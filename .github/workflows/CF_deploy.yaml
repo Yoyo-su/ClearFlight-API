@@ -7,7 +7,7 @@ on:
 
 jobs:
   run-tests:
-    name: Cleaflight-Checks
+    name: Clearflight-Checks
     runs-on: ubuntu-latest
 
     steps:
