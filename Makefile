@@ -56,23 +56,22 @@ endif
 
 ## Run security test
 security-test:
-	$(BANDIT) -lll ./src/*.py ./tests/*.py
+	$(BANDIT) -lll ./app/*.py ./tests/*.py
 
 ## Run the black code check
 run-black:
-	$(BLACK) ./src ./tests
+	$(BLACK) ./app ./tests
 
 ## Run the unit tests
 unit-test:
-	$(PYTEST) -vv --ignore=layer/python --ignore=dependencies_db/python
-
+	$(PYTEST) -vv
 ## Run the coverage check
 check-coverage:
-	$(PYTEST) --cov=src tests/
+	$(PYTEST) --cov=app tests/
 
 ## Run lint
 lint:
-	$(FLAKE8) . --max-line-length=150 --exclude=.git,__pycache__,./venv,./layer,./dependencies_db --ignore=E203,W503,E402
+	$(FLAKE8) . --max-line-length=150 --exclude=.git,__pycache__,./venv --ignore=
 
 ## Run audit
 audit:
@@ -81,7 +80,7 @@ audit:
 ## Export Bandit report to JSON
 bandit-report:
 	mkdir -p reports
-	$(BANDIT) -r ./src ./tests -f json -o reports/bandit_report.json
+	$(BANDIT) -r ./app ./tests -f json -o reports/bandit_report.json
 
 
 ## Run all checks
