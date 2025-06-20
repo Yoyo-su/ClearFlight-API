@@ -64,7 +64,7 @@ run-black:
 
 ## Run the unit tests
 unit-test:
-	$(PYTEST) -vv
+	$(PYTEST) --testdox -vvvrP
 ## Run the coverage check
 check-coverage:
 	$(PYTEST) --cov=app tests/
