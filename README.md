@@ -1,5 +1,18 @@
 # ClearFlight-API
-An API which provides real-time and historical traffic & weather information for airports, routings and flight numbers.
+An API which provides real-time traffic & weather information for airports, routings and flight numbers.
+
+
+## Architecture
+
+![Airport API](https://github.com/user-attachments/assets/26de1a9b-385f-4478-91de-c6a7f3f01761)
+
+
+## Endpoints
+### GET /airport - Implementation in progress
+
+### GET /route - To be implemented
+
+### GET /flight - To be implemented
 
 
 
@@ -43,4 +56,9 @@ Docker is used to run the API. To set it up, follow these steps:
    ```
 
 6. Access the API at `http://localhost:8000`. Status should be `ok` if everything is set up correctly.
+
+## Future Features
+- Visual dashboard
+- AI Advisor (GPT)
+- Predictive weather and traffic (ML)
 
