@@ -3,11 +3,10 @@ from unittest import mock
 from app.services.aviationstack import get_airport_info
 import requests
 
-####################################################
-###                                              ###
-###   Test suite for the AviationStack service   ###
-###                                              ###
-####################################################
+"""
+Test suite for the AviationStack service
+"""
+
 
 @pytest.mark.describe("AviationStack Service Tests")
 class TestAviationStack:
@@ -22,9 +21,27 @@ class TestAviationStack:
         "timezone",
         "country_iso2",
     ]
+    test_response = {
+        "data": [
+            {
+                "gmt": "-5",
+                "airport_name": "John F Kennedy International",
+                "iata_code": "JFK",
+                "icao_code": "KJFK",
+                "country_name": "United States",
+                "latitude": "40.642334",
+                "longitude": "-73.78817",
+                "timezone": "America/New_York",
+                "country_iso2": "US",
+            }
+        ]
+    }
 
     @pytest.mark.it("get_airport_info returns a valid response for iata code")
-    def test_get_airport_info_iata(self):
+    @mock.patch("app.services.aviationstack.requests.get")
+    def test_get_airport_info_iata(self, mock_get):
+        mock_response = self.test_response
+        mock_get.return_value.json.return_value = mock_response
         response = get_airport_info(airport_code="JFK")
         assert response is not None
         assert isinstance(response, dict)
@@ -36,7 +53,10 @@ class TestAviationStack:
         assert response["data"][0]["icao_code"] == "KJFK"
 
     @pytest.mark.it("get_airport_info returns a valid response for icao code")
-    def test_get_airport_info_icao(self):
+    @mock.patch("app.services.aviationstack.requests.get")
+    def test_get_airport_info_icao(self, mock_get):
+        mock_response = self.test_response
+        mock_get.return_value.json.return_value = mock_response
         response = get_airport_info(airport_code="KJFK")
         assert response is not None
         assert isinstance(response, dict)
