@@ -6,3 +6,4 @@ venv
 dev.txt
 *debug.yml
 .vscode
+.env
