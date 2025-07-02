@@ -1,6 +1,7 @@
 import requests
 from dotenv import load_dotenv
 import os
+from .cache import get_cache_key, check_cache, cache_response
 
 # Load env variables
 load_dotenv()
@@ -49,8 +50,20 @@ def get_airport_info(airport_code: str = None, as_api_key: str = as_api_key):
         url = (
             f"https://api.aviationstack.com/v1/airports?access_key={as_api_key}&{query}"
         )
-        response = requests.get(url)
-        airport_info = response.json()
+        cache_key = get_cache_key(url)
+        if cache_key:
+            # Check if the data is already cached
+            cache_data = check_cache(cache_key)
+
+        if cache_data:
+            print("Using cached data...")
+            airport_info = cache_data
+        else:
+            # Make the API request
+            print("Making API request...")
+            response = requests.get(url)
+            airport_info = response.json()
+            cache_response(cache_key, airport_info)
 
         # If the response does not contain exactly one airport, raise an error
         if len(airport_info["data"]) != 1:
