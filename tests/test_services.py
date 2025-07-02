@@ -3,6 +3,7 @@ from unittest import mock
 from app.services.aviationstack import get_airport_info
 import requests
 
+
 """
 Test suite for the AviationStack service
 """
@@ -112,3 +113,41 @@ class TestAviationStack:
         mock_get.side_effect = Exception("Unexpected error")
         with pytest.raises(Exception, match="Unexpected error"):
             get_airport_info(airport_code="JFK")
+
+    @pytest.mark.it("get_airport_info uses cache when available")
+    @mock.patch("app.services.aviationstack.requests.get")
+    @mock.patch("app.services.aviationstack.check_cache")
+    @mock.patch("app.services.aviationstack.cache_response")
+    def test_get_airport_info_uses_cache(
+        self, mock_cache_response, mock_check_cache, mock_get
+    ):
+        mock_response = self.test_response
+        mock_get.return_value.json.return_value = mock_response
+        mock_check_cache.return_value = mock_response
+
+        get_airport_info(airport_code="JFK")
+
+        # Ensure cache was checked and response was cached
+        mock_check_cache.assert_called_once()
+        mock_cache_response.assert_not_called()
+
+        # Ensure the API was not called since cache was hit
+        mock_get.assert_not_called()
+
+    @pytest.mark.it("get_airport_info caches response when not in cache")
+    @mock.patch("app.services.aviationstack.requests.get")
+    @mock.patch("app.services.aviationstack.get_cache_key")
+    @mock.patch("app.services.aviationstack.check_cache")
+    @mock.patch("app.services.aviationstack.cache_response")
+    def test_get_airport_info_caches_response(
+        self, mock_cache_response, mock_check_cache, mock_get_cache_key, mock_get
+    ):
+        mock_response = self.test_response
+        mock_get.return_value.json.return_value = mock_response
+        mock_check_cache.return_value = None
+        mock_get_cache_key.return_value = "mock_cache_key"
+
+        get_airport_info(airport_code="JFK")
+        # Ensure cache was checked and response was cached
+        mock_check_cache.assert_called_once()
+        mock_cache_response.assert_called_once_with("mock_cache_key", mock_response)
