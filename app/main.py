@@ -14,10 +14,10 @@ async def get_airport_info(airport_code: str):
     return airport_query(airport_code)
     # """
     # Get airport information by airport ID.
-    
+
     # Args:
     #     airport_id (str): The ID of the airport to retrieve information for.
-    
+
     # Returns:
     #     dict: A dictionary containing airport information.
     # """
