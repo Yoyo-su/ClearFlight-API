@@ -18,7 +18,7 @@ def get_airport_info(airport_code: str = None, as_api_key: str = as_api_key):
         as_api_key (str, optional): AviationStack API key. Defaults to the value from environment variables.
 
     Raises:
-        ValueError: - If the API key is missing, or if the airport code is not provided,
+        ValueError: - If the API key is missing.
                     - If the airport code is not 3 or 4 characters long.
                     - If the airport code is not found or if multiple results are returned.
                     - If the airport code is not provided.
