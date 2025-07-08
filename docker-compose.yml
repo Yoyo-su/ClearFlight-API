@@ -6,3 +6,13 @@ services:
       dockerfile: ./Dockerfile
     ports:
       - 8000:8000
+    environment:
+      - AVIATIONSTACK_API_KEY=${AVIATIONSTACK_API_KEY}
+      - WEATHERSTACK_API_KEY=${WEATHERSTACK_API_KEY}
+    depends_on:
+      - redis
+  redis:
+    image: redis:latest
+    container_name: redis-cache
+    ports:
+      - 6379:6379
