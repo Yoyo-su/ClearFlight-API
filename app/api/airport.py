@@ -1,6 +1,7 @@
 from app.services.aviationstack import get_airport_info
 from app.services.weatherstack import get_current_weather_info
 
+
 def airport_query(airport_code: str = None):
     try:
         airport_info = get_airport_info(airport_code)
@@ -17,5 +18,3 @@ def airport_query(airport_code: str = None):
     except Exception as e:
         print(f"Unexpected error: {e}")
         raise e
-    
-    

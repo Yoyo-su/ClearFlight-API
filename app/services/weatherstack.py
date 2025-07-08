@@ -9,7 +9,9 @@ load_dotenv()
 as_api_key = os.getenv("WEATHERSTACK_API_KEY")
 
 
-def get_current_weather_info(latitude: str = None, longtitude: str = None, as_api_key: str = as_api_key):
+def get_current_weather_info(
+    latitude: str = None, longtitude: str = None, as_api_key: str = as_api_key
+):
     """This function retrieves weather information from the AviationStack API based
     on the provided latitude and longitude, and returns the current weather data.
 
@@ -41,9 +43,7 @@ def get_current_weather_info(latitude: str = None, longtitude: str = None, as_ap
         # Construct the query
         query = f"query={latitude},{longtitude}"
         # Construct the URL with the query
-        url = (
-            f"https://api.weatherstack.com/current?access_key={as_api_key}&{query}"
-        )
+        url = f"https://api.weatherstack.com/current?access_key={as_api_key}&{query}"
         cache_key = get_cache_key(url)
         if cache_key:
             # Check if the data is already cached
@@ -51,7 +51,7 @@ def get_current_weather_info(latitude: str = None, longtitude: str = None, as_ap
 
         if cache_data:
             print("Using cached data...")
-            airport_info = cache_data
+            weather_info = cache_data
         else:
             # Make the API request
             print("Making API request...")
