@@ -22,7 +22,6 @@ def get_current_weather_info(
 
     Raises:
         ValueError: - If the API key is missing.
-                    - If the location is not found or if multiple results are returned.
                     - If the latitude or longitude is not provided.
                     - If there is any other validation error with the input parameters.
         RequestException: If there is an error with the request to the WeatherStack API.
@@ -58,12 +57,6 @@ def get_current_weather_info(
             response = requests.get(url)
             weather_info = response.json()
             cache_response(cache_key, weather_info)
-
-        # If the response does not contain exactly one location, raise an error
-        # if len(weather_info["current"]) != 1:
-        #     raise ValueError(
-        #         f"Weather information for latitude {latitude} and longitude {longtitude} not found or multiple results returned"
-        #     )
 
         # If the response is valid, return the weather information
         print(f"weather info for {latitude}, {longtitude} retrieved successfully")
