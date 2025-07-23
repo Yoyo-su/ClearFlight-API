@@ -10,7 +10,7 @@ def airport_query(airport_code: str = None):
         weather_info = get_current_weather_info(latitude, longitude)
         return {
             "airport_info": airport_info["data"][0],
-            "weather_info": weather_info,
+            "weather_info": weather_info["current"],
         }
     except ValueError as e:
         print(f"ValueError: {e}")
