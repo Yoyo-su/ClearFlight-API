@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       AVIATIONSTACK_API_KEY: ${{ secrets.AVIATIONSTACK_API_KEY }}
-      WEATHERSTACK_API_KEY: ${{ secrets.WEATHER_API_KEY }}
+      WEATHERSTACK_API_KEY: ${{ secrets.WEATHERSTACK_API_KEY }}
     steps:
     - name: Checkout repo
       uses: actions/checkout@v4
