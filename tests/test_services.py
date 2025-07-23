@@ -169,65 +169,61 @@ class TestWeatherStack:
         "current",
     ]
     test_response = {
-        "data": [
-            {
-                "request": {
-                    "type": "LatLon",
-                    "query": "Lat 40.64 and Lon -73.79",
-                    "language": "en",
-                    "unit": "m",
-                },
-                "location": {
-                    "name": "Valley Stream",
-                    "country": "United States of America",
-                    "region": "New York",
-                    "lat": "40.664",
-                    "lon": "-73.709",
-                    "timezone_id": "America/New_York",
-                    "localtime": "2025-07-23 11:40",
-                    "localtime_epoch": 1753270800,
-                    "utc_offset": "-4.0",
-                },
-                "current": {
-                    "observation_time": "03:40 PM",
-                    "temperature": 27,
-                    "weather_code": 116,
-                    "weather_icons": [
-                        "https://cdn.worldweatheronline.com/images/wsymbols01_png_64/wsymbol_0002_sunny_intervals.png"
-                    ],
-                    "weather_descriptions": ["Partly cloudy"],
-                    "astro": {
-                        "sunrise": "05:44 AM",
-                        "sunset": "08:19 PM",
-                        "moonrise": "03:56 AM",
-                        "moonset": "08:00 PM",
-                        "moon_phase": "Waning Crescent",
-                        "moon_illumination": 4,
-                    },
-                    "air_quality": {
-                        "co": "308.95",
-                        "no2": "10.73",
-                        "o3": "133",
-                        "so2": "5.18",
-                        "pm2_5": "21.275",
-                        "pm10": "24.235",
-                        "us-epa-index": "2",
-                        "gb-defra-index": "2",
-                    },
-                    "wind_speed": 12,
-                    "wind_degree": 170,
-                    "wind_dir": "S",
-                    "pressure": 1025,
-                    "precip": 0,
-                    "humidity": 56,
-                    "cloudcover": 75,
-                    "feelslike": 28,
-                    "uv_index": 7,
-                    "visibility": 16,
-                    "is_day": "yes",
-                },
-            }
-        ]
+        "request": {
+            "type": "LatLon",
+            "query": "Lat 40.64 and Lon -73.79",
+            "language": "en",
+            "unit": "m",
+        },
+        "location": {
+            "name": "Valley Stream",
+            "country": "United States of America",
+            "region": "New York",
+            "lat": "40.664",
+            "lon": "-73.709",
+            "timezone_id": "America/New_York",
+            "localtime": "2025-07-23 11:40",
+            "localtime_epoch": 1753270800,
+            "utc_offset": "-4.0",
+        },
+        "current": {
+            "observation_time": "03:40 PM",
+            "temperature": 27,
+            "weather_code": 116,
+            "weather_icons": [
+                "https://cdn.worldweatheronline.com/images/wsymbols01_png_64/wsymbol_0002_sunny_intervals.png"
+            ],
+            "weather_descriptions": ["Partly cloudy"],
+            "astro": {
+                "sunrise": "05:44 AM",
+                "sunset": "08:19 PM",
+                "moonrise": "03:56 AM",
+                "moonset": "08:00 PM",
+                "moon_phase": "Waning Crescent",
+                "moon_illumination": 4,
+            },
+            "air_quality": {
+                "co": "308.95",
+                "no2": "10.73",
+                "o3": "133",
+                "so2": "5.18",
+                "pm2_5": "21.275",
+                "pm10": "24.235",
+                "us-epa-index": "2",
+                "gb-defra-index": "2",
+            },
+            "wind_speed": 12,
+            "wind_degree": 170,
+            "wind_dir": "S",
+            "pressure": 1025,
+            "precip": 0,
+            "humidity": 56,
+            "cloudcover": 75,
+            "feelslike": 28,
+            "uv_index": 7,
+            "visibility": 16,
+            "is_day": "yes",
+        },
     }
 
     @pytest.mark.it("get_current_weather_info returns a valid response")
