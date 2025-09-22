@@ -45,17 +45,21 @@ Docker is used to run the API. To set it up, follow these steps:
    cd ClearFlight-API
    ```
 
-4. Build the Docker image:
+4. Check the docker-compose.yml file to ensure the configuration is correct. If you need to make changes, do so before building the image.
+
+5. Configure environment variables if necessary. You can create a `.env` file in the project root to manage sensitive information. Use the `.env.template` as a guide.
+
+6. Build and run the Docker container:
    ```bash
-   docker build -t clearflight-api .
+   docker-compose up --build
    ```
 
-5. Run the Docker container:
-   ```bash
-   docker run --name clearflight -p 8000:8000 clearflight-api
-   ```
+7. Access the API at `http://localhost:8000`. Status should be `ok` if everything is set up correctly.
 
-6. Access the API at `http://localhost:8000`. Status should be `ok` if everything is set up correctly.
+8. To stop the container, use:
+   ```bash
+   docker-compose down
+   ```
 
 ## Future Features
 - Visual dashboard
