@@ -8,3 +8,4 @@ dev.txt
 *.debug
 .vscode
 .env
+testfiles
