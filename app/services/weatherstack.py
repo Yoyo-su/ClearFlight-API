@@ -1,16 +1,13 @@
 import requests
-from dotenv import load_dotenv
-import os
+from app.core.config import settings
 from .cache import get_cache_key, check_cache, cache_response
 
-# Load env variables
-load_dotenv()
-
-as_api_key = os.getenv("WEATHERSTACK_API_KEY")
+# Load the WeatherStack API key from environment variables
+ws_api_key = settings.WEATHERSTACK_API_KEY
 
 
 def get_current_weather_info(
-    latitude: str = None, longtitude: str = None, as_api_key: str = as_api_key
+    latitude: str = None, longtitude: str = None, ws_api_key: str = ws_api_key
 ):
     """This function retrieves weather information from the AviationStack API based
     on the provided latitude and longitude, and returns the current weather data.
@@ -18,7 +15,7 @@ def get_current_weather_info(
     Args:
         latitude (str, optional): Latitude of the airport. Defaults to None.
         longtitude (str, optional): Longitude of the airport. Defaults to None.
-        as_api_key (str, optional): WeatherStack API key. Defaults to the value from environment variables.
+        ws_api_key (str, optional): WeatherStack API key. Defaults to the value from environment variables.
 
     Raises:
         ValueError: - If the API key is missing.
@@ -32,7 +29,7 @@ def get_current_weather_info(
     """
     try:
         # Validate variables
-        if not as_api_key:
+        if not ws_api_key:
             raise ValueError(
                 "WEATHERSTACK_API_KEY is not set in the environment variables"
             )
@@ -42,7 +39,7 @@ def get_current_weather_info(
         # Construct the query
         query = f"query={latitude},{longtitude}"
         # Construct the URL with the query
-        url = f"https://api.weatherstack.com/current?access_key={as_api_key}&{query}"
+        url = f"https://api.weatherstack.com/current?access_key={ws_api_key}&{query}"
         cache_key = get_cache_key(url)
         if cache_key:
             # Check if the data is already cached

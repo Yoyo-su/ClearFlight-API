@@ -1,21 +1,16 @@
-from dotenv import load_dotenv
-import os
+from app.core.config import settings
 import redis
 import json
 import hashlib
 
-# Load env variables
-load_dotenv()
-
 # Initialise Redis client
 redis_client = redis.Redis(
-    host=os.getenv("REDIS_HOST", "redis"),
-    port=int(os.getenv("REDIS_PORT", 6379)),
+    host=settings.REDIS_HOST,
+    port=settings.REDIS_PORT,
     decode_responses=True,
 )
+cache_expiry = settings.CACHE_EXPIRE
 
-# Default cache expiration time imported from environment variable or set to 1 hour
-cache_expiry = int(os.getenv("CACHE_EXPIRE", 3600))
 
 
 def get_cache_key(url, params=None):

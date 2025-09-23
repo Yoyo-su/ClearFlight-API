@@ -1,12 +1,9 @@
 import requests
-from dotenv import load_dotenv
-import os
+from app.core.config import settings
 from .cache import get_cache_key, check_cache, cache_response
 
-# Load env variables
-load_dotenv()
-
-as_api_key = os.getenv("AVIATIONSTACK_API_KEY")
+# Load the AviationStack API key from environment variables
+as_api_key = settings.AVIATIONSTACK_API_KEY
 
 
 def get_airport_info(airport_code: str = None, as_api_key: str = as_api_key):
