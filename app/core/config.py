@@ -1,4 +1,5 @@
 from pydantic_settings import BaseSettings
+from pydantic import ConfigDict
 
 
 class Settings(BaseSettings):
@@ -15,8 +16,8 @@ class Settings(BaseSettings):
 
     DEBUG: bool = False  # Enable for local debugging
 
-    class Config:
-        env_file = ".env"  # auto-loads .env file
+    # App config
+    model_config = ConfigDict(env_file=".env", extra="ignore")
 
 
 settings = Settings()
