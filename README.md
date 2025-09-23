@@ -8,7 +8,10 @@ An API which provides real-time traffic & weather information for airports, rout
 
 
 ## Endpoints
-### GET /airport - Implementation in progress
+### GET /airport
+Fetches real-time weather and traffic information for a specified airport.
+
+example: `/airport?icao=KJFK` or `/airport?iata=JFK` 
 
 ### GET /route - To be implemented
 
