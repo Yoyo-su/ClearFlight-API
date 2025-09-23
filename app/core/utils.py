@@ -6,7 +6,7 @@ Utility calculators for various metrics.
 """
 
 
-def weather_risk_calc(okta: int or bool, precipitation, windspeed, visibility):
+def weather_risk_calc(okta, precipitation, windspeed, visibility):
     """This function calculates weather risk index (0 = no risk, 10 = severe).
 
     Factors:
@@ -93,12 +93,27 @@ def traffic_risk_calc():
     pass
 
 
-def okta_calc():
-    #     Okta scale = 0–8
-    # Formula:
+def okta_calc(cloud_cover):
+    """This function converts cloud cover percentage to okta scale (0-8).
 
-    # okta=round(cloud%×0.08)
-    pass
+    Args:
+        cloud_cover (float): Cloud cover percentage (0-100).
+
+    Returns:
+        int: Cloud cover in okta (0-8).
+    """
+    try:
+        okta = round(cloud_cover * 0.08)
+        if not (0 <= okta <= 8):
+            raise ValueError("Calculated okta must be between 0 and 8")
+        else:
+            return okta
+    except ValueError as ve:
+        logging.error(f"Value error in okta calculation: {ve}")
+        return None
+    except Exception as e:
+        logging.error(f"Error calculating okta: {e}")
+        return None
 
 
 def dew_point_calc():

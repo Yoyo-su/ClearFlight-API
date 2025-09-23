@@ -2,7 +2,7 @@ import pytest
 from app.core.utils import (
     weather_risk_calc,
     # traffic_risk_calc,
-    # okta_calc,
+    okta_calc,
     # dew_point_calc,
     # local_time_calc,
     # pressure_inhg_calc,
@@ -67,3 +67,36 @@ class TestWeatherRiskCalc:
             weather_risk_calc(
                 okta=4, precipitation=2.0, windspeed=15.0
             )  # Missing visibility
+
+
+@pytest.mark.describe("Okta Calculation Function Tests")
+class TestOktaCalc:
+    @pytest.mark.it("okta_calc returns correct okta value")
+    def test_okta_calc(self):
+        assert okta_calc(0) == 0
+        assert okta_calc(50.00) == 4
+        assert okta_calc(100) == 8
+        assert okta_calc(25) == 2
+        assert okta_calc(75) == 6
+
+    @pytest.mark.it("okta_calc handles edge cases")
+    def test_okta_calc_edge_cases(self):
+        assert okta_calc(0) == 0
+        assert okta_calc(100) == 8
+        assert okta_calc(12.5) == 1
+        assert okta_calc(87.5) == 7
+
+    @pytest.mark.it("okta_calc handles invalid inputs")
+    def test_okta_calc_invalid_inputs(self):
+        with pytest.raises(TypeError):
+            okta_calc()  # Missing cloud cover parameter
+        assert okta_calc(None) is None
+        assert okta_calc(-10) is None
+        assert okta_calc(150) is None
+        assert okta_calc(-10) is None
+        assert okta_calc("fifty") is None
+
+    @pytest.mark.it("okta_calc handles boundary conditions")
+    def test_okta_calc_boundary_conditions(self):
+        assert okta_calc(0) == 0
+        assert okta_calc(100) == 8
