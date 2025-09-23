@@ -12,7 +12,6 @@ redis_client = redis.Redis(
 cache_expiry = settings.CACHE_EXPIRE
 
 
-
 def get_cache_key(url, params=None):
     """This function generates a unique cache key based on the URL and optional parameters.
 
