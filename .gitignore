@@ -9,3 +9,4 @@ dev.txt
 .vscode
 .env
 testfiles
+htmlcov
