@@ -246,7 +246,7 @@ class TestWeatherStack:
             ValueError,
             match="WEATHERSTACK_API_KEY is not set in the environment variables",
         ):
-            get_current_weather_info(self.test_lat, self.test_long, as_api_key=None)
+            get_current_weather_info(self.test_lat, self.test_long, ws_api_key=None)
 
     @pytest.mark.it("get_current_weather_info raises ValueError for invalid lat/long")
     def test_get_current_weather_info_missing_code(self):
