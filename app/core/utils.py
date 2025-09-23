@@ -1,5 +1,6 @@
 import math
 import logging
+from datetime import datetime, timezone, timedelta
 
 """
 Utility calculators for various metrics.
@@ -23,10 +24,10 @@ def weather_risk_calc(okta, precipitation, windspeed, visibility):
     - Visibility = 20%
 
     Args:
-        okta (int): Cloud cover in okta (0-8).
-        precipitation (int): Precipitation in mm/hr.
-        windspeed (int): Wind speed in km/h.
-        visibility (int): Visibility in km.
+        okta (int or float): Cloud cover in okta (0-8).
+        precipitation (int or float): Precipitation in mm/hr.
+        windspeed (int or float): Wind speed in km/h.
+        visibility (int or float): Visibility in km.
 
     Returns:
         int: Weather risk index from 0 to 10.
@@ -38,10 +39,8 @@ def weather_risk_calc(okta, precipitation, windspeed, visibility):
             isinstance(param, (int, float)) and param >= 0
             for param in [okta, precipitation, windspeed, visibility]
         ):
-            logging.error("Invalid input types or negative values")
             raise ValueError("All parameters must be non-negative numbers")
         if not (0 <= okta <= 8):
-            logging.error("Invalid okta value")
             raise ValueError("Okta must be between 0 and 8")
 
         # cloud risk calculation
@@ -77,7 +76,10 @@ def weather_risk_calc(okta, precipitation, windspeed, visibility):
 
         # Weighted sum
         weather_risk = (
-            (cloud_risk * 0.2) + (precip_risk * 0.3) + (wind_risk * 0.3) + (visibility_risk * 0.2)
+            (cloud_risk * 0.2)
+            + (precip_risk * 0.3)
+            + (wind_risk * 0.3)
+            + (visibility_risk * 0.2)
         )
         logging.info(f"Calculated weather risk: {weather_risk}")
 
@@ -97,50 +99,131 @@ def okta_calc(cloud_cover):
     """This function converts cloud cover percentage to okta scale (0-8).
 
     Args:
-        cloud_cover (float): Cloud cover percentage (0-100).
+        cloud_cover (int or float): Cloud cover percentage (0-100).
 
     Returns:
         int: Cloud cover in okta (0-8).
     """
     try:
+        if not isinstance(cloud_cover, (int, float)):
+            raise ValueError("Cloud cover must be a number")
+        if not (0 <= cloud_cover <= 100):
+            raise ValueError("Cloud cover must be between 0 and 100")
+
         okta = round(cloud_cover * 0.08)
-        if not (0 <= okta <= 8):
-            raise ValueError("Calculated okta must be between 0 and 8")
-        else:
-            return okta
-    except ValueError as ve:
-        logging.error(f"Value error in okta calculation: {ve}")
-        return None
+        logging.info(f"Calculated okta: {okta} from cloud cover: {cloud_cover}%")
+        return okta
     except Exception as e:
         logging.error(f"Error calculating okta: {e}")
         return None
 
 
-def dew_point_calc():
-    # Dew Point (°C)
+def dew_point_calc(temperature, humidity):
+    """This function calculates the dew point given temperature and humidity.
+
+    Args:
+        temperature (int or float): Temperature in °C.
+        humidity (int or float): Relative Humidity in %.
+
+    Returns:
+        int: Dew point in °C.
+    """
+
     # Formula: Td = T - ((100 - RH)/5)
     # Where:
     # Td = Dew Point in °C
     # T = Temperature in °C
     # RH = Relative Humidity in %
-    pass
+
+    try:
+        if not (
+            isinstance(temperature, (int, float)) and isinstance(humidity, (int, float))
+        ):
+            raise ValueError("Temperature and humidity must be numbers")
+        if not (0 <= humidity <= 100):
+            raise ValueError("Humidity must be between 0 and 100")
+        if temperature < -100 or temperature > 100:
+            raise ValueError("Temperature seems unrealistic")
+        dewpoint = round(temperature - ((100 - humidity) / 5))
+        return dewpoint
+    except Exception as e:
+        logging.error(f"Error calculating dew point: {e}")
+        return None
 
 
-def local_time_calc():
-    # Convert UTC time to local time based on timezone
-    pass
+def local_time_calc(utc_offset):
+    """This function calculates the local time based on the provided UTC offset.
+
+    Args:
+        utc_offset (str or None): UTC offset in hours (e.g., "-5", "+3", "0").
+
+    Returns:
+        tuple: A tuple containing the current UTC time and the local time as datetime objects.
+    """
+
+    current_utc = datetime.now(timezone.utc)
+
+    try:
+        if utc_offset is None:
+            return current_utc, current_utc
+        else:
+            offset_hours = int(utc_offset)
+            if not (-12 <= offset_hours <= 14):
+                raise ValueError("UTC offset must be between -12 and +14 hours")
+            # Create timezone offset
+            tz_offset = timezone(timedelta(hours=offset_hours))
+
+            # Convert UTC to offset time
+            local_time = current_utc.astimezone(tz_offset)
+            return current_utc, local_time
+    except Exception as e:
+        logging.error(f"Error calculating local time: {e}")
+        return current_utc, None  # Fallback to UTC if error
 
 
-def pressure_inhg_calc():
-    # Convert pressure from hPa to inHg
-    pass
+def pressure_inhg_calc(pressure_hpa: int | float):
+    """This function converts pressure from hPa to inHg.
+
+    Args:
+        pressure_hpa (int or float): Air pressure in hPa.
+
+    Returns:
+        float: Air pressure in inHg.
+    """
+    try:
+        return round(pressure_hpa * 0.02953, 2)
+    except Exception as e:
+        logging.error(f"Error converting pressure: {e}")
+        return None
 
 
-def visibility_mi_calc():
-    # Convert visibility from kilometers to miles
-    pass
+def visibility_mi_calc(visibility_km: int):
+    """This function converts visibility from kilometers to miles.
+
+    Args:
+        visibility_km (int): Visibility in kilometers.
+
+    Returns:
+        int: Visibility in miles.
+    """
+    try:
+        return round(visibility_km * 0.621371)
+    except Exception as e:
+        logging.error(f"Error converting visibility: {e}")
+        return None
 
 
-def windspeed_knots_calc():
-    # Convert wind speed from km/h to knots
-    pass
+def windspeed_knots_calc(windspeed_kmh):
+    """This function converts wind speed from km/h to knots.
+
+    Args:
+        windspeed_kmh (int): Wind speed in km/h.
+
+    Returns:
+        int: wind speed in knots.
+    """
+    try:
+        return round(windspeed_kmh * 0.539957)
+    except Exception as e:
+        logging.error(f"Error converting wind speed: {e}")
+        return None
