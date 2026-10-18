@@ -36,3 +36,11 @@ Prioritize a small, deployable weather pilot with understandable weather informa
 - Discover the actual test, formatting, linting and container commands from repository files and CI before running them.
 - Test both success and failure paths, especially upstream errors and missing weather data.
 - Update API documentation when endpoint behavior or response schemas change.
+
+## Project documents
+- `docs/CURRENT_MILESTONE.md`: active milestone, scope, acceptance criteria and next task.
+- `docs/ARCHITECTURE.md`: current versus planned structure.
+- `docs/DECISIONS.md`: recorded decisions; do not contradict them without flagging it.
+
+## Review mode
+When asked to review (for example by Codex), do not modify files or git state. Compare the branch with `main` against `docs/CURRENT_MILESTONE.md`, and report findings by severity (Critical/High/Medium/Low) with `path:line` references, evidence and the checks actually run.
