@@ -107,8 +107,8 @@ lookups (`/airport/EGLL`) and a hosted Redis connection.
 - [x] Rebuild Docker on a developer machine or CI, recording exact results (local and CI).
 - [x] Confirm tests, lint, dependency vulnerability audit and response handling.
 - [x] Update HTTP timeouts and errors while preserving existing response shape.
-- [ ] Move Docker Hub publishing to a separately gated release workflow (workflow
-  added; required reviewers on the `release` environment still to be configured).
+- [x] Move Docker Hub publishing to a separately gated release workflow (workflow
+  added; required reviewer configured on the `release` environment on 18 October 2026).
 - [x] Finalise an opt-in hosted `REDIS_URL` with authenticated TLS (hosted connection to be verified in CF-006).
 - [x] Fix README setup/endpoint mismatch.
 
