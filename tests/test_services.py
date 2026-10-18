@@ -2,6 +2,7 @@ import pytest
 from unittest import mock
 from app.services.aviationstack import get_airport_info
 from app.services.weatherstack import get_current_weather_info
+from app.services.redact import redact_request_error
 import requests
 
 
@@ -394,3 +395,55 @@ class TestProviderGuards:
             assert call() == valid_response
         mock_check.assert_not_called()
         mock_cache.assert_not_called()
+
+    @pytest.mark.it("provider request errors never expose the access key")
+    @pytest.mark.parametrize(
+        "error_type, message",
+        [
+            (
+                requests.exceptions.HTTPError,
+                "401 Client Error: Unauthorized for url: "
+                "https://api.example.com/v1?access_key=leaked-key&query=JFK",
+            ),
+            (
+                requests.exceptions.ConnectionError,
+                "HTTPSConnectionPool(host='api.example.com', port=443): Max retries "
+                "exceeded with url: /v1?access_key=leaked-key (Caused by ...)",
+            ),
+        ],
+        ids=["http-error", "connection-error"],
+    )
+    def test_request_error_redacts_access_key(
+        self, module, call, valid_response, error_type, message, capsys
+    ):
+        with mock.patch(f"{module}.requests.get") as mock_get:
+            mock_get.return_value.raise_for_status.side_effect = error_type(message)
+            with pytest.raises(error_type) as excinfo:
+                call()
+        assert "leaked-key" not in str(excinfo.value)
+        assert "access_key=[REDACTED]" in str(excinfo.value)
+        assert excinfo.value.__suppress_context__
+        assert "leaked-key" not in capsys.readouterr().out
+
+
+"""
+Test suite for request error redaction
+"""
+
+
+@pytest.mark.describe("Request Error Redaction Tests")
+class TestRedactRequestError:
+    @pytest.mark.it("redact_request_error masks access_key and the given secret")
+    def test_redacts_query_and_secret(self):
+        error = requests.exceptions.HTTPError(
+            "403 for url: https://api.example.com/v1?access_key=abc123&q=1 (abc123)"
+        )
+        redacted = redact_request_error(error, "abc123")
+        assert isinstance(redacted, requests.exceptions.HTTPError)
+        assert "abc123" not in str(redacted)
+        assert "access_key=[REDACTED]&q=1" in str(redacted)
+
+    @pytest.mark.it("redact_request_error leaves messages without credentials intact")
+    def test_leaves_safe_message(self):
+        error = requests.exceptions.Timeout("Read timed out. (read timeout=10)")
+        assert str(redact_request_error(error)) == "Read timed out. (read timeout=10)"

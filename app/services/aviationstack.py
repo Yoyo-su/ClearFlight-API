@@ -1,6 +1,7 @@
 import requests
 from app.core.config import settings
 from .cache import get_cache_key, check_cache, cache_response
+from .redact import redact_request_error
 
 # Load the AviationStack API key from environment variables
 as_api_key = settings.AVIATIONSTACK_API_KEY
@@ -80,8 +81,10 @@ def get_airport_info(airport_code: str = None, as_api_key: str = as_api_key):
         return airport_info
 
     except requests.exceptions.RequestException as e:
-        print(f"Request error: {e}")
-        raise e
+        # Request errors include the URL, so remove the access key before logging
+        safe_error = redact_request_error(e, as_api_key)
+        print(f"Request error: {safe_error}")
+        raise safe_error from None
     except ValueError as e:
         print(f"Value error: {e}")
         raise e

@@ -41,7 +41,7 @@ The run-tests job performs the following steps:
 The docker-build job then builds the Docker image without publishing it. Tests mock all provider calls, so CI uses dummy API keys.
 
 ### Release
-Publishing the Docker Hub image is handled separately by `release.yaml`, which runs only for version tags (`v*`) or a manual run, repeats the checks and uses the `release` GitHub environment.
+Publishing the Docker Hub image is handled separately by `release.yaml`, which publishes only for version tags (`v*`; a manual run must be started on such a tag), repeats the checks and uses the `release` GitHub environment.
 
 ### Local Setup
 Docker is used to run the API. To set it up, follow these steps:

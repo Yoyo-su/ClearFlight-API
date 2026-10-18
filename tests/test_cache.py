@@ -105,6 +105,17 @@ class TestCache:
         )
         mock_redis.from_url.assert_not_called()
 
+    @pytest.mark.it("create_redis_client ignores an empty REDIS_URL")
+    def test_create_redis_client_empty_url(self):
+        # Docker Compose passes REDIS_URL="" when it is not set
+        config = mock.Mock(REDIS_URL="", REDIS_HOST="redis", REDIS_PORT=6379)
+        with mock.patch("app.services.cache.redis.Redis") as mock_redis:
+            create_redis_client(config)
+        mock_redis.assert_called_once_with(
+            host="redis", port=6379, decode_responses=True
+        )
+        mock_redis.from_url.assert_not_called()
+
     @pytest.mark.it("check_cache returns None when Redis is unavailable")
     def test_check_cache_redis_error(self, mock_client):
         mock_client.get.side_effect = redis.ConnectionError("Redis down")

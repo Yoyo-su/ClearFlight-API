@@ -1,6 +1,7 @@
 import requests
 from app.core.config import settings
 from .cache import get_cache_key, check_cache, cache_response
+from .redact import redact_request_error
 
 # Load the WeatherStack API key from environment variables
 ws_api_key = settings.WEATHERSTACK_API_KEY
@@ -67,8 +68,10 @@ def get_current_weather_info(
         return weather_info
 
     except requests.exceptions.RequestException as e:
-        print(f"Request error: {e}")
-        raise e
+        # Request errors include the URL, so remove the access key before logging
+        safe_error = redact_request_error(e, ws_api_key)
+        print(f"Request error: {safe_error}")
+        raise safe_error from None
     except ValueError as e:
         print(f"Value error: {e}")
         raise e

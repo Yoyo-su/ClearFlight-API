@@ -83,7 +83,20 @@ dummy provider keys:
   `127.0.0.1:8000` was published.
 - `pytest` inside the container (Python 3.13.16): 63 passed.
 
-Not verified here: a GitHub Actions run of these workflows, live provider
+Review fixes (PR #11):
+
+- Provider request errors are redacted before they are printed, logged or
+  raised. Requests puts the full URL, including `access_key`, in HTTP error,
+  connection error and connect-timeout messages; the connection-error leak
+  predated this branch. The original exception is suppressed from tracebacks.
+- Docker Compose now passes the optional `REDIS_URL` to the API container
+  (verified: set, the client uses TLS to the hosted address; unset, it uses the
+  internal `redis` service).
+- `release.yaml` publishes only when run for a `v*` tag; branch names are not
+  valid image tags.
+- `make run-checks`: 70 tests passed, 89% coverage, no known vulnerabilities.
+
+Not verified here: a GitHub Actions run of the release workflow, live provider
 lookups (`/airport/EGLL`) and a hosted Redis connection.
 
 - [x] Rebuild Docker on a developer machine or CI, recording exact results (local; CI run pending).
