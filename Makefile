@@ -49,9 +49,9 @@ else
 endif # Dev setup tools: bandit, black, pytest-cov
 dev-setup:
 ifeq ($(CI),true)
-	$(PIP) install bandit black pytest-cov flake8 pip-audit
+	$(PIP) install -r requirements-dev.txt
 else
-	$(call execute_in_env, pip install bandit black pytest-cov flake8 pip-audit)
+	$(call execute_in_env, pip install -r requirements-dev.txt)
 endif
 
 ## Run security test
