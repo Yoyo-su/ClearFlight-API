@@ -41,6 +41,7 @@ jobs:
     name: Clearflight-Docker-Build
     runs-on: ubuntu-latest
     needs: run-tests
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
 
     steps:
       - name: Checkout code
