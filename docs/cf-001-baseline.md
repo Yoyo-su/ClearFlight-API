@@ -94,7 +94,9 @@ Review fixes (PR #11):
   internal `redis` service).
 - `release.yaml` publishes only when run for a `v*` tag; branch names are not
   valid image tags.
-- `make run-checks`: 70 tests passed, 89% coverage, no known vulnerabilities.
+- Malformed (non-JSON) provider responses raise `JSONDecodeError` instead of a
+  `TypeError` from the redaction helper, and are not cached.
+- `make run-checks`: 73 tests passed, 90% coverage, no known vulnerabilities.
 
 Not verified here: a GitHub Actions run of the release workflow, live provider
 lookups (`/airport/EGLL`) and a hosted Redis connection.

@@ -14,9 +14,17 @@ def redact_request_error(error: requests.exceptions.RequestException, secret=Non
         secret (str, optional): The API key to mask wherever it appears. Defaults to None.
 
     Returns:
-        RequestException: An exception of the same type with a redacted message.
+        RequestException: The original exception if it contains no credentials,
+        otherwise an exception of the same type (or a RequestException if that
+        type cannot be built from a message) with a redacted message.
     """
     message = ACCESS_KEY_PATTERN.sub(r"\1[REDACTED]", str(error))
     if secret:
         message = message.replace(secret, "[REDACTED]")
-    return type(error)(message)
+    if message == str(error):
+        return error
+    try:
+        return type(error)(message)
+    except TypeError:
+        # Some subclasses, e.g. JSONDecodeError, need more constructor arguments
+        return requests.exceptions.RequestException(message)

@@ -425,6 +425,18 @@ class TestProviderGuards:
         assert excinfo.value.__suppress_context__
         assert "leaked-key" not in capsys.readouterr().out
 
+    @pytest.mark.it("malformed provider JSON raises JSONDecodeError, nothing cached")
+    def test_malformed_json_not_cached(self, module, call, valid_response):
+        html_response = requests.models.Response()
+        html_response.status_code = 200
+        html_response._content = b"<html>Service unavailable</html>"
+        with mock.patch(
+            f"{module}.requests.get", return_value=html_response
+        ), mock.patch(f"{module}.cache_response") as mock_cache:
+            with pytest.raises(requests.exceptions.JSONDecodeError):
+                call()
+        mock_cache.assert_not_called()
+
 
 """
 Test suite for request error redaction
@@ -446,4 +458,14 @@ class TestRedactRequestError:
     @pytest.mark.it("redact_request_error leaves messages without credentials intact")
     def test_leaves_safe_message(self):
         error = requests.exceptions.Timeout("Read timed out. (read timeout=10)")
-        assert str(redact_request_error(error)) == "Read timed out. (read timeout=10)"
+        assert redact_request_error(error) is error
+
+    @pytest.mark.it("redact_request_error handles exceptions needing extra arguments")
+    def test_handles_json_decode_error(self):
+        error = requests.exceptions.JSONDecodeError("Expecting value", "<html>", 0)
+        assert redact_request_error(error, "abc123") is error
+        # If a credential does appear, fall back to a plain RequestException
+        error = requests.exceptions.JSONDecodeError("access_key=abc123", "<html>", 0)
+        redacted = redact_request_error(error, "abc123")
+        assert type(redacted) is requests.exceptions.RequestException
+        assert "abc123" not in str(redacted)
