@@ -52,9 +52,46 @@ existing httpx test client integration; tests pass. No live provider calls,
 Docker build, hosted deployment or new GitHub Actions result were verified here.
 Audit results are time-specific; keep the CI audit enabled.
 
-- [ ] Rebuild Docker on a developer machine or CI, recording exact results.
-- [ ] Confirm tests, lint, dependency vulnerability audit and response handling.
-- [ ] Update HTTP timeouts and errors while preserving existing response shape.
-- [ ] Move Docker Hub publishing to a separately gated release workflow.
-- [ ] Finalise an opt-in hosted `REDIS_URL` with authenticated TLS.
-- [ ] Fix README setup/endpoint mismatch.
+### Hardening verification — 18 October 2026
+
+Branch `pilot/cf-001-hardening`, from `main` at `7d51986`.
+
+- Provider calls use a configurable `PROVIDER_TIMEOUT` (default 10 s), check the
+  HTTP status, reject error bodies from 200 responses, and never cache failed
+  responses. A missing cache key no longer raises `UnboundLocalError`. The
+  `/airport/{airport_code}` success response is unchanged.
+- Optional `REDIS_URL` (for example an authenticated `rediss://` URL) overrides
+  `REDIS_HOST`/`REDIS_PORT`. Local Compose is unchanged.
+- `make run-black` is now a non-mutating `black --check` (`make format` reformats).
+  `make security-test` scans `app/` and `tests/` recursively at medium severity
+  and above; the previous run missed `requests` calls without timeouts (B113).
+- CI uses dummy provider keys and builds the Docker image without pushing on
+  pushes and pull requests. Docker Hub publishing moved to `release.yaml`
+  (version tags or manual run, `release` environment).
+- Dockerfile base image pinned to `python:3.13-slim`. The unpinned `python:3-slim` caused the
+  failed Docker build on `main` (run 39094696865): it resolved to a newer Python
+  with no `pydantic_core` 2.33.2 wheel, and the source build had no compiler.
+
+Verified locally (Python 3.13.1 venv, Docker 28.2.2, Compose v2.36.2), with
+dummy provider keys:
+
+- `make run-checks`: bandit, black check, flake8, 63 tests passed, 89% coverage,
+  `pip-audit` found no known vulnerabilities.
+- `docker compose build` and `docker compose up -d`: `GET /` returned
+  `{"status":"ok"}`; the API container reached Redis; Redis was not reachable
+  from the host (connection refused on 127.0.0.1:6379); only
+  `127.0.0.1:8000` was published.
+- `pytest` inside the container (Python 3.13.16): 63 passed.
+
+Not verified here: a GitHub Actions run of these workflows, live provider
+lookups (`/airport/EGLL`) and a hosted Redis connection.
+
+- [x] Rebuild Docker on a developer machine or CI, recording exact results (local; CI run pending).
+- [x] Confirm tests, lint, dependency vulnerability audit and response handling.
+- [x] Update HTTP timeouts and errors while preserving existing response shape.
+- [x] Move Docker Hub publishing to a separately gated release workflow.
+- [x] Finalise an opt-in hosted `REDIS_URL` with authenticated TLS (hosted connection verified in CF-006).
+- [x] Fix README setup/endpoint mismatch.
+
+Deferred to CF-004: mapping provider failures to 400/404/502/504 responses, and
+removing API access keys from the URLs hashed into cache keys.

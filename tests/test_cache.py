@@ -1,7 +1,13 @@
 import pytest
-from app.services.cache import get_cache_key, check_cache, cache_response
+from app.services.cache import (
+    get_cache_key,
+    check_cache,
+    cache_response,
+    create_redis_client,
+)
 from unittest import mock
 import json
+import redis
 
 """
 Test suite for the Cache Service
@@ -78,3 +84,28 @@ class TestCache:
         mock_client.setex.assert_called_once_with(
             cache_key, 3600, json.dumps(test_response)
         )
+
+    @pytest.mark.it("create_redis_client uses REDIS_URL when set")
+    def test_create_redis_client_from_url(self):
+        config = mock.Mock(REDIS_URL="rediss://user:secret@example.com:6380")
+        with mock.patch("app.services.cache.redis.Redis") as mock_redis:
+            create_redis_client(config)
+        mock_redis.from_url.assert_called_once_with(
+            "rediss://user:secret@example.com:6380", decode_responses=True
+        )
+        mock_redis.assert_not_called()
+
+    @pytest.mark.it("create_redis_client falls back to REDIS_HOST and REDIS_PORT")
+    def test_create_redis_client_from_host(self):
+        config = mock.Mock(REDIS_URL=None, REDIS_HOST="redis", REDIS_PORT=6379)
+        with mock.patch("app.services.cache.redis.Redis") as mock_redis:
+            create_redis_client(config)
+        mock_redis.assert_called_once_with(
+            host="redis", port=6379, decode_responses=True
+        )
+        mock_redis.from_url.assert_not_called()
+
+    @pytest.mark.it("check_cache returns None when Redis is unavailable")
+    def test_check_cache_redis_error(self, mock_client):
+        mock_client.get.side_effect = redis.ConnectionError("Redis down")
+        assert check_cache("test_cache_key") is None

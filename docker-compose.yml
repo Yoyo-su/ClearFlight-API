@@ -11,6 +11,7 @@ services:
       REDIS_HOST: redis
       REDIS_PORT: "6379"
       CACHE_EXPIRE: "${CACHE_EXPIRE:-3600}"
+      PROVIDER_TIMEOUT: "${PROVIDER_TIMEOUT:-10}"
     depends_on:
       - redis
   redis:

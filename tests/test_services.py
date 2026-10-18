@@ -312,3 +312,85 @@ class TestWeatherStack:
         # Ensure cache was checked and response was cached
         mock_check_cache.assert_called_once()
         mock_cache_response.assert_called_once_with("mock_cache_key", mock_response)
+
+
+"""
+Test suite for provider request guards (timeouts, HTTP and body errors)
+"""
+
+PROVIDERS = [
+    pytest.param(
+        "app.services.aviationstack",
+        lambda: get_airport_info(airport_code="JFK"),
+        TestAviationStack.test_response,
+        id="aviationstack",
+    ),
+    pytest.param(
+        "app.services.weatherstack",
+        lambda: get_current_weather_info("40.642334", "-73.78817"),
+        TestWeatherStack.test_response,
+        id="weatherstack",
+    ),
+]
+
+
+@pytest.mark.describe("Provider Request Guard Tests")
+@pytest.mark.parametrize("module, call, valid_response", PROVIDERS)
+class TestProviderGuards:
+    @pytest.mark.it("provider request uses the configured timeout")
+    def test_request_uses_timeout(self, module, call, valid_response):
+        with mock.patch(f"{module}.requests.get") as mock_get, mock.patch(
+            f"{module}.settings.PROVIDER_TIMEOUT", 2.5
+        ):
+            mock_get.return_value.json.return_value = valid_response
+            call()
+        assert mock_get.call_args.kwargs["timeout"] == 2.5
+
+    @pytest.mark.it("provider timeout propagates and nothing is cached")
+    def test_timeout_not_cached(self, module, call, valid_response):
+        with mock.patch(f"{module}.requests.get") as mock_get, mock.patch(
+            f"{module}.cache_response"
+        ) as mock_cache:
+            mock_get.side_effect = requests.exceptions.Timeout("timed out")
+            with pytest.raises(requests.exceptions.Timeout):
+                call()
+        mock_cache.assert_not_called()
+
+    @pytest.mark.it("provider HTTP error status propagates and nothing is cached")
+    def test_http_error_not_cached(self, module, call, valid_response):
+        with mock.patch(f"{module}.requests.get") as mock_get, mock.patch(
+            f"{module}.cache_response"
+        ) as mock_cache:
+            mock_get.return_value.raise_for_status.side_effect = (
+                requests.exceptions.HTTPError("503 Server Error")
+            )
+            with pytest.raises(requests.exceptions.HTTPError):
+                call()
+        mock_cache.assert_not_called()
+        mock_get.return_value.json.assert_not_called()
+
+    @pytest.mark.it("provider error body raises ValueError and nothing is cached")
+    def test_error_body_not_cached(self, module, call, valid_response):
+        error_body = {
+            "success": False,
+            "error": {"code": "invalid_access_key", "info": "Invalid key"},
+        }
+        with mock.patch(f"{module}.requests.get") as mock_get, mock.patch(
+            f"{module}.cache_response"
+        ) as mock_cache:
+            mock_get.return_value.json.return_value = error_body
+            with pytest.raises(ValueError, match="invalid_access_key"):
+                call()
+        mock_cache.assert_not_called()
+
+    @pytest.mark.it("provider request still works when no cache key is generated")
+    def test_missing_cache_key(self, module, call, valid_response):
+        with mock.patch(f"{module}.requests.get") as mock_get, mock.patch(
+            f"{module}.get_cache_key", return_value=None
+        ), mock.patch(f"{module}.check_cache") as mock_check, mock.patch(
+            f"{module}.cache_response"
+        ) as mock_cache:
+            mock_get.return_value.json.return_value = valid_response
+            assert call() == valid_response
+        mock_check.assert_not_called()
+        mock_cache.assert_not_called()

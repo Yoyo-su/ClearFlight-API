@@ -3,12 +3,28 @@ import redis
 import json
 import hashlib
 
+
+def create_redis_client(config=settings):
+    """This function creates a Redis client, preferring REDIS_URL (e.g. an
+    authenticated rediss:// URL for hosted Redis) over REDIS_HOST/REDIS_PORT.
+
+    Args:
+        config (Settings, optional): Application settings. Defaults to settings.
+
+    Returns:
+        redis.Redis: A Redis client.
+    """
+    if config.REDIS_URL:
+        return redis.Redis.from_url(config.REDIS_URL, decode_responses=True)
+    return redis.Redis(
+        host=config.REDIS_HOST,
+        port=config.REDIS_PORT,
+        decode_responses=True,
+    )
+
+
 # Initialise Redis client
-redis_client = redis.Redis(
-    host=settings.REDIS_HOST,
-    port=settings.REDIS_PORT,
-    decode_responses=True,
-)
+redis_client = create_redis_client()
 cache_expiry = settings.CACHE_EXPIRE
 
 

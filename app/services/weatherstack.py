@@ -41,6 +41,7 @@ def get_current_weather_info(
         # Construct the URL with the query
         url = f"https://api.weatherstack.com/current?access_key={ws_api_key}&{query}"
         cache_key = get_cache_key(url)
+        cache_data = None
         if cache_key:
             # Check if the data is already cached
             cache_data = check_cache(cache_key)
@@ -51,9 +52,15 @@ def get_current_weather_info(
         else:
             # Make the API request
             print("Making API request...")
-            response = requests.get(url)
+            response = requests.get(url, timeout=settings.PROVIDER_TIMEOUT)
+            response.raise_for_status()
             weather_info = response.json()
-            cache_response(cache_key, weather_info)
+            # WeatherStack can report errors in the body of a 200 response
+            if weather_info.get("success") is False or "error" in weather_info:
+                error = weather_info.get("error") or {}
+                raise ValueError(f"WeatherStack error: {error.get('code', 'unknown')}")
+            if cache_key:
+                cache_response(cache_key, weather_info)
 
         # If the response is valid, return the weather information
         print(f"weather info for {latitude}, {longtitude} retrieved successfully")
