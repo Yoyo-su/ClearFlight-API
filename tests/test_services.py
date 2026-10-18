@@ -2,6 +2,7 @@ import pytest
 from unittest import mock
 from app.services.aviationstack import get_airport_info
 from app.services.weatherstack import get_current_weather_info
+from app.services.redact import redact_request_error
 import requests
 
 
@@ -312,3 +313,159 @@ class TestWeatherStack:
         # Ensure cache was checked and response was cached
         mock_check_cache.assert_called_once()
         mock_cache_response.assert_called_once_with("mock_cache_key", mock_response)
+
+
+"""
+Test suite for provider request guards (timeouts, HTTP and body errors)
+"""
+
+PROVIDERS = [
+    pytest.param(
+        "app.services.aviationstack",
+        lambda: get_airport_info(airport_code="JFK"),
+        TestAviationStack.test_response,
+        id="aviationstack",
+    ),
+    pytest.param(
+        "app.services.weatherstack",
+        lambda: get_current_weather_info("40.642334", "-73.78817"),
+        TestWeatherStack.test_response,
+        id="weatherstack",
+    ),
+]
+
+
+@pytest.mark.describe("Provider Request Guard Tests")
+@pytest.mark.parametrize("module, call, valid_response", PROVIDERS)
+class TestProviderGuards:
+    @pytest.mark.it("provider request uses the configured timeout")
+    def test_request_uses_timeout(self, module, call, valid_response):
+        with mock.patch(f"{module}.requests.get") as mock_get, mock.patch(
+            f"{module}.settings.PROVIDER_TIMEOUT", 2.5
+        ):
+            mock_get.return_value.json.return_value = valid_response
+            call()
+        assert mock_get.call_args.kwargs["timeout"] == 2.5
+
+    @pytest.mark.it("provider timeout propagates and nothing is cached")
+    def test_timeout_not_cached(self, module, call, valid_response):
+        with mock.patch(f"{module}.requests.get") as mock_get, mock.patch(
+            f"{module}.cache_response"
+        ) as mock_cache:
+            mock_get.side_effect = requests.exceptions.Timeout("timed out")
+            with pytest.raises(requests.exceptions.Timeout):
+                call()
+        mock_cache.assert_not_called()
+
+    @pytest.mark.it("provider HTTP error status propagates and nothing is cached")
+    def test_http_error_not_cached(self, module, call, valid_response):
+        with mock.patch(f"{module}.requests.get") as mock_get, mock.patch(
+            f"{module}.cache_response"
+        ) as mock_cache:
+            mock_get.return_value.raise_for_status.side_effect = (
+                requests.exceptions.HTTPError("503 Server Error")
+            )
+            with pytest.raises(requests.exceptions.HTTPError):
+                call()
+        mock_cache.assert_not_called()
+        mock_get.return_value.json.assert_not_called()
+
+    @pytest.mark.it("provider error body raises ValueError and nothing is cached")
+    def test_error_body_not_cached(self, module, call, valid_response):
+        error_body = {
+            "success": False,
+            "error": {"code": "invalid_access_key", "info": "Invalid key"},
+        }
+        with mock.patch(f"{module}.requests.get") as mock_get, mock.patch(
+            f"{module}.cache_response"
+        ) as mock_cache:
+            mock_get.return_value.json.return_value = error_body
+            with pytest.raises(ValueError, match="invalid_access_key"):
+                call()
+        mock_cache.assert_not_called()
+
+    @pytest.mark.it("provider request still works when no cache key is generated")
+    def test_missing_cache_key(self, module, call, valid_response):
+        with mock.patch(f"{module}.requests.get") as mock_get, mock.patch(
+            f"{module}.get_cache_key", return_value=None
+        ), mock.patch(f"{module}.check_cache") as mock_check, mock.patch(
+            f"{module}.cache_response"
+        ) as mock_cache:
+            mock_get.return_value.json.return_value = valid_response
+            assert call() == valid_response
+        mock_check.assert_not_called()
+        mock_cache.assert_not_called()
+
+    @pytest.mark.it("provider request errors never expose the access key")
+    @pytest.mark.parametrize(
+        "error_type, message",
+        [
+            (
+                requests.exceptions.HTTPError,
+                "401 Client Error: Unauthorized for url: "
+                "https://api.example.com/v1?access_key=leaked-key&query=JFK",
+            ),
+            (
+                requests.exceptions.ConnectionError,
+                "HTTPSConnectionPool(host='api.example.com', port=443): Max retries "
+                "exceeded with url: /v1?access_key=leaked-key (Caused by ...)",
+            ),
+        ],
+        ids=["http-error", "connection-error"],
+    )
+    def test_request_error_redacts_access_key(
+        self, module, call, valid_response, error_type, message, capsys
+    ):
+        with mock.patch(f"{module}.requests.get") as mock_get:
+            mock_get.return_value.raise_for_status.side_effect = error_type(message)
+            with pytest.raises(error_type) as excinfo:
+                call()
+        assert "leaked-key" not in str(excinfo.value)
+        assert "access_key=[REDACTED]" in str(excinfo.value)
+        assert excinfo.value.__suppress_context__
+        assert "leaked-key" not in capsys.readouterr().out
+
+    @pytest.mark.it("malformed provider JSON raises JSONDecodeError, nothing cached")
+    def test_malformed_json_not_cached(self, module, call, valid_response):
+        html_response = requests.models.Response()
+        html_response.status_code = 200
+        html_response._content = b"<html>Service unavailable</html>"
+        with mock.patch(
+            f"{module}.requests.get", return_value=html_response
+        ), mock.patch(f"{module}.cache_response") as mock_cache:
+            with pytest.raises(requests.exceptions.JSONDecodeError):
+                call()
+        mock_cache.assert_not_called()
+
+
+"""
+Test suite for request error redaction
+"""
+
+
+@pytest.mark.describe("Request Error Redaction Tests")
+class TestRedactRequestError:
+    @pytest.mark.it("redact_request_error masks access_key and the given secret")
+    def test_redacts_query_and_secret(self):
+        error = requests.exceptions.HTTPError(
+            "403 for url: https://api.example.com/v1?access_key=abc123&q=1 (abc123)"
+        )
+        redacted = redact_request_error(error, "abc123")
+        assert isinstance(redacted, requests.exceptions.HTTPError)
+        assert "abc123" not in str(redacted)
+        assert "access_key=[REDACTED]&q=1" in str(redacted)
+
+    @pytest.mark.it("redact_request_error leaves messages without credentials intact")
+    def test_leaves_safe_message(self):
+        error = requests.exceptions.Timeout("Read timed out. (read timeout=10)")
+        assert redact_request_error(error) is error
+
+    @pytest.mark.it("redact_request_error handles exceptions needing extra arguments")
+    def test_handles_json_decode_error(self):
+        error = requests.exceptions.JSONDecodeError("Expecting value", "<html>", 0)
+        assert redact_request_error(error, "abc123") is error
+        # If a credential does appear, fall back to a plain RequestException
+        error = requests.exceptions.JSONDecodeError("access_key=abc123", "<html>", 0)
+        redacted = redact_request_error(error, "abc123")
+        assert type(redacted) is requests.exceptions.RequestException
+        assert "abc123" not in str(redacted)

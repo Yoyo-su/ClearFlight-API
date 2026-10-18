@@ -26,15 +26,22 @@ example: `/airport/KJFK` or `/airport/JFK` (legacy prototype route; `/v1/airport
 
 This project uses GitHub Actions for continuous integration and deployment, the workflow automatically runs tests and checks. 
 
-The CI/CD pipeline is triggered on:
-  - Pushes to the main branch
+The CI pipeline (`CF_deploy.yaml`) is triggered on:
+  - Pushes to `main` and `pilot/**` branches
+  - Pull requests into `main`
 
 ### Continuous Integration  
 The run-tests job performs the following steps:
 
- - Configures the Python environment and installs dependancies
- - Runs python security, format and linting checks
+ - Configures the Python environment and installs dependencies
+ - Runs python security, format (`black --check`) and linting checks
  - Runs pytests and checks test coverage
+ - Audits dependencies for known vulnerabilities
+
+The docker-build job then builds the Docker image without publishing it. Tests mock all provider calls, so CI uses dummy API keys.
+
+### Release
+Publishing the Docker Hub image is handled separately by `release.yaml`, which publishes only for version tags (`v*`; a manual run must be started on such a tag), repeats the checks and uses the `release` GitHub environment.
 
 ### Local Setup
 Docker is used to run the API. To set it up, follow these steps:

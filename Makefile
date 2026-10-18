@@ -56,10 +56,14 @@ endif
 
 ## Run security test
 security-test:
-	$(BANDIT) -lll ./app/*.py ./tests/*.py
+	$(BANDIT) -ll -r ./app ./tests
 
-## Run the black code check
+## Run the black code check (non-mutating)
 run-black:
+	$(BLACK) --check ./app ./tests
+
+## Reformat code with black
+format:
 	$(BLACK) ./app ./tests
 
 ## Run the unit tests

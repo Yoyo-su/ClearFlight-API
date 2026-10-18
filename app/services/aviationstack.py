@@ -1,6 +1,7 @@
 import requests
 from app.core.config import settings
 from .cache import get_cache_key, check_cache, cache_response
+from .redact import redact_request_error
 
 # Load the AviationStack API key from environment variables
 as_api_key = settings.AVIATIONSTACK_API_KEY
@@ -48,6 +49,7 @@ def get_airport_info(airport_code: str = None, as_api_key: str = as_api_key):
             f"https://api.aviationstack.com/v1/airports?access_key={as_api_key}&{query}"
         )
         cache_key = get_cache_key(url)
+        cache_data = None
         if cache_key:
             # Check if the data is already cached
             cache_data = check_cache(cache_key)
@@ -58,9 +60,15 @@ def get_airport_info(airport_code: str = None, as_api_key: str = as_api_key):
         else:
             # Make the API request
             print("Making API request...")
-            response = requests.get(url)
+            response = requests.get(url, timeout=settings.PROVIDER_TIMEOUT)
+            response.raise_for_status()
             airport_info = response.json()
-            cache_response(cache_key, airport_info)
+            # AviationStack can report errors in the body of a 200 response
+            if "error" in airport_info:
+                error = airport_info.get("error") or {}
+                raise ValueError(f"AviationStack error: {error.get('code', 'unknown')}")
+            if cache_key:
+                cache_response(cache_key, airport_info)
 
         # If the response does not contain exactly one airport, raise an error
         if len(airport_info["data"]) != 1:
@@ -73,8 +81,10 @@ def get_airport_info(airport_code: str = None, as_api_key: str = as_api_key):
         return airport_info
 
     except requests.exceptions.RequestException as e:
-        print(f"Request error: {e}")
-        raise e
+        # Request errors include the URL, so remove the access key before logging
+        safe_error = redact_request_error(e, as_api_key)
+        print(f"Request error: {safe_error}")
+        raise safe_error from None
     except ValueError as e:
         print(f"Value error: {e}")
         raise e

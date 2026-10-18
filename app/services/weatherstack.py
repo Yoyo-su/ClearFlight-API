@@ -1,6 +1,7 @@
 import requests
 from app.core.config import settings
 from .cache import get_cache_key, check_cache, cache_response
+from .redact import redact_request_error
 
 # Load the WeatherStack API key from environment variables
 ws_api_key = settings.WEATHERSTACK_API_KEY
@@ -41,6 +42,7 @@ def get_current_weather_info(
         # Construct the URL with the query
         url = f"https://api.weatherstack.com/current?access_key={ws_api_key}&{query}"
         cache_key = get_cache_key(url)
+        cache_data = None
         if cache_key:
             # Check if the data is already cached
             cache_data = check_cache(cache_key)
@@ -51,17 +53,25 @@ def get_current_weather_info(
         else:
             # Make the API request
             print("Making API request...")
-            response = requests.get(url)
+            response = requests.get(url, timeout=settings.PROVIDER_TIMEOUT)
+            response.raise_for_status()
             weather_info = response.json()
-            cache_response(cache_key, weather_info)
+            # WeatherStack can report errors in the body of a 200 response
+            if weather_info.get("success") is False or "error" in weather_info:
+                error = weather_info.get("error") or {}
+                raise ValueError(f"WeatherStack error: {error.get('code', 'unknown')}")
+            if cache_key:
+                cache_response(cache_key, weather_info)
 
         # If the response is valid, return the weather information
         print(f"weather info for {latitude}, {longtitude} retrieved successfully")
         return weather_info
 
     except requests.exceptions.RequestException as e:
-        print(f"Request error: {e}")
-        raise e
+        # Request errors include the URL, so remove the access key before logging
+        safe_error = redact_request_error(e, ws_api_key)
+        print(f"Request error: {safe_error}")
+        raise safe_error from None
     except ValueError as e:
         print(f"Value error: {e}")
         raise e

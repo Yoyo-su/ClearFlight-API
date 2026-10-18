@@ -8,9 +8,12 @@ services:
     environment:
       AVIATIONSTACK_API_KEY: ${AVIATIONSTACK_API_KEY:-}
       WEATHERSTACK_API_KEY: ${WEATHERSTACK_API_KEY:-}
+      # Optional hosted Redis (e.g. rediss://...); when set it overrides REDIS_HOST/REDIS_PORT.
+      REDIS_URL: ${REDIS_URL:-}
       REDIS_HOST: redis
       REDIS_PORT: "6379"
       CACHE_EXPIRE: "${CACHE_EXPIRE:-3600}"
+      PROVIDER_TIMEOUT: "${PROVIDER_TIMEOUT:-10}"
     depends_on:
       - redis
   redis:
