@@ -1,18 +1,20 @@
 services:
   clearflightapi:
-    image: clearflightapi
     build:
       context: .
-      dockerfile: ./Dockerfile
+      dockerfile: Dockerfile
     ports:
-      - 8000:8000
+      - "127.0.0.1:8000:8000"
     environment:
-      - AVIATIONSTACK_API_KEY=${AVIATIONSTACK_API_KEY}
-      - WEATHERSTACK_API_KEY=${WEATHERSTACK_API_KEY}
+      AVIATIONSTACK_API_KEY: ${AVIATIONSTACK_API_KEY:-}
+      WEATHERSTACK_API_KEY: ${WEATHERSTACK_API_KEY:-}
+      REDIS_HOST: redis
+      REDIS_PORT: "6379"
+      CACHE_EXPIRE: "${CACHE_EXPIRE:-3600}"
     depends_on:
       - redis
   redis:
-    image: redis:latest
-    container_name: redis-cache
-    ports:
-      - 6379:6379
+    image: redis:7-alpine
+    # Internal Compose network only. Never publish Redis on the host.
+    expose:
+      - "6379"

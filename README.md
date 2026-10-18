@@ -9,9 +9,9 @@ An API which provides real-time traffic & weather information for airports, rout
 
 ## Endpoints
 ### GET /airport
-Fetches real-time weather and traffic information for a specified airport.
+Fetches airport metadata and weather information from the existing prototype providers. Live airport traffic is not yet implemented.
 
-example: `/airport?icao=KJFK` or `/airport?iata=JFK` 
+example: `/airport/KJFK` or `/airport/JFK` (legacy prototype route; `/v1/airports/{code}/conditions` is planned for the pilot) 
 
 <img width="386" height="629" alt="image" src="https://github.com/user-attachments/assets/c66bc2e2-2396-4c6a-ba16-ba8f4a1a2b04" />
 
@@ -51,20 +51,20 @@ Docker is used to run the API. To set it up, follow these steps:
    cd ClearFlight-API
    ```
 
-4. Check the docker-compose.yml file to ensure the configuration is correct. If you need to make changes, do so before building the image.
+4. Copy `.env.template` to `.env` and add your own API credentials. Inside Docker Compose Redis is reachable as `redis` (not `localhost`).
 
-5. Configure environment variables if necessary. You can create a `.env` file in the project root to manage sensitive information. Use the `.env.template` as a guide.
+5. Keep `.env` private. Do not commit API keys. Redis is internal to Docker Compose; only the API is bound to `127.0.0.1:8000`.
 
 6. Build and run the Docker container:
    ```bash
-   docker-compose up --build
+   docker compose up --build
    ```
 
 7. Access the API at `http://localhost:8000`. Status should be `ok` if everything is set up correctly.
 
 8. To stop the container, use:
    ```bash
-   docker-compose down
+   docker compose down
    ```
 
 ## Future Features
@@ -72,3 +72,7 @@ Docker is used to run the API. To set it up, follow these steps:
 - AI Advisor (GPT)
 - Predictive weather and traffic (ML)
 
+
+## Pilot development
+
+See [Development Plan v1.0](docs/development-plan.md) and [CF-001 recovery baseline](docs/cf-001-baseline.md). The pilot adds a traveller-facing airport weather dashboard, but is not yet publicly deployed.

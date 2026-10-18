@@ -5,6 +5,14 @@ from app.services.weatherstack import get_current_weather_info
 import requests
 
 
+@pytest.fixture(autouse=True)
+def isolated_cache():
+    """Service tests must not connect to Redis or reuse cached provider data."""
+    with mock.patch("app.services.cache.redis_client") as client:
+        client.get.return_value = None
+        yield client
+
+
 """
 Test suite for the AviationStack service
 """
