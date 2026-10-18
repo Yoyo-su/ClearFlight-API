@@ -8,4 +8,4 @@ Before substantial edits, inspect the current code and propose a short plan. Kee
 - Current scope and acceptance criteria: `docs/CURRENT_MILESTONE.md`. Also see `docs/ARCHITECTURE.md` and `docs/DECISIONS.md`.
 - Use the built-in Explore agent for codebase search. Delegate to `test-engineer` (tests only), `quality-reviewer` and `requirements-validator` (read-only) when useful.
 - Run `make run-checks` before declaring work complete.
-- Shared workflow: `~/projects/VIBE_CODING_WORKFLOW.md`.
+- Shared workflow: `~/projects/AI_DEV_WORKFLOW.md`.

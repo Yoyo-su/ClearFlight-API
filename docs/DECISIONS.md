@@ -21,7 +21,7 @@ Locked pilot decisions live in [development-plan.md §1](development-plan.md) an
 - **Decision:** CI builds the Docker image without pushing. Publishing happens only in `release.yaml` for `v*` tags, via the `release` GitHub environment.
 - **Why:** Avoid publishing images from every push, and gate releases.
 - **Source:** PR #11, `docs/cf-001-baseline.md`
-- **Status:** accepted (required reviewers on `release` still to be configured)
+- **Status:** accepted. Required reviewer (Yoyo-su) configured on `release` on 2026-10-18.
 
 ### D-002: Redis is internal to Docker Compose; hosted Redis via `REDIS_URL` (2026-10-18)
 - **Decision:** Do not publish Redis port 6379 on the host. Optional `REDIS_URL` (authenticated `rediss://`) overrides `REDIS_HOST`/`REDIS_PORT`.

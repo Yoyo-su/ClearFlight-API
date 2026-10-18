@@ -40,7 +40,7 @@ Related plan constraints:
 None recorded yet for CF-002.
 
 ## Carried over from CF-001 (issue #2 closed)
-- [ ] Configure required reviewers on the GitHub `release` environment (manual GitHub setting; see `docs/cf-001-baseline.md`).
+- [x] Configure required reviewers on the GitHub `release` environment (done 2026-10-18: reviewer Yoyo-su, self-review allowed).
 - Deferred to CF-004: mapping provider failures to 400/404/502/504, and removing API access keys from URLs hashed into cache keys.
 
 ## Risks / open questions
