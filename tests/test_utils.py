@@ -147,18 +147,11 @@ class TestLocalTimeCalc:
 
     @pytest.mark.it("local_time_calc returns correct local time")
     def test_local_time_calc_correctness(self):
-        utc_time, local_time = local_time_calc("-5")
-        utc_time_str = utc_time.strftime("%H")
-        local_time_str = local_time.strftime("%H")
-        assert int(local_time_str) == (int(utc_time_str) - 5)
-        utc_time, local_time = local_time_calc("2")
-        utc_time_str = utc_time.strftime("%H")
-        local_time_str = local_time.strftime("%H")
-        assert int(local_time_str) == (int(utc_time_str) + 2)
-        utc_time, local_time = local_time_calc(3)
-        utc_time_str = utc_time.strftime("%H")
-        local_time_str = local_time.strftime("%H")
-        assert int(local_time_str) == (int(utc_time_str) + 3)
+        # Comparing HH alone fails when an offset crosses midnight.
+        for offset in (-5, 2, 3):
+            utc_time, local_time = local_time_calc(str(offset))
+            assert local_time.utcoffset().total_seconds() == offset * 3600
+            assert local_time.astimezone(utc_time.tzinfo) == utc_time
 
     @pytest.mark.it("local_time_calc handles invalid inputs")
     def test_local_time_calc_invalid_inputs(self):
