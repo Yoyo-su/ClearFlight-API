@@ -3,7 +3,11 @@ name: ClearFlight-CI/CD
 on: 
   push:
     branches:
-      - main 
+      - main
+      - 'pilot/**'
+  pull_request:
+    branches:
+      - main
 
 jobs:
   run-tests:
