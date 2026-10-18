@@ -1,0 +1,8 @@
+# Install after requirements.txt; audited development and packaging tools.
+bandit==1.9.4
+black==26.10.1
+flake8==7.4.1
+pip-audit==2.10.1
+pytest-cov==7.1.0
+pip==26.2.1
+setuptools==83.0.0

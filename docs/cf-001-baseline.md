@@ -32,6 +32,26 @@ The airport lookup requires functional provider credentials. A local Docker buil
 
 ## CF-001 remaining
 
+### Dependency remediation verification — 18 October 2026
+
+Updated vulnerable application pins, including urllib3 2.8.0 and a compatible
+FastAPI 0.143.3 / Starlette 1.3.1 pair. `make dev-setup` now installs the pinned
+tools in `requirements-dev.txt`, including patched pip and setuptools.
+
+Verified locally on Python 3.13.1 in a fresh virtual environment, installed with
+`python -m pip install -r requirements.txt -r requirements-dev.txt`:
+
+- `python -m pip check`: no broken requirements.
+- `pip-audit`: no known vulnerabilities found (no advisory exclusions).
+- `pytest --cov=app tests/ -q` with dummy provider keys: 50 passed; 87% coverage.
+- Black check, Makefile lint and security checks: passed in the development environment.
+
+Service tests now mock Redis as well as provider HTTP calls. Routing regression
+tests cover IATA and ICAO lookups. Starlette emits a deprecation warning for the
+existing httpx test client integration; tests pass. No live provider calls,
+Docker build, hosted deployment or new GitHub Actions result were verified here.
+Audit results are time-specific; keep the CI audit enabled.
+
 - [ ] Rebuild Docker on a developer machine or CI, recording exact results.
 - [ ] Confirm tests, lint, dependency vulnerability audit and response handling.
 - [ ] Update HTTP timeouts and errors while preserving existing response shape.
