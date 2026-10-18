@@ -57,11 +57,14 @@ Audit results are time-specific; keep the CI audit enabled.
 Branch `pilot/cf-001-hardening`, from `main` at `7d51986`.
 
 - Provider calls use a configurable `PROVIDER_TIMEOUT` (default 10 s), check the
-  HTTP status, reject error bodies from 200 responses, and never cache failed
-  responses. A missing cache key no longer raises `UnboundLocalError`. The
-  `/airport/{airport_code}` success response is unchanged.
+  HTTP status, reject error bodies from 200 responses, and do not cache HTTP
+  errors, recognized provider error bodies or invalid JSON. Valid JSON that is
+  missing required fields can still be cached. A missing cache key no longer
+  raises `UnboundLocalError`. The `/airport/{airport_code}` success response is
+  unchanged.
 - Optional `REDIS_URL` (for example an authenticated `rediss://` URL) overrides
-  `REDIS_HOST`/`REDIS_PORT`. Local Compose is unchanged.
+  `REDIS_HOST`/`REDIS_PORT`. Without it, local Compose uses the internal
+  `redis` service.
 - `make run-black` is now a non-mutating `black --check` (`make format` reformats).
   `make security-test` scans `app/` and `tests/` recursively at medium severity
   and above; the previous run missed `requests` calls without timeouts (B113).
@@ -101,11 +104,12 @@ Review fixes (PR #11):
 Not verified here: a GitHub Actions run of the release workflow, live provider
 lookups (`/airport/EGLL`) and a hosted Redis connection.
 
-- [x] Rebuild Docker on a developer machine or CI, recording exact results (local; CI run pending).
+- [x] Rebuild Docker on a developer machine or CI, recording exact results (local and CI).
 - [x] Confirm tests, lint, dependency vulnerability audit and response handling.
 - [x] Update HTTP timeouts and errors while preserving existing response shape.
-- [x] Move Docker Hub publishing to a separately gated release workflow.
-- [x] Finalise an opt-in hosted `REDIS_URL` with authenticated TLS (hosted connection verified in CF-006).
+- [ ] Move Docker Hub publishing to a separately gated release workflow (workflow
+  added; required reviewers on the `release` environment still to be configured).
+- [x] Finalise an opt-in hosted `REDIS_URL` with authenticated TLS (hosted connection to be verified in CF-006).
 - [x] Fix README setup/endpoint mismatch.
 
 Deferred to CF-004: mapping provider failures to 400/404/502/504 responses, and
