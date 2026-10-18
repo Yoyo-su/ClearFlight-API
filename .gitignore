@@ -10,3 +10,7 @@ dev.txt
 .env
 testfiles
 htmlcov
+
+# Local-only AI agent instructions
+CLAUDE.md
+AGENTS.md
