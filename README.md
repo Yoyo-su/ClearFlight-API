@@ -35,7 +35,7 @@ The run-tests job performs the following steps:
 
  - Configures the Python environment and installs dependencies
  - Runs python security, format (`black --check`) and linting checks
- - Runs pytests and enforces at least 80% branch test coverage
+ - Runs pytests and enforces at least 80% test coverage (branch-aware)
  - Audits dependencies for known vulnerabilities
 
 The docker-build job then builds the Docker image without publishing it. Tests mock all provider calls, so CI uses dummy API keys.

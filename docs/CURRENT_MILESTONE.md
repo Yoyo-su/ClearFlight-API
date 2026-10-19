@@ -49,7 +49,7 @@ None recorded yet for CF-002.
 
 ## Follow-ups (discovered, not in scope)
 - `docs/development-plan.md` §6 still shows CF-001 task checkboxes unticked, although issue #2 is closed. `docs/cf-001-baseline.md` has the actual status.
-- **Test task (test-engineer):** `app/api/airport.py` has 18% branch coverage (lines 30-44 and 61-114 untested; 2026-10-19), although the repo total is 92%. Delegate to the `test-engineer` agent (tests/ only, mocked providers): cover the airport-profile handler's success path and its `ValueError` and unexpected-error paths. If CF-002 replaces this module, test the replacement instead.
+- **Test task (test-engineer):** `app/api/airport.py` has 18% statement coverage (it has no branches; lines 30-44 of `airport_query` and 61-114 of `generate_airport_profile` untested; 2026-10-19), although the repo total is 92%. Delegate to the `test-engineer` agent (tests/ only, mocked providers): cover `airport_query`'s success path and its `ValueError` and unexpected-error paths, and `generate_airport_profile`'s output and its own exception path. If CF-002 replaces this module, test the replacement instead.
 
 ## Next task
 Branch `feat/cf-002-airport-catalogue` from `main`, then plan the OurAirports import and timezone approach for approval.

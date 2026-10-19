@@ -69,7 +69,7 @@ format:
 ## Run the unit tests
 unit-test:
 	$(PYTEST) --testdox -vvv
-## Run the coverage check (fails below 80% branch coverage, D-004)
+## Run the coverage check (branch-aware total; fails below 80%, D-004)
 check-coverage:
 	$(PYTEST) --cov=app --cov-branch --cov-report=term-missing --cov-fail-under=80 tests/
 
