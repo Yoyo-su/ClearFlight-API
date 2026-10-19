@@ -17,6 +17,13 @@ Locked pilot decisions live in [development-plan.md §1](development-plan.md) an
 
 ## Entries
 
+### D-004: Test suite must keep at least 80% coverage, branch-aware (2026-10-19)
+- **Decision:** `make check-coverage` (part of `make run-checks`, so also CI) measures `app/` with `--cov-branch` and fails when the total is below 80% (`--cov-fail-under=80`). The total is coverage.py's total with branch measurement on, which counts executed statements and branch outcomes together; it is not a separate branch-only threshold. By review convention, not enforced by the gate, pull requests should not lower total coverage (note before/after in the PR), and exclusions (`# pragma: no cover`) need a stated reason.
+- **Why:** Owner's standard for all Python projects. Coverage was reported but never enforced (statement-only: 89% at CF-001 close, 90% later; branch-aware: 91.62% on 2026-10-19, with no partial branches), so a large regression could merge unnoticed. This is a repository-wide floor; the plan §7 pilot gate still applies on top (≥80% for new transformation/scoring logic, with meaningful tests prioritised over the single number).
+- **Alternatives considered:** Keep coverage report-only (no protection against regressions); a higher gate (would push towards tests written for the number); a separate branch-only threshold (needs extra tooling; branch coverage is already near 100%).
+- **Source:** Owner instruction, 2026-10-19; PR #14.
+- **Status:** accepted 2026-10-19 by project owner.
+
 ### D-003: Docker Hub publishing only from version tags (2026-10-18)
 - **Decision:** CI builds the Docker image without pushing. Publishing happens only in `release.yaml` for `v*` tags, via the `release` GitHub environment.
 - **Why:** Avoid publishing images from every push, and gate releases.
