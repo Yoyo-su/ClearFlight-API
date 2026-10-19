@@ -74,6 +74,18 @@ Docker is used to run the API. To set it up, follow these steps:
    docker compose down
    ```
 
+### Running the checks locally
+`make run-checks` runs the same checks as CI (bandit, black, flake8, pytest, the coverage gate and pip-audit). It needs Python 3.13 available as `python`.
+
+```bash
+make requirements dev-setup   # creates ./venv and installs dependencies
+export PYTHONPATH=$PWD        # lets the tests import the app package, as CI does
+export AVIATIONSTACK_API_KEY=ci-dummy-key WEATHERSTACK_API_KEY=ci-dummy-key
+make run-checks
+```
+
+The tests mock the providers, so dummy keys are enough, and no real credentials are needed. Without the keys (or a `.env`), test collection fails with a settings validation error. Without `PYTHONPATH`, it fails with `ModuleNotFoundError: No module named 'app'`. If the project directory is moved, recreate `venv` (`rm -rf venv && make requirements dev-setup`), because a virtual environment's paths are fixed when it is created.
+
 ## Future Features
 - Visual dashboard
 - AI Advisor (GPT)
