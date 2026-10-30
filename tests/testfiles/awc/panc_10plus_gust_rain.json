@@ -1,0 +1,37 @@
+[
+ {
+  "icaoId": "PANC",
+  "receiptTime": "2026-10-30T06:56:45.206Z",
+  "obsTime": 1793343180,
+  "reportTime": "2026-10-30T07:00:00.000Z",
+  "temp": 6.1,
+  "dewp": 0.6,
+  "wdir": 140,
+  "wspd": 15,
+  "wgst": 33,
+  "visib": "10+",
+  "altim": 1000.4,
+  "slp": 1000.5,
+  "qcField": 12,
+  "wxString": "-RA",
+  "precip": 0.005,
+  "metarType": "METAR",
+  "rawOb": "METAR PANC 300653Z 14015G33KT 10SM -RA BKN044 OVC070 06/01 A2954 RMK AO2 PK WND 15033/0643 SLP005 P0000 T00610006 $",
+  "lat": 61.1691,
+  "lon": -150.0277,
+  "elev": 39,
+  "name": "Anchorage Intl, AK, US",
+  "cover": "OVC",
+  "clouds": [
+   {
+    "cover": "BKN",
+    "base": 4400
+   },
+   {
+    "cover": "OVC",
+    "base": 7000
+   }
+  ],
+  "fltCat": "VFR"
+ }
+]

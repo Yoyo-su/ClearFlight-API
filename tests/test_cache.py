@@ -91,7 +91,10 @@ class TestCache:
         with mock.patch("app.services.cache.redis.Redis") as mock_redis:
             create_redis_client(config)
         mock_redis.from_url.assert_called_once_with(
-            "rediss://user:secret@example.com:6380", decode_responses=True
+            "rediss://user:secret@example.com:6380",
+            decode_responses=True,
+            socket_connect_timeout=1,
+            socket_timeout=1,
         )
         mock_redis.assert_not_called()
 
@@ -101,7 +104,11 @@ class TestCache:
         with mock.patch("app.services.cache.redis.Redis") as mock_redis:
             create_redis_client(config)
         mock_redis.assert_called_once_with(
-            host="redis", port=6379, decode_responses=True
+            host="redis",
+            port=6379,
+            decode_responses=True,
+            socket_connect_timeout=1,
+            socket_timeout=1,
         )
         mock_redis.from_url.assert_not_called()
 
@@ -112,11 +119,20 @@ class TestCache:
         with mock.patch("app.services.cache.redis.Redis") as mock_redis:
             create_redis_client(config)
         mock_redis.assert_called_once_with(
-            host="redis", port=6379, decode_responses=True
+            host="redis",
+            port=6379,
+            decode_responses=True,
+            socket_connect_timeout=1,
+            socket_timeout=1,
         )
         mock_redis.from_url.assert_not_called()
 
     @pytest.mark.it("check_cache returns None when Redis is unavailable")
     def test_check_cache_redis_error(self, mock_client):
         mock_client.get.side_effect = redis.ConnectionError("Redis down")
+        assert check_cache("test_cache_key") is None
+
+    @pytest.mark.it("check_cache treats a value that isn't JSON as a miss")
+    def test_check_cache_malformed_json(self, mock_client):
+        mock_client.get.return_value = "{not json"
         assert check_cache("test_cache_key") is None

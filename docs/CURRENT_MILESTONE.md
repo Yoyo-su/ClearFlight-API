@@ -1,65 +1,72 @@
-# Current milestone: CF-002 Airport catalogue
+# Current milestone: CF-003 METAR weather adapter
 
-**Status:** In review (branch `feat/cf-002-airport-catalogue`; PR pending)
-**Source of truth:** [docs/development-plan.md](development-plan.md), §5 roadmap and §7 acceptance gates
-**Tracking:** [GitHub issue #3](https://github.com/Yoyo-su/ClearFlight-API/issues/3)
-**Target window / estimate:** 26 Oct – 1 Nov 2026 · ~8 h
+**Status:** In review (branch `feat/cf-003-metar-adapter`; PR pending)
+**Source of truth:** [docs/development-plan.md](development-plan.md), §3 weather and cache policy, §4 errors, §5 roadmap
+**Tracking:** [GitHub issue #4](https://github.com/Yoyo-su/ClearFlight-API/issues/4)
+**Target window / estimate:** 2–8 Nov 2026 · ~10 h
 **Last updated:** 2026-10-30
 
 ## Goal
-Travellers' airport lookups are backed by a local OurAirports catalogue with validated IANA timezones, searchable by IATA, ICAO, name and city.
+A provider adapter fetches Aviation Weather Center METAR observations, normalises them with honest missing values, and reports their source, observation time and freshness. Provider failures are handled and the provider is protected by caching and a rate cap.
 
-## Scope (from plan §5 and issue #3)
-- Import OurAirports metadata.
-- Index IATA / ICAO / name / city for search.
-- Validate IDs and the IANA timezone mapping, including DST, for the pilot airports EGLL, RJBB and KJFK.
+## Scope (from plan §5 and issue #4)
+- AWC METAR adapter with normalised parsing and handling of missing fields.
+- Timeout, retry/backoff, a rate cap and typed provider errors.
+- Caching, with `observed_at` kept separate from `fetched_at`, and freshness classification.
+- Recorded fixtures plus live smoke lookups for EGLL, RJBB and KJFK.
 
 ## Out of scope
-- METAR weather adapter (CF-003), conditions index and v1 response models (CF-004), frontend (CF-005), deployment (CF-006).
-- Everything in plan §2 "Explicitly deferred".
+- The public `/v1/airports/{code}/conditions` endpoint, response models, HTTP status mapping and the conditions index (CF-004). CF-004 builds them on this adapter, using the error-to-status mapping in D-006.
+- Frontend (CF-005), deployment (CF-006).
 
-## Acceptance criteria (issue #3)
-- [x] Search endpoint works; timezone/DST tests pass.
-- [x] Relevant automated checks pass and user-visible errors are covered.
+## Acceptance criteria (issue #4)
+- [x] Mocked fixtures and live smoke lookups pass; no synthetic observations; missing data handled.
+- [x] Relevant automated checks pass and user-visible errors are covered (as typed adapter errors; the HTTP mapping is CF-004).
 - [x] README / API contract updated where applicable.
 - [ ] Work delivered in a PR from a separate branch; do not commit directly to main. (Branch ready; PR not yet opened.)
 
-Plan exit evidence: "Search endpoints and timezone tests pass for 3 pilot airports."
-
-Related plan constraints:
-- Use IANA timezone IDs, never a fixed GMT offset. Derive or cross-check from coordinates and a maintained mapping (plan §3).
-- Proposed route: `GET /v1/airports/search?q=...`. Invalid search returns 400, no result returns a clear empty or 404 state (plan §4).
-- Preserve the legacy `/airport/{airport_code}` route for now.
+Plan exit evidence: "Mocked/recorded fixtures pass; real smoke lookups demonstrate source/age."
 
 ## Tasks
 | ID | Task | Status | PR |
 |---|---|---|---|
-| CF-002.1 | Import script + committed OurAirports snapshot with IANA zones (D-005) | Done | |
-| CF-002.2 | In-memory catalogue: lookup by IATA/ICAO, ranked search | Done | |
-| CF-002.3 | `GET /v1/airports/search` with 400/empty states; startup validation | Done | |
-| CF-002.4 | Pilot timezone, DST and snapshot integrity tests | Done | |
-| CF-002.5 | README, ARCHITECTURE, DECISIONS (D-005) | Done | |
+| CF-003.1 | Observation model, normalisation and validity rules (D-006) | Done | |
+| CF-003.2 | AWC requests: User-Agent, timeout, one retry with backoff, typed errors | Done | |
+| CF-003.3 | Rate cap, Redis cache (incl. "no report"), freshness | Done | |
+| CF-003.4 | Cache helper hardening (malformed JSON, Redis timeouts); Compose settings | Done | |
+| CF-003.5 | Recorded fixtures, tests, live smoke script | Done | |
+| CF-003.6 | README, ARCHITECTURE, DECISIONS (D-006) | Done | |
 
 ## Verification evidence
-- 2026-10-30: `make run-checks` passes: 170 tests, total coverage 95.60% branch-aware (92% on `main` before), no known vulnerabilities after bumping `certifi` and `setuptools` for new advisories. Docker image rebuilt; the search endpoint was smoke-tested in the container.
-- Reviews, round 1: quality-reviewer "ready with minor fixes" (1 Medium refuted for the current image, but `tzdata` was added as a fallback; 3 Low fixed, 1 not changed); Codex "ready with minor fixes" (1 Low: the snapshot and metadata moves aren't atomic as a pair; documented and tested; import-script tests added); requirements-validator "ready to open the PR" (attribution line and endpoint code tests added).
-- Snapshot: 11,251 airports from the 2026-10-30 OurAirports export; 3 without a timezone (PLPA, SCGC, SCPZ); 1 override (YBCG).
-- Pilot zones: EGLL Europe/London, RJBB Asia/Tokyo, KJFK America/New_York. They match the AviationStack trial and OpenFlights; the DST changeovers for 2026 are tested.
-- Cross-check against OpenFlights: same January/July offsets for 5,312 of 5,365 shared airports. The differences are mostly OpenFlights' stale data; see D-005.
-
-## Carried over from CF-001 (issue #2 closed)
-- [x] Configure required reviewers on the GitHub `release` environment (done 2026-10-18: reviewer Yoyo-su, self-review allowed).
-- Deferred to CF-004: mapping provider failures to 400/404/502/504, and removing API access keys from URLs hashed into cache keys.
+- 2026-10-30 live smoke (`scripts/metar_smoke.py`), source "Aviation Weather Center":
+  - EGLL observed 07:20Z, 35 min old, current.
+  - RJBB observed 07:30Z, 25 min old, current.
+  - KJFK observed 06:51Z, 64 min old, current.
+  - ZZZZ returned "no report available"; `LHR` was rejected as an invalid station code.
+  - With Redis unreachable, lookups fell back to the provider.
+- `make run-checks` passes: 261 tests, total coverage 97.21% branch-aware (95.60% before), pip-audit clean. A copy containing only the files git would commit also passes, so the fixtures reach CI. In the container, the forwarded settings were confirmed and a repeat lookup was a cache hit (TTL 600 s).
+- Reviews (3 rounds, the workflow cap):
+  - Round 1: Codex 1 High (fixtures ignored by `.gitignore`) and 2 Medium (crashes on malformed values); quality-reviewer 1 Medium; requirements-validator gaps.
+  - Round 2: Codex 2 Medium (unknown ceiling height, huge integers); quality-reviewer 1 Medium (`Retry-After: nan`).
+  - Round 3 (scoped): 1 Medium (rule precedence).
+  - All confirmed findings are fixed and tested; no High is open.
+- Recorded fixtures (AWC, 2026-10-30) cover the pilot stations, MPS wind with gusts (ZBAA), an obscured sky with fog (EGKK), variable wind with CAVOK (LEMD), an automated no-cloud SPECI (YSSY), `10+` visibility with gusts and rain (PANC), and a garbled report (DNMM).
 
 ## Risks / open questions
-- Choice of timezone derivation source (dependency or dataset), which needs a decision recorded in `docs/DECISIONS.md`.
-- How the OurAirports data is stored and refreshed (build-time import vs. committed snapshot).
+- Visibility arrives in statute miles, so metric reports lose a little precision (1300 m → 1304 m; 150 m → 145 m). Accepted in plan r2.
+- Worst-case lookup latency is about 2 × `PROVIDER_TIMEOUT` (10 s) + backoff ≈ 21 s; CF-004 may want a shorter METAR timeout.
+- The rate cap is per process (gunicorn runs one worker). A shared limit is needed before scaling out (CF-006).
+- A few airports' ICAO codes differ from their METAR station IDs; airports without an ICAO code have no METAR. CF-004 shows these as unavailable.
+
+## Previous milestone
+CF-002 airport catalogue: done. PR #16 merged 2026-10-30 (`618c726`), issue #3 closed. Evidence is in the PR.
 
 ## Follow-ups (discovered, not in scope)
 - Search relevance: ties are broken alphabetically, so "london" lists Gatwick before Heathrow, and "kennedy" ranks Gahcho Kue (city "Kennedy Lake") above JFK. Consider ranking airports with scheduled service higher (OurAirports `scheduled_service`) before the CF-005 frontend.
-- The legacy `/airport/{code}` route fails against the AviationStack trial (each airport is returned twice; owner decided 2026-10-30 not to fix it). Replace it with the catalogue in CF-004.
+- The legacy `/airport/{code}` route fails against the AviationStack trial (each airport is returned twice; owner decided 2026-10-30 not to fix it). Replace it with the catalogue and METAR adapter in CF-004.
+- Carried over from CF-001 (`docs/cf-001-baseline.md`), now for CF-004: map provider failures to 400/404/502/504, and remove API access keys from URLs that are hashed into cache keys (legacy AviationStack/WeatherStack services).
 - `docs/development-plan.md` §6 still shows CF-001 task checkboxes unticked, although issue #2 is closed. `docs/cf-001-baseline.md` has the actual status.
-- **Test task (test-engineer):** `app/api/airport.py` has 18% statement coverage (it has no branches; lines 30-44 of `airport_query` and 61-114 of `generate_airport_profile` untested; 2026-10-19), although the repo total is 92%. Delegate to the `test-engineer` agent (tests/ only, mocked providers): cover `airport_query`'s success path and its `ValueError` and unexpected-error paths, and `generate_airport_profile`'s output and its own exception path. If CF-002 replaces this module, test the replacement instead.
+- **Test task (test-engineer):** `app/api/airport.py` (legacy route) has low statement coverage. If CF-004 replaces the legacy route, test the replacement instead.
 
 ## Next task
-Reviews (quality-reviewer, Codex, requirements-validator), then open the CF-002 PR.
+Reviews (quality-reviewer, Codex, requirements-validator), then open the CF-003 PR.

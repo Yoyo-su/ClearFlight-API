@@ -1,0 +1,24 @@
+[
+ {
+  "icaoId": "LEMD",
+  "receiptTime": "2026-10-30T07:34:11.235Z",
+  "obsTime": 1793345400,
+  "reportTime": "2026-10-30T07:30:00.000Z",
+  "temp": 10,
+  "dewp": 7,
+  "wdir": "VRB",
+  "wspd": 2,
+  "visib": "6+",
+  "altim": 1021,
+  "qcField": 16,
+  "metarType": "METAR",
+  "rawOb": "METAR LEMD 300730Z VRB02KT CAVOK 10/07 Q1021 NOSIG",
+  "lat": 40.466,
+  "lon": -3.555,
+  "elev": 589,
+  "name": "Madrid/Barajas Arpt, M, ES",
+  "cover": "CAVOK",
+  "clouds": [],
+  "fltCat": "VFR"
+ }
+]

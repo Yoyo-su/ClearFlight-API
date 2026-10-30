@@ -114,6 +114,30 @@ make run-checks
 
 The tests mock the providers, so dummy keys are enough, and no real credentials are needed. Without the keys (or a `.env`), test collection fails with a settings validation error. Without `PYTHONPATH`, it fails with `ModuleNotFoundError: No module named 'app'`. If the project directory is moved, recreate `venv` (`rm -rf venv && make requirements dev-setup`), because a virtual environment's paths are fixed when it is created.
 
+### METAR observations
+`app/services/metar.py` fetches the latest METAR observation for a station from the [Aviation Weather Center](https://aviationweather.gov/data/api/) data API. It is used internally; the public conditions endpoint comes in CF-004.
+- **Observation fields:**
+  - `observed_at` comes from the observation itself, not the report time; `fetched_at` is when the provider was called.
+  - `raw_text`, temperature and dew point (°C).
+  - Wind direction (null when variable, with `wind_variable`), speed and gust in knots.
+  - Visibility in metres, converted from statute miles. `visibility_at_least` marks values such as `10+`.
+  - `sky_condition` (`clear`, `cavok`, `clouds`, `obscured`, `unknown`), cloud layers, and `ceiling_ft` (the lowest broken or overcast layer). A null `ceiling_ft` means "no ceiling" only when `sky_condition` is `clear`, `cavok` or `clouds`; when it's `obscured` or `unknown` (including a broken or overcast layer whose height wasn't reported), the ceiling is unknown.
+  - `pressure_hpa` and weather codes (e.g. `-RA`, `BR`).
+- Missing or implausible values are `null`; nothing is defaulted or guessed.
+- **Freshness** (computed on every read): `current` up to `METAR_CURRENT_MAX_MINUTES` (90), `stale` up to `METAR_STALE_MAX_MINUTES` (180), then `expired`.
+- **Provider protection:**
+  - Observations are cached in Redis for `METAR_CACHE_TTL` (600 s), and "no report" for `METAR_NO_DATA_CACHE_TTL` (300 s).
+  - Requests send `METAR_USER_AGENT` and are capped at `METAR_RATE_LIMIT_PER_MINUTE` (30) per process.
+  - One retry with a short backoff on timeouts, 429 and 5xx (worst case about 2 × `PROVIDER_TIMEOUT` + 1 s).
+  - If Redis is unavailable, lookups go to the provider, still under the cap.
+- **Errors:** `MetarTimeout`, `MetarUpstreamError` and `MetarRateLimited`, each with a machine-readable `reason` (see D-006). A station without a report returns `None`, not an error.
+
+Live check for the pilot airports (real requests; not part of CI):
+```bash
+python scripts/metar_smoke.py            # EGLL, RJBB, KJFK
+python scripts/metar_smoke.py EGKK LFPG  # other stations
+```
+
 ### Updating the airport catalogue
 `app/data/airports.csv` is built from [OurAirports](https://ourairports.com/data/) by `scripts/import_ourairports.py`, which also derives each airport's IANA timezone from its coordinates with `timezonefinder`. The script and its dependencies are not needed to run the API or the tests. To refresh the snapshot:
 ```bash
@@ -122,7 +146,7 @@ python -m venv .venv-import && .venv-import/bin/pip install -r requirements.txt 
 ```
 The new snapshot is validated first (codes, coordinates, timezone IDs, the three pilot airports, and a row count within 10% of the current one; pass `--allow-size-change` to accept a bigger change). If validation fails, the current files are left unchanged. `app/data/airports.meta.json` records the source, date, library versions and airports without a timezone. To correct an airport's timezone, add a row to `app/data/timezone_overrides.csv` and rerun the script. Review the diff before committing.
 
-Data sources: airport data from [OurAirports](https://ourairports.com/data/) (public domain); timezone boundaries via [timezonefinder](https://github.com/jannikmi/timezonefinder) (MIT) and [timezone-boundary-builder](https://github.com/evansiroky/timezone-boundary-builder) (ODbL); timezone rules from the [IANA tz database](https://www.iana.org/time-zones).
+Data sources: airport data from [OurAirports](https://ourairports.com/data/) (public domain); timezone boundaries via [timezonefinder](https://github.com/jannikmi/timezonefinder) (MIT) and [timezone-boundary-builder](https://github.com/evansiroky/timezone-boundary-builder) (ODbL); timezone rules from the [IANA tz database](https://www.iana.org/time-zones); METAR observations from the [NOAA Aviation Weather Center](https://aviationweather.gov/) (US government data).
 
 ## Future Features
 - Visual dashboard

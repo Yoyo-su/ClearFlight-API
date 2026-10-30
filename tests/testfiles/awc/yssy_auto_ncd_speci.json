@@ -1,0 +1,24 @@
+[
+ {
+  "icaoId": "YSSY",
+  "receiptTime": "2026-10-30T07:45:04.023Z",
+  "obsTime": 1793346240,
+  "reportTime": "2026-10-30T07:44:00.000Z",
+  "temp": 21,
+  "dewp": 14,
+  "wdir": 40,
+  "wspd": 19,
+  "visib": "6+",
+  "altim": 1019,
+  "qcField": 2,
+  "metarType": "SPECI",
+  "rawOb": "SPECI YSSY 300744Z AUTO 04019KT 9999 // NCD 21/14 Q1019",
+  "lat": -33.946,
+  "lon": 151.173,
+  "elev": 3,
+  "name": "Sydney Intl, NS, AU",
+  "cover": "CLR",
+  "clouds": [],
+  "fltCat": "VFR"
+ }
+]

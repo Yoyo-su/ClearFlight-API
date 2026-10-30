@@ -9,6 +9,10 @@ dev.txt
 .vscode
 .env
 testfiles
+!tests/testfiles/
+tests/testfiles/*
+# Recorded provider responses used by the tests
+!tests/testfiles/awc/
 htmlcov
 
 # Local-only AI agent instructions
