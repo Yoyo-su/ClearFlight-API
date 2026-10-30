@@ -1,0 +1,25 @@
+[
+ {
+  "icaoId": "ZBAA",
+  "receiptTime": "2026-10-30T07:37:44.262Z",
+  "obsTime": 1793345400,
+  "reportTime": "2026-10-30T07:30:00.000Z",
+  "temp": 21,
+  "dewp": -6,
+  "wdir": 290,
+  "wspd": 16,
+  "wgst": 27,
+  "visib": "6+",
+  "altim": 1015,
+  "qcField": 16,
+  "metarType": "METAR",
+  "rawOb": "METAR ZBAA 300730Z 29008G14MPS CAVOK 21/M06 Q1015 NOSIG",
+  "lat": 40.082,
+  "lon": 116.603,
+  "elev": 31,
+  "name": "Beijing Intl, BJ, CN",
+  "cover": "CAVOK",
+  "clouds": [],
+  "fltCat": "VFR"
+ }
+]

@@ -14,12 +14,16 @@ def create_redis_client(config=settings):
     Returns:
         redis.Redis: A Redis client.
     """
+    # Short timeouts so an unreachable Redis can't stall requests; callers
+    # fall back to the provider when the cache fails.
+    timeouts = {"socket_connect_timeout": 1, "socket_timeout": 1}
     if config.REDIS_URL:
-        return redis.Redis.from_url(config.REDIS_URL, decode_responses=True)
+        return redis.Redis.from_url(config.REDIS_URL, decode_responses=True, **timeouts)
     return redis.Redis(
         host=config.REDIS_HOST,
         port=config.REDIS_PORT,
         decode_responses=True,
+        **timeouts,
     )
 
 
@@ -57,6 +61,7 @@ def check_cache(cache_key):
 
     Returns:
         dict or None: Returns the cached data as a dictionary if found, otherwise returns None.
+        A value that isn't valid JSON is treated as a miss.
     """
     try:
         # Check cache first
@@ -66,7 +71,7 @@ def check_cache(cache_key):
             return json.loads(cached_response)
         print("Cache miss!")
         return None
-    except redis.RedisError as e:
+    except (redis.RedisError, ValueError) as e:
         print(f"Error checking cache: {e}")
         return None
 

@@ -18,6 +18,16 @@ class Settings(BaseSettings):
     REDIS_PORT: int = 6379
     CACHE_EXPIRE: int = 3600  # 1 hour
 
+    # METAR observations (Aviation Weather Center)
+    METAR_USER_AGENT: str = (
+        "ClearFlight-API/0.1 (+https://github.com/Yoyo-su/ClearFlight-API)"
+    )
+    METAR_CACHE_TTL: int = 600  # seconds an observation is cached
+    METAR_NO_DATA_CACHE_TTL: int = 300  # seconds a "no report" result is cached
+    METAR_RATE_LIMIT_PER_MINUTE: int = 30  # provider requests per process
+    METAR_CURRENT_MAX_MINUTES: int = 90  # older observations are stale
+    METAR_STALE_MAX_MINUTES: int = 180  # older observations are expired
+
     DEBUG: bool = False  # Enable for local debugging
 
     # App config

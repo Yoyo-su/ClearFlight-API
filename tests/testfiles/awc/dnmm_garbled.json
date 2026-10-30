@@ -1,0 +1,28 @@
+[
+ {
+  "icaoId": "DNMM",
+  "receiptTime": "2026-10-30T05:32:03.782Z",
+  "obsTime": 1793336400,
+  "reportTime": "2026-10-30T05:00:00.000Z",
+  "temp": 25,
+  "dewp": 24,
+  "wdir": "VRB",
+  "wspd": 2,
+  "visib": 4.97,
+  "qcField": 0,
+  "metarType": "METAR",
+  "rawOb": "METAR DNMM 300500Z VRB02KT 8000 FEW009 25/24 Q10 CHECK TEXT NEW ENDING ADDED HAABYFYX",
+  "lat": 6.577,
+  "lon": 3.321,
+  "elev": 27,
+  "name": "Lagos/Muhammed Intl, LA, NG",
+  "cover": "FEW",
+  "clouds": [
+   {
+    "cover": "FEW",
+    "base": 900
+   }
+  ],
+  "fltCat": "MVFR"
+ }
+]
