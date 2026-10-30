@@ -2,11 +2,17 @@
 
 This document separates **what exists today** from the **planned pilot architecture**. The planned design is defined in [development-plan.md §3–4](development-plan.md). If the two disagree, the plan is the source of truth.
 
-## Current implementation (as of 2026-10-18, `main` @ d13a35c)
+## Current implementation (as of 2026-10-30, CF-002 branch `feat/cf-002-airport-catalogue`)
 
 ```text
 Client ──HTTP──> FastAPI (app/main.py, gunicorn + uvicorn worker, Docker)
                   ├── GET /                       health check {"status": "ok"}
+                  ├── GET /v1/airports/search     catalogue search (code, name, city)
+                  │       │
+                  │       app/api/airport_search.py      parameter checks (400), response model
+                  │       └── app/services/airport_catalogue.py  in-memory index, loaded and
+                  │                                               validated at startup from
+                  │                                               app/data/airports.csv
                   └── GET /airport/{airport_code} legacy prototype (IATA or ICAO)
                           │
                           app/api/airport.py      airport_query → generate_airport_profile
@@ -20,6 +26,7 @@ Client ──HTTP──> FastAPI (app/main.py, gunicorn + uvicorn worker, Docker
 
 | Area | Detail |
 |---|---|
+| Airport catalogue | `app/data/airports.csv`: committed OurAirports snapshot with IANA timezones precomputed (D-005). Rebuilt offline by `scripts/import_ourairports.py` (transforms/validation in `app/services/airport_import.py`; `timezonefinder` from `requirements-import.txt`, not a runtime or CI dependency). Overrides in `app/data/timezone_overrides.csv`; provenance in `airports.meta.json`. DST rules come from the system tz database via `zoneinfo`. |
 | Config | `app/core/config.py` (pydantic-settings); variables in `.env.template` |
 | Runtime | `Dockerfile` (python:3.13-slim, non-root user), `docker-compose.yml` (API on `127.0.0.1:8000`, Redis internal only) |
 | Tests | `tests/` with pytest; providers and Redis are mocked; fixtures in `tests/testfiles/` |
