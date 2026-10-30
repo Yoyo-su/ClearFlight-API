@@ -1,0 +1,17 @@
+{
+  "generated_at": "2026-10-30T04:00:24+00:00",
+  "row_count": 11251,
+  "source_rows": 86311,
+  "sources": {
+    "airports": "https://davidmegginson.github.io/ourairports-data/airports.csv",
+    "countries": "https://davidmegginson.github.io/ourairports-data/countries.csv"
+  },
+  "timezone_overrides": 1,
+  "timezonefinder": "9.1.0",
+  "timezonefinder_data": "4.2026.5",
+  "unresolved_timezones": [
+    "PLPA",
+    "SCGC",
+    "SCPZ"
+  ]
+}

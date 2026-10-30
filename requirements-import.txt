@@ -1,0 +1,4 @@
+# Only for scripts/import_ourairports.py (rebuilding app/data/airports.csv).
+# Not installed by the API image or CI. Install after requirements.txt.
+timezonefinder==9.1.0
+timezonefinder-data==4.2026.5
