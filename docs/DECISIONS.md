@@ -17,6 +17,31 @@ Locked pilot decisions live in [development-plan.md §1](development-plan.md) an
 
 ## Entries
 
+### D-007: v1 conditions contract and conditions index v0.1 (2026-11-02)
+- **Decision:**
+  - **Route:** `GET /v1/airports/{code}/conditions` takes IATA (3 letters) or ICAO (4 alphanumerics) in any case. Anything else is `400 invalid_code`; an unknown airport is `404 airport_not_found`.
+  - **Response:** `airport`, `observation`, `conditions`, `data_status`, `unavailable_reason`, `last_observed_at` (models in `app/api/models.py`).
+  - **Freshness:** one authority, `metar.freshness`, with the configurable thresholds and one clock per request. `current` is scored; `stale` is shown but not scored.
+  - **Unavailable:** older than the stale limit gives `unavailable` / `observation_too_old` with `observation: null` and `last_observed_at`. No report gives `no_report`. An airport without ICAO gives `no_metar_station`. All are `200`.
+  - **Provider failures** follow D-006: 504 `provider_timeout`, 502 `provider_error`, 503 `rate_limited` with Retry-After. Error bodies are `{"detail", "reason"}`.
+  - **Index v0.1:** the maximum of four components, with bands as in the README.
+    - Wind uses the higher of speed and gust.
+    - Visibility breakpoints are 8000 / 4800 / 1600 / 800 m (the common 5 / 3 / 1 statute-mile flight-category breakpoints, used only as severity bands), with a 10 m tolerance for AWC's mile rounding.
+    - Ceiling breakpoints are 3000 / 1000 / 500 / 200 ft.
+    - Weather groups are parsed as intensity + descriptor + phenomena. BL with SN/SA/DU scores 3, and DR (low drifting) is treated like mist, scoring 0. SG, IC and UP score with rain, as in plan r2.
+  - **Score rules:** a score needs a current observation with known wind, visibility, ceiling and weather, except that known components already at 10 give 10. Levels: low 0–2, moderate 3–5, high 6–7, severe 8–10, unknown.
+    - **Unrecognised weather group:** the weather factor is unknown (owner decision, 2026-11-02, after review; this replaces plan r2's "scores 0"). Groups are captured for later scoring: logged, and counted once per observation in Redis (`conditions:unrecognised_wx:counts` / `:examples`, no expiry). `scripts/unrecognised_weather.py` lists them.
+    - **Gust without a sustained speed:** a gust ≥ 50 kt gives the wind factor 10; otherwise wind is unknown.
+    - `age_minutes` is rounded up, so it never looks fresher than `data_status`.
+  - **Adapter change (amends D-006):** an observation that isn't current when fetched is cached for 60 s instead of 600 s. On 2026-11-02, AWC's CDN served a 3-hour-old RJBB report although a newer one had been received 12 minutes earlier.
+  - **Wording:** generated text never claims safety, delays or forecasts (tested). A fixed disclaimer is always included.
+  - **Other routes:** `GET /health` added. The legacy `/airport/{code}` stays unchanged and deprecated, and is removed in CF-006.
+  - **CF-001 carry-over:** the legacy provider cache keys now hash a key-free string.
+- **Why:** Plan §3, §4 and §7 (stable contract; deterministic scoring; stale or missing data never presented as low). Taking the maximum avoids diluting a single severe factor. The max-10 exception scores dense fog honestly without ever producing a reassuring number from missing data. Expired values are withheld so old numbers can't be read as current. The design critique (CORMORANT case 3) found the weather-parsing ambiguity, the risk of two freshness authorities, the untestable Redis gate and a credential test that couldn't prove anything; all are fixed.
+- **Alternatives considered:** a weighted average (dilutes single severe factors); always `unknown` when any input is missing (gives "unknown" in dense fog); returning expired values flagged (risks being shown as current); retiring or rebuilding the legacy route now.
+- **Source:** CF-004 (issue #5); plan r2 and critique in `~/codex-reviews/clearflight-cf004-design/`; owner decisions 2026-11-02.
+- **Status:** accepted 2026-11-02 by project owner (each decision chosen in a walkthrough).
+
 ### D-006: METAR observation contract, caching, rate cap and error mapping (2026-10-30)
 - **Decision:**
   - **Source:** Aviation Weather Center `api/data/metar?ids={ICAO}&format=json`. The newest record by `obsTime` becomes `observed_at` (not `reportTime`, which can differ). Records more than 10 minutes in the future are ignored. 204 means no report and returns `None`, not an error.

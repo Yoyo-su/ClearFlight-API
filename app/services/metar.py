@@ -39,6 +39,10 @@ CLEAR_COVERS = {"CLR", "SKC", "NCD", "NSC"}
 LAYER_COVERS = {"FEW", "SCT", "BKN", "OVC"}
 CEILING_COVERS = {"BKN", "OVC"}
 NO_REPORT = {"no_report": True}  # cached when the provider has no usable report
+# An observation that isn't current when fetched may come from a stale CDN copy
+# (seen 2026-11-02: a 3-hour-old RJBB report while AWC had a newer one), so it
+# is cached only as long as AWC's own cache-control max-age, then re-fetched.
+NOT_CURRENT_CACHE_TTL = 60
 
 
 class MetarError(Exception):
@@ -164,9 +168,10 @@ def get_latest_observation(icao: str) -> Observation | None:
         if not records:
             cache_response(cache_key, NO_REPORT, settings.METAR_NO_DATA_CACHE_TTL)
     else:
-        cache_response(
-            cache_key, observation.model_dump(mode="json"), settings.METAR_CACHE_TTL
-        )
+        ttl = settings.METAR_CACHE_TTL
+        if freshness(observation.observed_at, fetched_at) != "current":
+            ttl = min(ttl, NOT_CURRENT_CACHE_TTL)
+        cache_response(cache_key, observation.model_dump(mode="json"), ttl)
     return observation
 
 
