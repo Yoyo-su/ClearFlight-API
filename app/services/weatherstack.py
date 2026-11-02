@@ -41,7 +41,8 @@ def get_current_weather_info(
         query = f"query={latitude},{longtitude}"
         # Construct the URL with the query
         url = f"https://api.weatherstack.com/current?access_key={ws_api_key}&{query}"
-        cache_key = get_cache_key(url)
+        # Hash a key-free string so the access key never reaches the cache key
+        cache_key = get_cache_key(f"weatherstack:current:{query}")
         cache_data = None
         if cache_key:
             # Check if the data is already cached

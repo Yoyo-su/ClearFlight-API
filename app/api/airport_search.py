@@ -1,5 +1,4 @@
 from fastapi import HTTPException
-from pydantic import BaseModel
 
 from app.services.airport_catalogue import get_catalogue
 
@@ -7,26 +6,6 @@ MIN_QUERY_LENGTH = 2
 MAX_QUERY_LENGTH = 64
 DEFAULT_LIMIT = 10
 MAX_LIMIT = 25
-
-
-class AirportResult(BaseModel):
-    code: str
-    icao: str | None
-    iata: str | None
-    name: str
-    city: str | None
-    country: str | None
-    country_code: str
-    type: str
-    timezone: str | None
-    latitude: float
-    longitude: float
-
-
-class AirportSearchResponse(BaseModel):
-    query: str
-    count: int
-    results: list[AirportResult]
 
 
 def search_query(q: str | None, limit: str | None) -> dict:

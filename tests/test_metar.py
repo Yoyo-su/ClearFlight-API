@@ -463,7 +463,8 @@ class TestProviderRequests:
 class TestCaching:
     @pytest.mark.it("caches the normalised observation for METAR_CACHE_TTL")
     def test_cache_store(self, get):
-        get.return_value = response(body=fixture("pilots_latest"))
+        recent = datetime.now(timezone.utc) - timedelta(minutes=20)
+        get.return_value = response(body=[record(obsTime=int(recent.timestamp()))])
         obs = get_latest_observation("EGLL")
         metar.check_cache.assert_called_once_with("metar:v1:EGLL")
         metar.cache_response.assert_called_once_with(
@@ -471,6 +472,15 @@ class TestCaching:
             obs.model_dump(mode="json"),
             metar.settings.METAR_CACHE_TTL,
         )
+
+    @pytest.mark.it("caches an observation that isn't current for only 60 s")
+    @pytest.mark.parametrize("age_minutes, ttl", [(30, None), (120, 60), (300, 60)])
+    def test_short_ttl_when_not_current(self, get, age_minutes, ttl):
+        obs_time = datetime.now(timezone.utc) - timedelta(minutes=age_minutes)
+        get.return_value = response(body=[record(obsTime=int(obs_time.timestamp()))])
+        get_latest_observation("EGLL")
+        expected = ttl or metar.settings.METAR_CACHE_TTL
+        assert metar.cache_response.call_args[0][2] == expected
 
     @pytest.mark.it("serves a cached observation without calling AWC")
     def test_cache_hit(self, get):

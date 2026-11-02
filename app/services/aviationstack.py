@@ -48,7 +48,8 @@ def get_airport_info(airport_code: str = None, as_api_key: str = as_api_key):
         url = (
             f"https://api.aviationstack.com/v1/airports?access_key={as_api_key}&{query}"
         )
-        cache_key = get_cache_key(url)
+        # Hash a key-free string so the access key never reaches the cache key
+        cache_key = get_cache_key(f"aviationstack:airports:{query}")
         cache_data = None
         if cache_key:
             # Check if the data is already cached
