@@ -1,0 +1,8 @@
+{
+  "status": 404,
+  "headers": {},
+  "body": {
+    "detail": "No airport with code ZZZ",
+    "reason": "airport_not_found"
+  }
+}

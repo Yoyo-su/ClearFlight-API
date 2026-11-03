@@ -1,0 +1,93 @@
+{
+  "status": 200,
+  "headers": {},
+  "body": {
+    "airport": {
+      "code": "PANC",
+      "icao": "PANC",
+      "iata": "ANC",
+      "name": "Ted Stevens Anchorage International Airport",
+      "city": "Anchorage",
+      "country": "United States",
+      "country_code": "US",
+      "timezone": "America/Anchorage"
+    },
+    "observation": {
+      "source": "Aviation Weather Center",
+      "station": "PANC",
+      "report_type": "METAR",
+      "observed_at": "2026-10-30T06:53:00Z",
+      "fetched_at": "2026-10-30T07:55:00Z",
+      "age_minutes": 62,
+      "raw_text": "METAR PANC 300653Z 14015G33KT 10SM -RA BKN044 OVC070 06/01 A2954 RMK AO2 PK WND 15033/0643 SLP005 P0000 T00610006 $",
+      "temperature_c": 6.1,
+      "dewpoint_c": 0.6,
+      "wind_direction_deg": 140,
+      "wind_variable": false,
+      "wind_speed_kt": 15,
+      "wind_gust_kt": 33,
+      "visibility_m": 16093,
+      "visibility_at_least": true,
+      "sky_condition": "clouds",
+      "ceiling_ft": 4400,
+      "cloud_layers": [
+        {
+          "cover": "BKN",
+          "base_ft": 4400
+        },
+        {
+          "cover": "OVC",
+          "base_ft": 7000
+        }
+      ],
+      "pressure_hpa": 1000.4,
+      "weather_phenomena": [
+        "-RA"
+      ]
+    },
+    "conditions": {
+      "version": "0.1",
+      "score": 6,
+      "level": "high",
+      "factors": [
+        {
+          "name": "wind",
+          "value": 33,
+          "unit": "kt",
+          "score": 6,
+          "detail": "15 kt gusting 33 kt"
+        },
+        {
+          "name": "visibility",
+          "value": 16093,
+          "unit": "m",
+          "score": 0,
+          "detail": "16.1 km or more"
+        },
+        {
+          "name": "ceiling",
+          "value": 4400,
+          "unit": "ft",
+          "score": 0,
+          "detail": "4,400 ft"
+        },
+        {
+          "name": "weather",
+          "value": [
+            "-RA"
+          ],
+          "unit": null,
+          "score": 1,
+          "detail": "-RA"
+        }
+      ],
+      "explanation": "Observed conditions index 6/10 (high), mainly from wind of 15 kt gusting 33 kt.",
+      "disclaimer": "Experimental index of the weather reported at the airport. It is not a forecast and does not predict delays, cancellations or flight safety."
+    },
+    "data_status": "current",
+    "unavailable_reason": null,
+    "last_observed_at": "2026-10-30T06:53:00Z",
+    "current_until": "2026-10-30T08:23:00Z",
+    "stale_until": "2026-10-30T09:53:00Z"
+  }
+}

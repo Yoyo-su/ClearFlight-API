@@ -75,7 +75,7 @@ check-coverage:
 
 ## Run lint
 lint:
-	$(FLAKE8) . --max-line-length=150 --exclude=.git,__pycache__,./venv --ignore=W503
+	$(FLAKE8) . --max-line-length=150 --exclude=.git,__pycache__,./venv,./frontend --ignore=W503
 
 ## Run audit
 audit:
@@ -87,5 +87,20 @@ bandit-report:
 	$(BANDIT) -r ./app ./tests -f json -o reports/bandit_report.json
 
 
-## Run all checks
+## Run all checks (Python only; the frontend has its own target)
 run-checks: security-test run-black lint unit-test check-coverage audit
+
+## Frontend checks: install, audit, lint, typecheck, unit tests with the 80%
+## coverage gate, build, then end-to-end tests on desktop and mobile.
+## In CI, Playwright also installs Chromium's system libraries.
+PLAYWRIGHT_DEPS := $(if $(filter true,$(IS_CI)),--with-deps,)
+frontend-checks:
+	cd frontend && npm ci --no-fund
+	cd frontend && npm audit --omit=dev
+	cd frontend && npm audit --audit-level=high
+	cd frontend && npm run lint
+	cd frontend && npm run typecheck
+	cd frontend && npm test
+	cd frontend && npm run build
+	cd frontend && npx playwright install $(PLAYWRIGHT_DEPS) chromium
+	cd frontend && npm run e2e

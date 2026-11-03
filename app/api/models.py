@@ -90,6 +90,10 @@ class ConditionsResponse(BaseModel):
         Literal["no_metar_station", "no_report", "observation_too_old"] | None
     )
     last_observed_at: datetime | None
+    # When the observation stops being current and when it expires (D-008);
+    # null when there is no observation.
+    current_until: datetime | None
+    stale_until: datetime | None
 
 
 class ErrorResponse(BaseModel):

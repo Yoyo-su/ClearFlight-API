@@ -1,0 +1,30 @@
+{
+  "status": 200,
+  "headers": {},
+  "body": {
+    "airport": {
+      "code": "EGLL",
+      "icao": "EGLL",
+      "iata": "LHR",
+      "name": "London Heathrow Airport",
+      "city": "London",
+      "country": "United Kingdom",
+      "country_code": "GB",
+      "timezone": "Europe/London"
+    },
+    "observation": null,
+    "conditions": {
+      "version": "0.1",
+      "score": null,
+      "level": "unknown",
+      "factors": [],
+      "explanation": "No score: the latest observation is too old to use.",
+      "disclaimer": "Experimental index of the weather reported at the airport. It is not a forecast and does not predict delays, cancellations or flight safety."
+    },
+    "data_status": "unavailable",
+    "unavailable_reason": "observation_too_old",
+    "last_observed_at": "2026-10-30T03:50:00Z",
+    "current_until": null,
+    "stale_until": null
+  }
+}

@@ -1,0 +1,10 @@
+{
+  "status": 503,
+  "headers": {
+    "Retry-After": "13"
+  },
+  "body": {
+    "detail": "Weather requests are temporarily limited; try again shortly",
+    "reason": "rate_limited"
+  }
+}

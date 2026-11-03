@@ -1,0 +1,84 @@
+{
+  "status": 200,
+  "headers": {},
+  "body": {
+    "airport": {
+      "code": "EGKK",
+      "icao": "EGKK",
+      "iata": "LGW",
+      "name": "London Gatwick Airport",
+      "city": "London",
+      "country": "United Kingdom",
+      "country_code": "GB",
+      "timezone": "Europe/London"
+    },
+    "observation": {
+      "source": "Aviation Weather Center",
+      "station": "EGKK",
+      "report_type": "METAR",
+      "observed_at": "2026-10-30T06:50:00Z",
+      "fetched_at": "2026-10-30T07:55:00Z",
+      "age_minutes": 65,
+      "raw_text": "METAR EGKK 300650Z 07005KT 0150 R08R/0550N FG VV/// 08/08 Q1029",
+      "temperature_c": 8.0,
+      "dewpoint_c": 8.0,
+      "wind_direction_deg": 70,
+      "wind_variable": false,
+      "wind_speed_kt": 5,
+      "wind_gust_kt": null,
+      "visibility_m": 145,
+      "visibility_at_least": false,
+      "sky_condition": "obscured",
+      "ceiling_ft": null,
+      "cloud_layers": [],
+      "pressure_hpa": 1029.0,
+      "weather_phenomena": [
+        "FG"
+      ]
+    },
+    "conditions": {
+      "version": "0.1",
+      "score": 10,
+      "level": "severe",
+      "factors": [
+        {
+          "name": "wind",
+          "value": 5,
+          "unit": "kt",
+          "score": 0,
+          "detail": "5 kt"
+        },
+        {
+          "name": "visibility",
+          "value": 145,
+          "unit": "m",
+          "score": 10,
+          "detail": "145 m"
+        },
+        {
+          "name": "ceiling",
+          "value": null,
+          "unit": "ft",
+          "score": null,
+          "detail": "sky obscured; height not reported"
+        },
+        {
+          "name": "weather",
+          "value": [
+            "FG"
+          ],
+          "unit": null,
+          "score": 0,
+          "detail": "FG"
+        }
+      ],
+      "explanation": "Observed conditions index 10/10 (severe), mainly from visibility of 145 m. (The cloud ceiling wasn't reported.)",
+      "disclaimer": "Experimental index of the weather reported at the airport. It is not a forecast and does not predict delays, cancellations or flight safety."
+    },
+    "data_status": "current",
+    "unavailable_reason": null,
+    "last_observed_at": "2026-10-30T06:50:00Z",
+    "current_until": "2026-10-30T08:20:00Z",
+    "stale_until": "2026-10-30T09:50:00Z"
+  }
+}

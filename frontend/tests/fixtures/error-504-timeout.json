@@ -1,0 +1,8 @@
+{
+  "status": 504,
+  "headers": {},
+  "body": {
+    "detail": "The weather provider timed out",
+    "reason": "provider_timeout"
+  }
+}

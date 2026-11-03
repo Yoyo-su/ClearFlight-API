@@ -169,6 +169,38 @@ class TestFreshness:
         assert observation_body.get("age_minutes") == shown_age
         assert (body["conditions"]["score"] is not None) == (status == "current")
 
+    @pytest.mark.it("gives current_until and stale_until from the thresholds")
+    def test_eligibility_times(self, client, monkeypatch):
+        obs = observation("pilots_latest", "KJFK", age_minutes=20)
+        body = get_conditions(client, "KJFK", obs)[0].json()
+        observed = obs.observed_at
+        assert datetime.fromisoformat(body["current_until"]) == observed + timedelta(
+            minutes=90
+        )
+        assert datetime.fromisoformat(body["stale_until"]) == observed + timedelta(
+            minutes=180
+        )
+        monkeypatch.setattr(metar.settings, "METAR_CURRENT_MAX_MINUTES", 30)
+        monkeypatch.setattr(metar.settings, "METAR_STALE_MAX_MINUTES", 60)
+        body = get_conditions(client, "KJFK", obs)[0].json()
+        assert datetime.fromisoformat(body["current_until"]) == observed + timedelta(
+            minutes=30
+        )
+        assert datetime.fromisoformat(body["stale_until"]) == observed + timedelta(
+            minutes=60
+        )
+
+    @pytest.mark.it("gives null eligibility times when there is no observation")
+    @pytest.mark.parametrize(
+        "code, result, age",
+        [("RJBB", None, None), ("AAI", None, None), ("EGLL", "obs", 200)],
+    )
+    def test_eligibility_times_null(self, client, code, result, age):
+        obs = observation("pilots_latest", "EGLL", age_minutes=age) if result else None
+        body = get_conditions(client, code, obs)[0].json()
+        assert body["data_status"] == "unavailable"
+        assert (body["current_until"], body["stale_until"]) == (None, None)
+
     @pytest.mark.it("reports age 0 for an observation slightly in the future")
     def test_future_age(self, client):
         obs = observation("pilots_latest", "KJFK", age_minutes=-5)

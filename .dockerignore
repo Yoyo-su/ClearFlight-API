@@ -25,3 +25,6 @@
 **/values.dev.yaml
 LICENSE
 README.md
+
+# The frontend is built and deployed separately (CF-006), not in the API image.
+frontend
