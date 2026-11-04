@@ -1,9 +1,10 @@
 import math
 import re
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 from fastapi import HTTPException
 
+from app.core.config import settings
 from app.services import conditions as index
 from app.services import unrecognised_weather
 from app.services.airport_catalogue import get_catalogue
@@ -36,7 +37,9 @@ def conditions_query(code: str) -> dict:
 
     Returns:
         dict: airport, observation, conditions, data_status,
-            unavailable_reason and last_observed_at (D-007).
+            unavailable_reason, last_observed_at, and current_until and
+            stale_until (when the observation stops being current and
+            expires, from the configured thresholds; D-007, D-008).
     """
     normalised = code.strip().upper()
     if not code.isascii() or not CODE_PATTERN.fullmatch(normalised):
@@ -92,6 +95,10 @@ def conditions_query(code: str) -> dict:
         "data_status": status,
         "unavailable_reason": None,
         "last_observed_at": observation.observed_at,
+        "current_until": observation.observed_at
+        + timedelta(minutes=settings.METAR_CURRENT_MAX_MINUTES),
+        "stale_until": observation.observed_at
+        + timedelta(minutes=settings.METAR_STALE_MAX_MINUTES),
     }
 
 
@@ -107,4 +114,6 @@ def unavailable(airport_data: dict, reason: str, last_observed_at=None) -> dict:
         "data_status": "unavailable",
         "unavailable_reason": reason,
         "last_observed_at": last_observed_at,
+        "current_until": None,
+        "stale_until": None,
     }

@@ -32,7 +32,9 @@ example: `/v1/airports/LHR/conditions`. This illustrative, abridged response is 
                  "disclaimer": "Experimental index of the weather reported at the airport. It is not a forecast and does not predict delays, cancellations or flight safety."},
   "data_status": "current",
   "unavailable_reason": null,
-  "last_observed_at": "2026-10-30T07:20:00Z"
+  "last_observed_at": "2026-10-30T07:20:00Z",
+  "current_until": "2026-10-30T08:50:00Z",
+  "stale_until": "2026-10-30T10:20:00Z"
 }
 ```
 **`data_status`:**
@@ -42,6 +44,8 @@ example: `/v1/airports/LHR/conditions`. This illustrative, abridged response is 
   - `no_metar_station`: the airport has no ICAO code;
   - `no_report`: the station has no current report;
   - `observation_too_old`: older than the stale limit; `last_observed_at` gives its time.
+
+**`current_until` / `stale_until`** (D-008): when the observation stops being current (it loses its score) and when it expires (its values should no longer be shown). The backend computes them from its configured thresholds, so a client keeping a response on screen can age it without knowing the thresholds. They're `null` when there's no observation.
 
 **Conditions index v0.1 (D-007):** an experimental 0–10 severity of the *observed* conditions; higher is more severe. It is not a forecast and does not predict delays, cancellations or flight safety. The index is the highest of four components:
 
@@ -181,7 +185,7 @@ Docker is used to run the API. To set it up, follow these steps:
    ```
 
 ### Running the checks locally
-`make run-checks` runs the same checks as CI (bandit, black, flake8, pytest, the coverage gate and pip-audit). It needs Python 3.13 available as `python`.
+`make run-checks` runs the same Python checks as CI (bandit, black, flake8, pytest, the coverage gate and pip-audit). It needs Python 3.13 available as `python`. `make frontend-checks` runs the frontend's CI checks (see [Frontend](#frontend)); it needs Node 24.
 
 ```bash
 make requirements dev-setup   # creates ./venv and installs dependencies
@@ -192,8 +196,36 @@ make run-checks
 
 The tests mock the providers, so dummy keys are enough, and no real credentials are needed. Without the keys (or a `.env`), test collection fails with a settings validation error. Without `PYTHONPATH`, it fails with `ModuleNotFoundError: No module named 'app'`. If the project directory is moved, recreate `venv` (`rm -rf venv && make requirements dev-setup`), because a virtual environment's paths are fixed when it is created.
 
+### Frontend
+The traveller-facing web app lives in `frontend/`: React 19, TypeScript, Vite and react-router, with no other runtime dependencies. The design is in [docs/cf-005-design.md](docs/cf-005-design.md).
+
+- **Pages:** search (`/`), with results as you type, recently viewed airports (stored only in your browser) and the pilot airports; an airport page (`/airport/EGLL`); and a not-found page.
+- **Airport page:** local and UTC clocks; the observation with its age; the experimental conditions index with its factors; and every unavailable or error state, with wording from the spec. It refreshes every 5 minutes while visible; the Refresh button has a 60 s cooldown.
+
+```bash
+cd frontend
+npm ci
+npm run dev          # http://localhost:5173, proxies /v1 and /health to the API on :8000
+npm test             # unit and component tests (Vitest), 80% coverage gate
+npm run e2e          # end-to-end tests on desktop and mobile Chromium, with axe checks
+npm run build        # production build in dist/
+```
+Run the API with `docker compose up` for `npm run dev`. Set `VITE_API_BASE_URL` at build time when the API is on another origin (CF-006); empty means same origin.
+
+**Contract with the API:** `frontend/tests/fixtures/` holds API responses recorded from the real code (`python scripts/record_frontend_fixtures.py`, deterministic, no network).
+- The backend test `tests/test_frontend_fixtures.py` fails if they no longer match the Pydantic models exactly or what the API produces now.
+- The frontend's `tests/unit/contract.test.ts` validates them against the runtime schema in `frontend/src/api/types.ts` (names, value types, nullability, allowed values). The TypeScript types are derived from that schema, and the client validates every live response with it too.
+
+After changing a v1 model, re-record the fixtures and update `frontend/src/api/types.ts`.
+
+**Checks** (`make frontend-checks`, also run as a separate CI job):
+- `npm ci`;
+- `npm audit`: no advisories in runtime dependencies, and nothing high or above in any dependency;
+- lint, typecheck, unit tests with coverage, build;
+- Playwright end-to-end tests.
+
 ### METAR observations
-`app/services/metar.py` fetches the latest METAR observation for a station from the [Aviation Weather Center](https://aviationweather.gov/data/api/) data API. It is used internally; the public conditions endpoint comes in CF-004.
+`app/services/metar.py` fetches the latest METAR observation for a station from the [Aviation Weather Center](https://aviationweather.gov/data/api/) data API. The conditions endpoint uses it.
 - **Observation fields:**
   - `observed_at` comes from the observation itself, not the report time; `fetched_at` is when the provider was called.
   - `raw_text`, temperature and dew point (°C).

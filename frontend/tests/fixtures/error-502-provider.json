@@ -1,0 +1,8 @@
+{
+  "status": 502,
+  "headers": {},
+  "body": {
+    "detail": "The weather provider failed (http_500)",
+    "reason": "provider_error"
+  }
+}

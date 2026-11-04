@@ -1,0 +1,30 @@
+{
+  "status": 200,
+  "headers": {},
+  "body": {
+    "airport": {
+      "code": "RJBB",
+      "icao": "RJBB",
+      "iata": "KIX",
+      "name": "Kansai International Airport",
+      "city": "Osaka",
+      "country": "Japan",
+      "country_code": "JP",
+      "timezone": "Asia/Tokyo"
+    },
+    "observation": null,
+    "conditions": {
+      "version": "0.1",
+      "score": null,
+      "level": "unknown",
+      "factors": [],
+      "explanation": "No score: no current weather observation is available.",
+      "disclaimer": "Experimental index of the weather reported at the airport. It is not a forecast and does not predict delays, cancellations or flight safety."
+    },
+    "data_status": "unavailable",
+    "unavailable_reason": "no_report",
+    "last_observed_at": null,
+    "current_until": null,
+    "stale_until": null
+  }
+}

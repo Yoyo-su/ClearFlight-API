@@ -1,0 +1,23 @@
+{
+  "status": 200,
+  "headers": {},
+  "body": {
+    "query": "jfk",
+    "count": 1,
+    "results": [
+      {
+        "code": "KJFK",
+        "icao": "KJFK",
+        "iata": "JFK",
+        "name": "John F. Kennedy International Airport",
+        "city": "New York",
+        "country": "United States",
+        "country_code": "US",
+        "type": "large_airport",
+        "timezone": "America/New_York",
+        "latitude": 40.639447,
+        "longitude": -73.779317
+      }
+    ]
+  }
+}

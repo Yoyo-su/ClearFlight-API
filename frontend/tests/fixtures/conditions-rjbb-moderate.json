@@ -1,0 +1,99 @@
+{
+  "status": 200,
+  "headers": {},
+  "body": {
+    "airport": {
+      "code": "RJBB",
+      "icao": "RJBB",
+      "iata": "KIX",
+      "name": "Kansai International Airport",
+      "city": "Osaka",
+      "country": "Japan",
+      "country_code": "JP",
+      "timezone": "Asia/Tokyo"
+    },
+    "observation": {
+      "source": "Aviation Weather Center",
+      "station": "RJBB",
+      "report_type": "METAR",
+      "observed_at": "2026-10-30T07:30:00Z",
+      "fetched_at": "2026-10-30T07:55:00Z",
+      "age_minutes": 25,
+      "raw_text": "METAR RJBB 300730Z 07008KT 7000 +SHRA BR FEW015 SCT025CB BKN030 19/17 Q1013 TEMPO 4000 TSRA BR BECMG NSW",
+      "temperature_c": 19.0,
+      "dewpoint_c": 17.0,
+      "wind_direction_deg": 70,
+      "wind_variable": false,
+      "wind_speed_kt": 8,
+      "wind_gust_kt": null,
+      "visibility_m": 7001,
+      "visibility_at_least": false,
+      "sky_condition": "clouds",
+      "ceiling_ft": 3000,
+      "cloud_layers": [
+        {
+          "cover": "FEW",
+          "base_ft": 1500
+        },
+        {
+          "cover": "SCT",
+          "base_ft": 2500
+        },
+        {
+          "cover": "BKN",
+          "base_ft": 3000
+        }
+      ],
+      "pressure_hpa": 1013.0,
+      "weather_phenomena": [
+        "+SHRA",
+        "BR"
+      ]
+    },
+    "conditions": {
+      "version": "0.1",
+      "score": 5,
+      "level": "moderate",
+      "factors": [
+        {
+          "name": "wind",
+          "value": 8,
+          "unit": "kt",
+          "score": 0,
+          "detail": "8 kt"
+        },
+        {
+          "name": "visibility",
+          "value": 7001,
+          "unit": "m",
+          "score": 3,
+          "detail": "7.0 km"
+        },
+        {
+          "name": "ceiling",
+          "value": 3000,
+          "unit": "ft",
+          "score": 3,
+          "detail": "3,000 ft"
+        },
+        {
+          "name": "weather",
+          "value": [
+            "+SHRA",
+            "BR"
+          ],
+          "unit": null,
+          "score": 5,
+          "detail": "+SHRA BR"
+        }
+      ],
+      "explanation": "Observed conditions index 5/10 (moderate), mainly from reported weather +SHRA BR.",
+      "disclaimer": "Experimental index of the weather reported at the airport. It is not a forecast and does not predict delays, cancellations or flight safety."
+    },
+    "data_status": "current",
+    "unavailable_reason": null,
+    "last_observed_at": "2026-10-30T07:30:00Z",
+    "current_until": "2026-10-30T09:00:00Z",
+    "stale_until": "2026-10-30T10:30:00Z"
+  }
+}

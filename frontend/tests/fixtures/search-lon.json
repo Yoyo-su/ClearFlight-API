@@ -1,0 +1,140 @@
+{
+  "status": 200,
+  "headers": {},
+  "body": {
+    "query": "lon",
+    "count": 10,
+    "results": [
+      {
+        "code": "EGKK",
+        "icao": "EGKK",
+        "iata": "LGW",
+        "name": "London Gatwick Airport",
+        "city": "London",
+        "country": "United Kingdom",
+        "country_code": "GB",
+        "type": "large_airport",
+        "timezone": "Europe/London",
+        "latitude": 51.148744,
+        "longitude": -0.185739
+      },
+      {
+        "code": "EGLL",
+        "icao": "EGLL",
+        "iata": "LHR",
+        "name": "London Heathrow Airport",
+        "city": "London",
+        "country": "United Kingdom",
+        "country_code": "GB",
+        "type": "large_airport",
+        "timezone": "Europe/London",
+        "latitude": 51.470748,
+        "longitude": -0.459909
+      },
+      {
+        "code": "EGGW",
+        "icao": "EGGW",
+        "iata": "LTN",
+        "name": "London Luton Airport",
+        "city": "Luton, Luton",
+        "country": "United Kingdom",
+        "country_code": "GB",
+        "type": "large_airport",
+        "timezone": "Europe/London",
+        "latitude": 51.874699,
+        "longitude": -0.368333
+      },
+      {
+        "code": "EGSS",
+        "icao": "EGSS",
+        "iata": "STN",
+        "name": "London Stansted Airport",
+        "city": "London, Essex",
+        "country": "United Kingdom",
+        "country_code": "GB",
+        "type": "large_airport",
+        "timezone": "Europe/London",
+        "latitude": 51.884998,
+        "longitude": 0.235
+      },
+      {
+        "code": "KLGB",
+        "icao": "KLGB",
+        "iata": "LGB",
+        "name": "Long Beach International Airport",
+        "city": "Long Beach",
+        "country": "United States",
+        "country_code": "US",
+        "type": "large_airport",
+        "timezone": "America/Los_Angeles",
+        "latitude": 33.816523,
+        "longitude": -118.149891
+      },
+      {
+        "code": "VVLT",
+        "icao": "VVLT",
+        "iata": "LTH",
+        "name": "Long Thanh International Airport (Under Construction)",
+        "city": "Ho Chi Minh City (Long Thanh)",
+        "country": "Vietnam",
+        "country_code": "VN",
+        "type": "large_airport",
+        "timezone": "Asia/Ho_Chi_Minh",
+        "latitude": 10.772842,
+        "longitude": 107.040596
+      },
+      {
+        "code": "KGGG",
+        "icao": "KGGG",
+        "iata": "GGG",
+        "name": "East Texas Regional Airport",
+        "city": "Longview",
+        "country": "United States",
+        "country_code": "US",
+        "type": "medium_airport",
+        "timezone": "America/Chicago",
+        "latitude": 32.383999,
+        "longitude": -94.711502
+      },
+      {
+        "code": "SBLO",
+        "icao": "SBLO",
+        "iata": "LDB",
+        "name": "Governor José Richa Airport",
+        "city": "Londrina",
+        "country": "Brazil",
+        "country_code": "BR",
+        "type": "medium_airport",
+        "timezone": "America/Sao_Paulo",
+        "latitude": -23.334375,
+        "longitude": -51.128365
+      },
+      {
+        "code": "ZSLO",
+        "icao": "ZSLO",
+        "iata": "LCX",
+        "name": "Liancheng Guanzhishan Airport",
+        "city": "Longyan (Liancheng)",
+        "country": "China",
+        "country_code": "CN",
+        "type": "medium_airport",
+        "timezone": "Asia/Shanghai",
+        "latitude": 25.67592,
+        "longitude": 116.745907
+      },
+      {
+        "code": "EGKB",
+        "icao": "EGKB",
+        "iata": "BQH",
+        "name": "London Biggin Hill Airport",
+        "city": "London",
+        "country": "United Kingdom",
+        "country_code": "GB",
+        "type": "medium_airport",
+        "timezone": "Europe/London",
+        "latitude": 51.330799,
+        "longitude": 0.0325
+      }
+    ]
+  }
+}

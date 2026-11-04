@@ -1,0 +1,8 @@
+{
+  "status": 400,
+  "headers": {},
+  "body": {
+    "detail": "code must be a 3-letter IATA or 4-character ICAO code",
+    "reason": "invalid_code"
+  }
+}

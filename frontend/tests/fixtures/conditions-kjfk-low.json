@@ -1,0 +1,85 @@
+{
+  "status": 200,
+  "headers": {},
+  "body": {
+    "airport": {
+      "code": "KJFK",
+      "icao": "KJFK",
+      "iata": "JFK",
+      "name": "John F. Kennedy International Airport",
+      "city": "New York",
+      "country": "United States",
+      "country_code": "US",
+      "timezone": "America/New_York"
+    },
+    "observation": {
+      "source": "Aviation Weather Center",
+      "station": "KJFK",
+      "report_type": "METAR",
+      "observed_at": "2026-10-30T06:51:00Z",
+      "fetched_at": "2026-10-30T07:55:00Z",
+      "age_minutes": 64,
+      "raw_text": "METAR KJFK 300651Z 23011KT 10SM FEW250 14/12 A3006 RMK AO2 SLP177 T01390122 $",
+      "temperature_c": 13.9,
+      "dewpoint_c": 12.2,
+      "wind_direction_deg": 230,
+      "wind_variable": false,
+      "wind_speed_kt": 11,
+      "wind_gust_kt": null,
+      "visibility_m": 16093,
+      "visibility_at_least": true,
+      "sky_condition": "clouds",
+      "ceiling_ft": null,
+      "cloud_layers": [
+        {
+          "cover": "FEW",
+          "base_ft": 25000
+        }
+      ],
+      "pressure_hpa": 1018.0,
+      "weather_phenomena": []
+    },
+    "conditions": {
+      "version": "0.1",
+      "score": 2,
+      "level": "low",
+      "factors": [
+        {
+          "name": "wind",
+          "value": 11,
+          "unit": "kt",
+          "score": 2,
+          "detail": "11 kt"
+        },
+        {
+          "name": "visibility",
+          "value": 16093,
+          "unit": "m",
+          "score": 0,
+          "detail": "16.1 km or more"
+        },
+        {
+          "name": "ceiling",
+          "value": null,
+          "unit": "ft",
+          "score": 0,
+          "detail": "no cloud ceiling"
+        },
+        {
+          "name": "weather",
+          "value": [],
+          "unit": null,
+          "score": 0,
+          "detail": "no significant weather reported"
+        }
+      ],
+      "explanation": "Observed conditions index 2/10 (low), mainly from wind of 11 kt.",
+      "disclaimer": "Experimental index of the weather reported at the airport. It is not a forecast and does not predict delays, cancellations or flight safety."
+    },
+    "data_status": "current",
+    "unavailable_reason": null,
+    "last_observed_at": "2026-10-30T06:51:00Z",
+    "current_until": "2026-10-30T08:21:00Z",
+    "stale_until": "2026-10-30T09:51:00Z"
+  }
+}

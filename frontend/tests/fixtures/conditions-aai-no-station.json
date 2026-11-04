@@ -1,0 +1,30 @@
+{
+  "status": 200,
+  "headers": {},
+  "body": {
+    "airport": {
+      "code": "AAI",
+      "icao": null,
+      "iata": "AAI",
+      "name": "Arraias Airport",
+      "city": "Arraias",
+      "country": "Brazil",
+      "country_code": "BR",
+      "timezone": "America/Araguaina"
+    },
+    "observation": null,
+    "conditions": {
+      "version": "0.1",
+      "score": null,
+      "level": "unknown",
+      "factors": [],
+      "explanation": "No score: this airport has no METAR weather station.",
+      "disclaimer": "Experimental index of the weather reported at the airport. It is not a forecast and does not predict delays, cancellations or flight safety."
+    },
+    "data_status": "unavailable",
+    "unavailable_reason": "no_metar_station",
+    "last_observed_at": null,
+    "current_until": null,
+    "stale_until": null
+  }
+}

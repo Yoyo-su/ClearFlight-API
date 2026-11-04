@@ -1,0 +1,85 @@
+{
+  "status": 200,
+  "headers": {},
+  "body": {
+    "airport": {
+      "code": "EGLL",
+      "icao": "EGLL",
+      "iata": "LHR",
+      "name": "London Heathrow Airport",
+      "city": "London",
+      "country": "United Kingdom",
+      "country_code": "GB",
+      "timezone": "Europe/London"
+    },
+    "observation": {
+      "source": "Aviation Weather Center",
+      "station": "EGLL",
+      "report_type": "METAR",
+      "observed_at": "2026-10-30T07:20:00Z",
+      "fetched_at": "2026-10-30T07:55:00Z",
+      "age_minutes": 35,
+      "raw_text": "METAR EGLL 300720Z AUTO 07004KT //// OVC002 10/10 Q1029",
+      "temperature_c": 10.0,
+      "dewpoint_c": 10.0,
+      "wind_direction_deg": 70,
+      "wind_variable": false,
+      "wind_speed_kt": 4,
+      "wind_gust_kt": null,
+      "visibility_m": null,
+      "visibility_at_least": false,
+      "sky_condition": "clouds",
+      "ceiling_ft": 200,
+      "cloud_layers": [
+        {
+          "cover": "OVC",
+          "base_ft": 200
+        }
+      ],
+      "pressure_hpa": 1029.0,
+      "weather_phenomena": []
+    },
+    "conditions": {
+      "version": "0.1",
+      "score": null,
+      "level": "unknown",
+      "factors": [
+        {
+          "name": "wind",
+          "value": 4,
+          "unit": "kt",
+          "score": 0,
+          "detail": "4 kt"
+        },
+        {
+          "name": "visibility",
+          "value": null,
+          "unit": "m",
+          "score": null,
+          "detail": "visibility not reported"
+        },
+        {
+          "name": "ceiling",
+          "value": 200,
+          "unit": "ft",
+          "score": 8,
+          "detail": "200 ft"
+        },
+        {
+          "name": "weather",
+          "value": [],
+          "unit": null,
+          "score": 0,
+          "detail": "no significant weather reported"
+        }
+      ],
+      "explanation": "No score: the visibility wasn't reported.",
+      "disclaimer": "Experimental index of the weather reported at the airport. It is not a forecast and does not predict delays, cancellations or flight safety."
+    },
+    "data_status": "current",
+    "unavailable_reason": null,
+    "last_observed_at": "2026-10-30T07:20:00Z",
+    "current_until": "2026-10-30T08:50:00Z",
+    "stale_until": "2026-10-30T10:20:00Z"
+  }
+}

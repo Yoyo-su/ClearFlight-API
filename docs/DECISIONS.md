@@ -17,6 +17,28 @@ Locked pilot decisions live in [development-plan.md §1](development-plan.md) an
 
 ## Entries
 
+### D-008: Frontend MVP design and the API ageing fields (2026-11-03)
+- **Decision:** The CF-005 frontend follows `docs/cf-005-design.md` r3 with the owner's choices:
+  - **D1:** both unit systems, metric first, no toggle.
+  - **D2:** level colours slate blue / amber / orange / red, plus grey dashed for unknown. No green anywhere, and the number and level word always appear together.
+  - **D3:** search as you type (2+ characters, 250 ms).
+  - **D4:** auto-refresh every 5 minutes while visible, plus a Refresh button with a 60 s cooldown. A failed refresh keeps the last good data.
+  - **D5:** pilot airports plus browser-only "recently viewed"; a site-wide "popular" list is deferred.
+  - **D6:** the "calm instrument panel" look, with a redesign earmarked.
+  - **D7:** `frontend/` in this repo.
+  - **D8:** the URL is rewritten to the API's canonical `airport.code`.
+  - **D9:** react-router.
+  - **D10:** an 80% frontend coverage gate.
+  - **D11:** the v1 conditions response adds `current_until` and `stale_until`, computed from the backend's thresholds (still the single freshness authority, D-007). The page withdraws the score after `current_until` and hides the values after `stale_until`, even while refreshes fail or after a background tab returns.
+  - **Request ownership:** every request, retry and timer belongs to the airport on screen and is cancelled when leaving it; late responses are ignored.
+  - **Contract:** recorded fixtures are checked against the Pydantic models (backend) and against a runtime schema in `frontend/src/api/` (frontend). The TypeScript types are derived from that schema, and the client validates every response with it, so field names, value types, nullability and enums can't drift. A malformed 200 is treated as a failure (`invalid_response`); during a refresh, the last good data is kept.
+  - **Checks:** `make run-checks` stays Python-only; `make frontend-checks` runs in separate CI and release jobs. `npm audit` allows no runtime advisories and nothing high or above anywhere. A moderate `minimatch` advisory in the lint tooling, which isn't shipped, is accepted until upstream fixes it.
+  - **Packages** are pinned exactly, at the newest release at least two weeks old (TypeScript 6.0.3: typescript-eslint 8.71 doesn't support TypeScript 7).
+- **Why:** Plan §1–2 and §7 (mobile-first, accessible, no misleading safety/delay claims, honest unknown/stale states, shareable URLs). The owner chose each option in a walkthrough. The design critique (CORMORANT) found data that outlived its eligibility (High), the IATA-only canonical-URL case, an inaccurate cost note, contract drift, CI callers, and request ownership; all are addressed.
+- **Alternatives considered:** a units toggle; traffic-light colours; search on submit; manual-only refresh; a separate frontend repo; a hand-written router; re-fetching at each age boundary instead of D11 (would blank the page during an outage).
+- **Source:** CF-005 (issue #6); spec r3 and critique in `~/codex-reviews/clearflight-cf005-design/`; owner walkthrough 2026-11-03.
+- **Status:** accepted 2026-11-03 by project owner, including the `npm audit` gate thresholds (approved 2026-11-03 after implementation).
+
 ### D-007: v1 conditions contract and conditions index v0.1 (2026-11-02)
 - **Decision:**
   - **Route:** `GET /v1/airports/{code}/conditions` takes IATA (3 letters) or ICAO (4 alphanumerics) in any case. Anything else is `400 invalid_code`; an unknown airport is `404 airport_not_found`.
