@@ -155,13 +155,15 @@ Errors: 400 invalid search/code format, 404 airport not found, 429 app rate-limi
 
 ## 6. First milestone detailed tasks — CF-001
 
-- [ ] **CF-001.1** Branch `pilot/cf-001-baseline`; record current main SHA and existing CI history.
-- [ ] **CF-001.2** Reproduce Python/Docker environment, review dependency pins and check `.env.template` vs Docker Compose (`REDIS_HOST=redis` inside Compose).
-- [ ] **CF-001.3** Run existing test suite; record count, failures and coverage rather than assuming old green CI guarantees current correctness.
-- [ ] **CF-001.4** Improve GitHub Actions: pull-request validation, non-mutating formatter check, dependency audit, Docker build; reconsider existing Docker Hub push job until release process is defined.
-- [ ] **CF-001.5** Remove public Redis port mapping for development unless specifically needed and bound to loopback; support future secure hosted REDIS_URL.
-- [ ] **CF-001.6** Add provider timeouts/HTTP error guards where necessary to establish a stable baseline; deep METAR adaptation belongs to CF-003.
-- [ ] **CF-001.7** Confirm health endpoint, reproducible Docker command, sample tests and README setup instructions.
+**Status: complete** (issue #2 closed 2026-10-18; evidence in [cf-001-baseline.md](cf-001-baseline.md)). The provider error mapping and key-free cache keys deferred from CF-001.6 were done in CF-004.
+
+- [x] **CF-001.1** Branch `pilot/cf-001-baseline`; record current main SHA and existing CI history.
+- [x] **CF-001.2** Reproduce Python/Docker environment, review dependency pins and check `.env.template` vs Docker Compose (`REDIS_HOST=redis` inside Compose).
+- [x] **CF-001.3** Run existing test suite; record count, failures and coverage rather than assuming old green CI guarantees current correctness.
+- [x] **CF-001.4** Improve GitHub Actions: pull-request validation, non-mutating formatter check, dependency audit, Docker build; reconsider existing Docker Hub push job until release process is defined.
+- [x] **CF-001.5** Remove public Redis port mapping for development unless specifically needed and bound to loopback; support future secure hosted REDIS_URL.
+- [x] **CF-001.6** Add provider timeouts/HTTP error guards where necessary to establish a stable baseline; deep METAR adaptation belongs to CF-003.
+- [x] **CF-001.7** Confirm health endpoint, reproducible Docker command, sample tests and README setup instructions.
 
 Note that GitHub Actions passed at the last recorded September 2025 commit; a fresh run on current dependencies is required. The old GitHub workflow builds and pushes to Docker Hub but does not itself deploy a publicly accessible web service.
 

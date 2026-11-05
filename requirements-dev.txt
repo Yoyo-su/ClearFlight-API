@@ -6,3 +6,5 @@ pip-audit==2.10.1
 pytest-cov==7.1.0
 pip==26.2.1
 setuptools==84.1.0
+# Starlette's TestClient prefers httpx2 (httpx support is deprecated)
+httpx2==2.16.0
