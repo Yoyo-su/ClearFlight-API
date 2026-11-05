@@ -71,19 +71,6 @@
         "longitude": -118.149891
       },
       {
-        "code": "VVLT",
-        "icao": "VVLT",
-        "iata": "LTH",
-        "name": "Long Thanh International Airport (Under Construction)",
-        "city": "Ho Chi Minh City (Long Thanh)",
-        "country": "Vietnam",
-        "country_code": "VN",
-        "type": "large_airport",
-        "timezone": "Asia/Ho_Chi_Minh",
-        "latitude": 10.772842,
-        "longitude": 107.040596
-      },
-      {
         "code": "KGGG",
         "icao": "KGGG",
         "iata": "GGG",
@@ -123,17 +110,30 @@
         "longitude": 116.745907
       },
       {
-        "code": "EGKB",
-        "icao": "EGKB",
-        "iata": "BQH",
-        "name": "London Biggin Hill Airport",
+        "code": "EGLC",
+        "icao": "EGLC",
+        "iata": "LCY",
+        "name": "London City Airport",
         "city": "London",
         "country": "United Kingdom",
         "country_code": "GB",
         "type": "medium_airport",
         "timezone": "Europe/London",
-        "latitude": 51.330799,
-        "longitude": 0.0325
+        "latitude": 51.505299,
+        "longitude": 0.055278
+      },
+      {
+        "code": "CYXU",
+        "icao": "CYXU",
+        "iata": "YXU",
+        "name": "London International Airport",
+        "city": "London",
+        "country": "Canada",
+        "country_code": "CA",
+        "type": "medium_airport",
+        "timezone": "America/Toronto",
+        "latitude": 43.032845,
+        "longitude": -81.149003
       }
     ]
   }

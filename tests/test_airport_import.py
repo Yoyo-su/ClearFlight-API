@@ -31,6 +31,7 @@ def source_row(**overrides):
         "municipality": "London",
         "icao_code": "EGLL",
         "iata_code": "LHR",
+        "scheduled_service": "yes",
     }
     row.update(overrides)
     return row
@@ -45,6 +46,7 @@ def snapshot_row(**overrides):
         "country_code": "GB",
         "country": "United Kingdom",
         "type": "large_airport",
+        "scheduled": "yes",
         "latitude": "51.470748",
         "longitude": "-0.459909",
         "timezone": "Europe/London",
@@ -102,6 +104,22 @@ class TestBuildSnapshotRows:
         assert snapshot == [snapshot_row()]
         assert list(snapshot[0]) == SNAPSHOT_FIELDS
         lookup.assert_called_once_with(51.470748, -0.459909)
+
+    @pytest.mark.it("records scheduled service as yes or no")
+    @pytest.mark.parametrize(
+        "value, expected", [("yes", "yes"), ("no", "no"), ("", "no"), (" yes ", "yes")]
+    )
+    def test_scheduled(self, value, expected):
+        rows = [source_row(scheduled_service=value)]
+        snapshot, _ = build_snapshot_rows(rows, {}, fixed_lookup("Europe/London"))
+        assert snapshot[0]["scheduled"] == expected
+
+    @pytest.mark.it("treats a missing scheduled_service column as no")
+    def test_scheduled_missing(self):
+        row = source_row()
+        del row["scheduled_service"]
+        snapshot, _ = build_snapshot_rows([row], {}, fixed_lookup("Europe/London"))
+        assert snapshot[0]["scheduled"] == "no"
 
     @pytest.mark.it("keeps airports with only an IATA or only an ICAO code")
     def test_single_code_rows(self):
@@ -166,6 +184,7 @@ class TestValidateSnapshot:
             (snapshot_row(icao="", iata="L1R"), "invalid IATA code"),
             (snapshot_row(name=""), "empty name"),
             (snapshot_row(type="heliport"), "unexpected type"),
+            (snapshot_row(scheduled="maybe"), "invalid scheduled"),
             (snapshot_row(latitude="91"), "invalid coordinates"),
             (snapshot_row(longitude="east"), "invalid coordinates"),
             (snapshot_row(timezone="GMT+1"), "unknown timezone"),

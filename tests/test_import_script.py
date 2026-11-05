@@ -140,6 +140,16 @@ class TestMain:
         assert meta["sources"]["airports"] == airports
 
     @pytest.mark.it("leaves the current snapshot when validation fails")
+    def test_main_over_old_format_snapshot(self, script, tmp_path):
+        # A snapshot from before a column was added (no "scheduled") must not
+        # stop the import; only its row count is used for the size check.
+        script.SNAPSHOT_PATH.write_text(
+            "icao,iata,name\nEGLL,LHR,a\nRJBB,KIX,b\nKJFK,JFK,c\n", encoding="utf-8"
+        )
+        airports, countries = write_sources(tmp_path)
+        assert run_main(script, ["--airports", airports, "--countries", countries]) == 0
+        assert "scheduled" in read_snapshot(script.SNAPSHOT_PATH)[0]
+
     def test_main_validation_failure(self, script, tmp_path):
         airports, countries = write_sources(tmp_path)
         run_main(script, ["--airports", airports, "--countries", countries])

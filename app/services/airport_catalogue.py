@@ -30,6 +30,7 @@ class Airport:
     country_code: str
     country: str | None
     type: str
+    scheduled: bool  # has scheduled airline service (OurAirports)
     latitude: float
     longitude: float
     timezone: str | None
@@ -51,6 +52,7 @@ class Airport:
             country_code=row["country_code"],
             country=row["country"] or None,
             type=row["type"],
+            scheduled=row["scheduled"] == "yes",
             latitude=float(row["latitude"]),
             longitude=float(row["longitude"]),
             timezone=row["timezone"] or None,
@@ -106,9 +108,11 @@ class AirportCatalogue:
     def search(self, query: str, limit: int) -> list[Airport]:
         """Search by code, name or city.
 
-        Results are ordered: exact IATA/ICAO match, then name or city starting
-        with the query, then a word in the name or city starting with it, then
-        any other substring match. Ties go to larger airports, then by name.
+        Results are ordered: exact IATA/ICAO match first; then airports with
+        scheduled airline service (what travellers search for) before those
+        without; within each, name or city starting with the query, then a word
+        in the name or city starting with it, then any other substring match;
+        then larger airports, then by name.
         """
         term = normalise(query)
         if not term:
@@ -118,11 +122,16 @@ class AirportCatalogue:
         for airport in self.airports:
             rank = self._match_rank(airport, term, code)
             if rank is not None:
-                matches.append(
-                    (rank, TYPE_RANK.get(airport.type, 3), airport.name, airport)
+                order = (
+                    0 if rank == 0 else 1,  # exact code match
+                    0 if airport.scheduled else 1,
+                    rank,
+                    TYPE_RANK.get(airport.type, 3),
+                    airport.name,
                 )
-        matches.sort(key=lambda m: m[:3])
-        return [m[3] for m in matches[:limit]]
+                matches.append((order, airport))
+        matches.sort(key=lambda m: m[0])
+        return [m[1] for m in matches[:limit]]
 
     @staticmethod
     def _match_rank(airport: Airport, term: str, code: str) -> int | None:

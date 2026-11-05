@@ -17,6 +17,23 @@ Locked pilot decisions live in [development-plan.md §1](development-plan.md) an
 
 ## Entries
 
+### D-009: Search ranks airports with scheduled service higher; "6+" visibility is 10 km; full zone names (2026-11-05)
+- **Decision:**
+  - **Snapshot (amends D-005):** the snapshot gains a `scheduled` column ("yes"/"no", from OurAirports' `scheduled_service`).
+  - **Search order:** exact code match; then airports with scheduled airline service before those without; then the match tier (name/city prefix, word prefix, substring); then size, then name.
+  - **"6+" visibility (amends D-006):** when the provider sends "6+" and the raw report contains a metric `9999` or `CAVOK` (10 km or more), the adapter reports 10,000 m with `visibility_at_least`. Any other "6+" (e.g. a North American `P6SM`, more than 6 SM) stays at 6 SM, about 9,656 m, "at least". Scores don't change (≥ 8000 m scores 0).
+  - **Zone names (refines D-008):** the frontend shows the browser's abbreviation when it has a real one ("GMT", "BST", "EDT", "WET"), otherwise the full name ("Japan Standard Time"), and only an offset when the browser knows no name.
+- **Why:** Owner cleanup list 2026-11-04:
+  - "kennedy" ranked a small Canadian airport above JFK, and "paris" put the business-only Le Bourget before Orly; travellers search for airports they can fly to.
+  - A European "9999" report read as "9.7 km or more".
+  - London showed as "UTC+0" in the smoke test. That turned out to be Playwright's headless Chromium, which ships without zone names; full browsers show "GMT". The fallback still helps where a browser has no abbreviation: "Japan Standard Time (UTC+9)" instead of only "UTC+9". Guessing "GMT" for every UTC+0 zone would be wrong for Lisbon (WET).
+- **Alternatives considered:**
+  - Scheduled service as a tie-break within a match tier only. Implemented first, but it didn't fix "kennedy": Gahcho Kue's city "Kennedy Lake" is a prefix match.
+  - A passenger-volume ranking (no data source).
+  - Always the long zone name (longer on phones).
+- **Source:** cleanup PR 2; snapshot regenerated from the 2026-11-05 OurAirports export (11,260 airports, +9 since 2026-10-30; 4,074 with scheduled service).
+- **Status:** accepted 2026-11-05. The owner chose the cleanup items; the change in ranking rule from "within a tier" to "ahead of tiers" was made during implementation and is flagged for owner review in the PR.
+
 ### D-008: Frontend MVP design and the API ageing fields (2026-11-03)
 - **Decision:** The CF-005 frontend follows `docs/cf-005-design.md` r3 with the owner's choices:
   - **D1:** both unit systems, metric first, no toggle.

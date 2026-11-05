@@ -52,6 +52,9 @@ test("search, open an airport and read its conditions", async ({ page }) => {
   await expect(page.getByRole("heading", { level: 1, name: "London Heathrow Airport" })).toBeVisible();
   await expect(page.getByText("Severe", { exact: true })).toBeVisible();
   await expect(page.getByText("Observed 35 min ago · 07:20 UTC")).toBeVisible();
+  // The zone label: a name when the browser has one ("GMT (UTC+0)"), else
+  // the offset. Playwright's headless Chromium ships without zone names.
+  await expect(page.getByText(/· ((GMT|Greenwich Mean Time) \(UTC\+0\)|UTC\+0)$/)).toBeVisible();
   await expect(page.getByText(/does not predict delays, cancellations or flight safety/).first()).toBeVisible();
   await expectAccessible(page);
   await expectNoHorizontalScroll(page);

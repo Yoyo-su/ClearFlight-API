@@ -24,16 +24,28 @@ function utcOffset(timeZone: string, now: Date): string {
   return `UTC${sign === "-" ? "−" : "+"}${text}`;
 }
 
-/** A short zone name such as "GMT", "BST" or "EDT", if the platform knows one. */
-function abbreviation(timeZone: string, now: Date): string | null {
+function zoneLabel(timeZone: string, now: Date, style: "short" | "long", locale: string): string {
+  return part(new Intl.DateTimeFormat(locale, { timeZone, timeZoneName: style }).formatToParts(now), "timeZoneName");
+}
+
+/**
+ * A zone name such as "BST" or "EDT" if the browser knows an abbreviation,
+ * otherwise its full name such as "Greenwich Mean Time" or "Japan Standard
+ * Time". Which names a browser knows varies (Playwright's headless Chromium
+ * knows none and gives "GMT+0"), and guessing one would be wrong for zones
+ * such as Lisbon (WET), so the full name is the fallback. Null when the
+ * browser only knows an offset.
+ */
+function zoneName(timeZone: string, now: Date): string | null {
+  // "GMT+1"/"UTC−4" are offsets, not names; a bare "GMT" is a real name
+  // (London in winter), a bare "UTC" isn't one for a local zone.
+  const isOffset = (name: string) => /^(GMT|UTC)[+−-]/.test(name) || name === "UTC";
   for (const locale of ["en-GB", "en-US"]) {
-    const name = part(
-      new Intl.DateTimeFormat(locale, { timeZone, timeZoneName: "short" }).formatToParts(now),
-      "timeZoneName",
-    );
-    if (name && !/^(GMT|UTC)[+−-]/.test(name)) return name === "UTC" ? "GMT" : name;
+    const name = zoneLabel(timeZone, now, "short", locale);
+    if (name && !isOffset(name)) return name;
   }
-  return null;
+  const long = zoneLabel(timeZone, now, "long", "en-GB");
+  return long && !isOffset(long) ? long : null;
 }
 
 export function readClock(timeZone: string, now: Date): ClockReading {
@@ -52,8 +64,8 @@ export function readClock(timeZone: string, now: Date): ClockReading {
     .format(now)
     .replace(",", "");
   const offset = utcOffset(timeZone, now);
-  const short = abbreviation(timeZone, now);
-  return { time, date, zone: short ? `${short} (${offset})` : offset };
+  const name = zoneName(timeZone, now);
+  return { time, date, zone: name ? `${name} (${offset})` : offset };
 }
 
 export function isValidTimeZone(timeZone: string): boolean {

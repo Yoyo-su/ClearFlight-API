@@ -29,7 +29,6 @@ from app.services.airport_import import (  # noqa: E402
     build_snapshot_rows,
     parse_countries,
     parse_overrides,
-    read_snapshot,
     validate_snapshot,
     write_snapshot,
 )
@@ -49,6 +48,12 @@ def load_csv(local_path: str | None, url: str) -> list[dict]:
     response.raise_for_status()
     response.encoding = "utf-8"
     return list(csv.DictReader(io.StringIO(response.text)))
+
+
+def count_rows(path: Path) -> int:
+    """Rows in the current snapshot, whatever its columns (for the size check)."""
+    with open(path, newline="", encoding="utf-8") as f:
+        return sum(1 for _ in csv.DictReader(f))
 
 
 def main() -> int:
@@ -79,9 +84,7 @@ def main() -> int:
         overrides,
     )
 
-    previous_count = (
-        len(read_snapshot(SNAPSHOT_PATH)) if SNAPSHOT_PATH.exists() else None
-    )
+    previous_count = count_rows(SNAPSHOT_PATH) if SNAPSHOT_PATH.exists() else None
     validate_snapshot(rows, previous_count, args.allow_size_change)
 
     meta = {
