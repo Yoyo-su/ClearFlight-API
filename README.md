@@ -7,12 +7,13 @@
 ClearFlight shows observed weather only. It is not a forecast, an aviation briefing or a flight tracker, and its index does not predict delays, cancellations or flight safety.
 
 ## Status
-A pilot under active development, **not yet publicly deployed**. The whole app runs locally with Docker.
+Under active development and **not publicly deployed**: public deployment waits until the app includes flight data and fuller predictive scoring (owner decision, 2026-11-07). The whole app runs locally with Docker.
 
 | | |
 |---|---|
 | Done | Airport catalogue and search (CF-002) · METAR weather adapter (CF-003) · conditions API and index v0.1 (CF-004) · web app (CF-005) |
-| Next | Public deployment (CF-006) · traveller validation (CF-007) |
+| Next | Plan the next phase: flight data, an airport map and predictive scoring |
+| Deferred | Public deployment (CF-006) and traveller validation (CF-007), until that phase is built |
 
 **Known limitations:**
 - The index bands are heuristic (v0.1) and not yet validated with travellers.
@@ -113,9 +114,8 @@ Three routes, documented in full in [docs/API.md](docs/API.md):
 | [docs/CURRENT_MILESTONE.md](docs/CURRENT_MILESTONE.md) | What's in progress now |
 
 ## Roadmap
-- **CF-006 public deployment:** hosting, HTTPS, CORS, request limits, monitoring; release `v0.1.0`; remove the deprecated legacy route.
-- **CF-007 traveller validation:** 10–20 testers, then a go / iterate / stop decision.
-- **Proposed, not yet scoped:**
-  - an airport map with weather and flight data (a free flight-data source still has to be chosen; flight data is deferred in the pilot plan);
-  - a site-wide "popular airports" list;
-  - a deeper visual redesign.
+- **Next phase (being planned):** flight data for the airport, an airport map with weather and flight data, and fuller predictive scoring. This changes the original pilot plan, which deferred flight tracking and prediction, so data sources, costs and how predictions are presented are still to be decided.
+- **Deferred until then:**
+  - CF-006 public deployment: hosting, HTTPS, CORS, request limits, monitoring; release `v0.1.0`; remove the deprecated legacy route;
+  - CF-007 traveller validation: 10–20 testers, then a go / iterate / stop decision.
+- **Proposed:** a site-wide "popular airports" list; a deeper visual redesign.
