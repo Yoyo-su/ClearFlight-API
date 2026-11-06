@@ -75,7 +75,7 @@ check-coverage:
 
 ## Run lint
 lint:
-	$(FLAKE8) . --max-line-length=150 --exclude=.git,__pycache__,./venv,./frontend --ignore=W503
+	$(FLAKE8) . --max-line-length=150 --exclude=.git,__pycache__,./venv,./.venv*,./.local-*,./frontend --ignore=W503
 
 ## Run audit
 audit:
