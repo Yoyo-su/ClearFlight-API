@@ -170,14 +170,14 @@ Docker is used to run the API. To set it up, follow these steps:
 
 4. Copy `.env.template` to `.env` and add your own API credentials. Inside Docker Compose Redis is reachable as `redis` (not `localhost`).
 
-5. Keep `.env` private. Do not commit API keys. Redis is internal to Docker Compose; only the API is bound to `127.0.0.1:8000`.
+5. Keep `.env` private. Do not commit API keys. Redis is internal to Docker Compose; only the API (`127.0.0.1:8000`) and the web app (`127.0.0.1:5173`) are bound, and only to localhost.
 
 6. Build and run the Docker container:
    ```bash
    docker compose up --build
    ```
 
-7. Access the API at `http://localhost:8000`. Status should be `ok` if everything is set up correctly.
+7. Open the web app at `http://localhost:5173`. The first start installs its packages, which takes a minute; later starts reinstall only when `frontend/package-lock.json` changes. (Docker keeps these packages in its own volume. On Linux/WSL it may leave an empty, root-owned `frontend/node_modules` folder on a fresh clone; if a host `npm ci` then fails, remove it with `sudo rm -rf frontend/node_modules`.) The API is at `http://localhost:8000`; `/health` should return `ok`.
 
 8. To stop the container, use:
    ```bash
@@ -210,7 +210,7 @@ npm test             # unit and component tests (Vitest), 80% coverage gate
 npm run e2e          # end-to-end tests on desktop and mobile Chromium, with axe checks
 npm run build        # production build in dist/
 ```
-Run the API with `docker compose up` for `npm run dev`. Set `VITE_API_BASE_URL` at build time when the API is on another origin (CF-006); empty means same origin.
+`docker compose up` also starts this dev server (the `frontend` service, at http://localhost:5173, proxying to the API container). To run it on the host instead, start only the API with `docker compose up clearflightapi redis`, then `npm run dev`. Set `VITE_API_BASE_URL` at build time when the API is on another origin (CF-006); empty means same origin.
 
 **Contract with the API:** `frontend/tests/fixtures/` holds API responses recorded from the real code (`python scripts/record_frontend_fixtures.py`, deterministic, no network).
 - The backend test `tests/test_frontend_fixtures.py` fails if they no longer match the Pydantic models exactly or what the API produces now.
