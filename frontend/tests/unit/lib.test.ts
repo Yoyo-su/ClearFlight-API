@@ -142,9 +142,9 @@ describe("local clock with DST (IANA zones)", () => {
     ["America/New_York", "2026-11-01T05:59:00Z", "01:59", "EDT (UTC−4)"],
     ["America/New_York", "2026-11-01T06:00:00Z", "01:00", "EST (UTC−5)"],
     // Tokyo: no DST
-    ["Asia/Tokyo", "2026-07-15T12:00:00Z", "21:00", "UTC+9"],
+    ["Asia/Tokyo", "2026-07-15T12:00:00Z", "21:00", "Japan Standard Time (UTC+9)"],
     // India: half-hour offset
-    ["Asia/Kolkata", "2026-07-15T12:00:00Z", "17:30", "UTC+5:30"],
+    ["Asia/Kolkata", "2026-07-15T12:00:00Z", "17:30", "India Standard Time (UTC+5:30)"],
   ])("%s at %s reads %s %s", (zone, iso, time, label) => {
     const reading = readClock(zone, new Date(iso));
     expect(reading.time).toBe(time);

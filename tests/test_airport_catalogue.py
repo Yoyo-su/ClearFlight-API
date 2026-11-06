@@ -30,6 +30,7 @@ def airport(**fields):
         "country_code": "GB",
         "country": "United Kingdom",
         "type": "small_airport",
+        "scheduled": "no",
         "latitude": "51.0",
         "longitude": "0.0",
         "timezone": "Europe/London",
@@ -160,6 +161,70 @@ class TestSearch:
         assert result["icao"] is None and result["code"] == "AAI"
         assert catalogue.get("GRU").to_dict()["timezone"] is None
         assert airport(iata="XYZ").to_dict()["city"] is None
+
+
+@pytest.mark.describe("Airport search: scheduled service")
+class TestScheduledRanking:
+    @pytest.mark.it("ranks airports with scheduled service ahead of match quality")
+    def test_scheduled_first(self):
+        catalogue = AirportCatalogue(
+            [
+                airport(
+                    iata="GHK",
+                    name="Gahcho Kue",
+                    city="Kennedy Lake",
+                    type="small_airport",
+                ),
+                airport(
+                    icao="KAAA",
+                    name="Kennedy Field",
+                    city="Nowhere",
+                    type="large_airport",
+                ),
+                airport(
+                    icao="KJFK",
+                    iata="JFK",
+                    name="John F. Kennedy International Airport",
+                    city="New York",
+                    type="large_airport",
+                    scheduled="yes",
+                ),
+            ]
+        )
+        # JFK only matches a word inside its name, but has scheduled service.
+        assert [a.code for a in catalogue.search("kennedy", 10)] == [
+            "KJFK",
+            "KAAA",
+            "GHK",
+        ]
+
+    @pytest.mark.it("still puts an exact code match first")
+    def test_exact_code_beats_scheduled(self):
+        catalogue = AirportCatalogue(
+            [
+                airport(iata="GHK", name="Gahcho Kue", city="Kennedy Lake"),
+                airport(icao="KGHK", name="GHK Field", city="Nowhere", scheduled="yes"),
+            ]
+        )
+        assert [a.code for a in catalogue.search("ghk", 10)] == ["GHK", "KGHK"]
+
+    @pytest.mark.it("puts a scheduled small airport before an unscheduled large one")
+    def test_scheduled_beats_size(self):
+        catalogue = AirportCatalogue(
+            [
+                airport(
+                    icao="EGXX", name="London Big", city="London", type="large_airport"
+                ),
+                airport(
+                    icao="EGYY",
+                    name="London Small",
+                    city="London",
+                    type="small_airport",
+                    scheduled="yes",
+                ),
+            ]
+        )
+        assert [a.code for a in catalogue.search("london", 10)] == ["EGYY", "EGXX"]
 
 
 @pytest.mark.describe("Loading a snapshot")

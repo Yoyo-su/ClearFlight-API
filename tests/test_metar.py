@@ -113,8 +113,27 @@ class TestRecordedFixtures:
     def test_visibility_lower_bound(self):
         panc = observe("panc_10plus_gust_rain", "PANC")
         assert (panc.visibility_m, panc.visibility_at_least) == (16093, True)
+        # "6+" stands for 9999/CAVOK, i.e. 10 km or more (raw: CAVOK)
         lemd = observe("lemd_vrb_cavok", "LEMD")
-        assert (lemd.visibility_m, lemd.visibility_at_least) == (9656, True)
+        assert (lemd.visibility_m, lemd.visibility_at_least) == (10000, True)
+        yssy = observe("yssy_auto_ncd_speci", "YSSY")
+        assert "9999" in yssy.raw_text
+        assert (yssy.visibility_m, yssy.visibility_at_least) == (10000, True)
+
+    @pytest.mark.it("keeps a '6+' without a metric 9999/CAVOK report at 6 miles")
+    @pytest.mark.parametrize(
+        "raw",
+        [
+            "METAR KXYZ 300651Z 23011KT P6SM FEW250 14/12 A3006",
+            "METAR KXYZ 300651Z 23011KT 19999 FEW250 14/12 A3006",
+            None,
+        ],
+    )
+    def test_six_plus_not_metric(self, raw):
+        obs = select_observation(
+            [record(icaoId="KXYZ", visib="6+", rawOb=raw)], "KXYZ", FETCHED_AT
+        )
+        assert (obs.visibility_m, obs.visibility_at_least) == (9656, True)
 
     @pytest.mark.it("keeps gusts and AWC's knot conversion for MPS stations")
     def test_gusts(self):

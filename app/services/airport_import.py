@@ -29,6 +29,7 @@ SNAPSHOT_FIELDS = [
     "country_code",
     "country",
     "type",
+    "scheduled",
     "latitude",
     "longitude",
     "timezone",
@@ -118,6 +119,10 @@ def build_snapshot_rows(
                 "country_code": country_code,
                 "country": countries.get(country_code, ""),
                 "type": row["type"],
+                # "yes" when OurAirports lists scheduled airline service
+                "scheduled": (
+                    "yes" if row.get("scheduled_service", "").strip() == "yes" else "no"
+                ),
                 "latitude": f"{latitude:.6f}",
                 "longitude": f"{longitude:.6f}",
                 "timezone": timezone,
@@ -162,6 +167,8 @@ def validate_snapshot(
         seen_iata.add(iata)
         if not row["name"]:
             problems.append(f"line {index}: empty name")
+        if row["scheduled"] not in ("yes", "no"):
+            problems.append(f"line {index}: invalid scheduled {row['scheduled']!r}")
         if row["type"] not in INCLUDED_TYPES:
             problems.append(f"line {index}: unexpected type {row['type']!r}")
         try:

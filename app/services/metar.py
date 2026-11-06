@@ -34,6 +34,7 @@ BACKOFF_JITTER_SECONDS = 0.25
 MAX_RETRY_AFTER_SECONDS = 2.0
 FUTURE_TOLERANCE = timedelta(minutes=10)
 METRES_PER_STATUTE_MILE = 1609.344
+METRES_TEN_KM = 10000
 
 CLEAR_COVERS = {"CLR", "SKC", "NCD", "NSC"}
 LAYER_COVERS = {"FEW", "SCT", "BKN", "OVC"}
@@ -290,11 +291,22 @@ def whole(value: float | None) -> int | None:
     return None if value is None else round(value)
 
 
-def parse_visibility(value) -> tuple[float | None, bool]:
+METRIC_TEN_KM_PLUS = re.compile(r"(?<!\S)(9999|CAVOK)(?!\S)")
+
+
+def parse_visibility(value, raw_text=None) -> tuple[float | None, bool]:
     """Return (statute miles, at_least) from AWC's visib, e.g. 4.35 or "10+"."""
     at_least = False
     if isinstance(value, str):
         text = value.strip()
+        if (
+            text == "6+"
+            and isinstance(raw_text, str)
+            and METRIC_TEN_KM_PLUS.search(raw_text)
+        ):
+            # AWC turns a metric 9999 or CAVOK (10 km or more) into "6+", so
+            # report the metric value. Other "6+" (e.g. P6SM) stays 6 SM (D-009).
+            return METRES_TEN_KM / METRES_PER_STATUTE_MILE, True
         at_least = text.endswith("+")
         try:
             value = float(text.rstrip("+"))
@@ -351,7 +363,7 @@ def normalise_record(
     if wind_gust is not None and wind_speed is not None and wind_gust < wind_speed:
         logger.warning("Ignoring METAR gust below wind speed for %s", station)
         wind_gust = None
-    miles, at_least = parse_visibility(record.get("visib"))
+    miles, at_least = parse_visibility(record.get("visib"), record.get("rawOb"))
     sky_condition, layers, ceiling = parse_sky(
         record.get("cover"), record.get("clouds")
     )

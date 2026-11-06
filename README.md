@@ -59,7 +59,7 @@ example: `/v1/airports/LHR/conditions`. This illustrative, abridged response is 
 | 8 | 40–49 | 0.8–1.6 km | 200–499 ft |
 | 10 | ≥ 50 | < 800 m | < 200 ft |
 
-Visibility arrives from the provider in statute miles rounded to 0.01. Band comparisons allow 10 m for that rounding, so a reported 8000 m (sent as 4.97 SM = 7998 m) scores 0.
+Visibility arrives from the provider in statute miles rounded to 0.01. Band comparisons allow 10 m for that rounding, so a reported 8000 m (sent as 4.97 SM = 7998 m) scores 0. When the provider's "6+" comes from a metric `9999` or `CAVOK` report, it is reported as 10,000 m, "at least"; any other "6+" stays at 6 statute miles, "at least".
 
 - **Reported weather:**
   - thunderstorm 8 (heavy 10);
@@ -119,7 +119,7 @@ example: `/v1/airports/search?q=heathrow` returns
   ]
 }
 ```
-- Results are ordered: exact IATA/ICAO code, then name or city starting with `q`, then a word starting with `q`, then any other match; ties go to larger airports, then by name.
+- Results are ordered: exact IATA/ICAO code first; then airports with scheduled airline service before those without; within each group, name or city starting with `q`, then a word starting with `q`, then any other match; then larger airports, then by name.
 - `code` is the ICAO code, or the IATA code when the airport has no ICAO code. `icao`, `iata`, `city`, `country` and `timezone` can be `null`.
 - `timezone` is an IANA zone ID. A few remote airports have none (`null`); the API never substitutes a fixed offset.
 - No match returns `200` with an empty `results` list. A missing, too short or too long `q`, or an invalid `limit`, returns `400`.

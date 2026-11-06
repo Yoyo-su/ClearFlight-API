@@ -1,7 +1,7 @@
 {
-  "generated_at": "2026-10-30T04:00:24+00:00",
-  "row_count": 11251,
-  "source_rows": 86311,
+  "generated_at": "2026-11-05T13:26:33+00:00",
+  "row_count": 11260,
+  "source_rows": 86337,
   "sources": {
     "airports": "https://davidmegginson.github.io/ourairports-data/airports.csv",
     "countries": "https://davidmegginson.github.io/ourairports-data/countries.csv"
