@@ -63,7 +63,7 @@ Locked pilot decisions live in [development-plan.md §1](development-plan.md) an
   - **Freshness:** one authority, `metar.freshness`, with the configurable thresholds and one clock per request. `current` is scored; `stale` is shown but not scored.
   - **Unavailable:** older than the stale limit gives `unavailable` / `observation_too_old` with `observation: null` and `last_observed_at`. No report gives `no_report`. An airport without ICAO gives `no_metar_station`. All are `200`.
   - **Provider failures** follow D-006: 504 `provider_timeout`, 502 `provider_error`, 503 `rate_limited` with Retry-After. Error bodies are `{"detail", "reason"}`.
-  - **Index v0.1:** the maximum of four components, with bands as in the README.
+  - **Index v0.1:** the maximum of four components, with bands as in [API.md](API.md) (formerly in the README).
     - Wind uses the higher of speed and gust.
     - Visibility breakpoints are 8000 / 4800 / 1600 / 800 m (the common 5 / 3 / 1 statute-mile flight-category breakpoints, used only as severity bands), with a 10 m tolerance for AWC's mile rounding.
     - Ceiling breakpoints are 3000 / 1000 / 500 / 200 ft.

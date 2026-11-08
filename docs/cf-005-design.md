@@ -1,5 +1,7 @@
 # CF-005 frontend MVP — design spec (draft for owner approval)
 
+> Note (2026-11-06): the README sections this spec cites ("Endpoints", "Frontend", "Running the checks locally") moved to [API.md](API.md) and [DEVELOPMENT.md](DEVELOPMENT.md).
+
 **Status:** r3, **approved by the owner 2026-11-03** (decisions D1–D11 in §11). r3 addresses the Codex design critique of r2 (1 High, 5 Medium; see §13).
 **Mock-up:** the "ClearFlight CF-005 mock-up" canvas (private artifact: https://claude.ai/artifact/BKt9cvXu6jBuoS2TAtazX3). Its artboards show the search page and the airport page on desktop and mobile. A "state" switch on the airport page shows every state in §4.
 **Sources:**
