@@ -12,7 +12,7 @@ Under active development and **not publicly deployed**: public deployment waits 
 | | |
 |---|---|
 | Done | Airport catalogue and search (CF-002) · METAR weather adapter (CF-003) · conditions API and index v0.1 (CF-004) · web app (CF-005) |
-| Next | Plan the next phase: flight data, an airport map and predictive scoring |
+| Next | Phase 2 ([plan v1.1](docs/development-plan.md)): forecast outlook, live aircraft and airport map, observed movements, disruption signals, flight lookup |
 | Deferred | Public deployment (CF-006) and traveller validation (CF-007), until that phase is built |
 
 **Known limitations:**
@@ -114,7 +114,7 @@ Three routes, documented in full in [docs/API.md](docs/API.md):
 | [docs/CURRENT_MILESTONE.md](docs/CURRENT_MILESTONE.md) | What's in progress now |
 
 ## Roadmap
-- **Next phase (being planned):** flight data for the airport, an airport map with weather and flight data, and fuller predictive scoring. This changes the original pilot plan, which deferred flight tracking and prediction, so data sources, costs and how predictions are presented are still to be decided.
+- **Phase 2 ([plan v1.1](docs/development-plan.md), free data only):** a forecast outlook from official airport forecasts (CF-008), live aircraft positions (CF-009) on an airport map (CF-010), observed departures and arrivals (CF-011), heuristic disruption signals (CF-012), and a flight lookup with best-effort delays (CF-013). Complete per-flight delays and delay prediction aren't possible on free data and stay out of scope.
 - **Deferred until then:**
   - CF-006 public deployment: hosting, HTTPS, CORS, request limits, monitoring; release `v0.1.0`; remove the deprecated legacy route;
   - CF-007 traveller validation: 10–20 testers, then a go / iterate / stop decision.

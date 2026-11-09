@@ -1,21 +1,25 @@
-# Current milestone: post-CF-005 cleanup (before CF-006)
+# Current milestone: CF-008 Forecast outlook (Phase 2 begins)
 
-**Status:** In progress (three small PRs). CF-006 public deployment waits until the owner has hosting set up.
-**Source of truth:** owner's cleanup list, 2026-11-04 (items 1, 2, 3, 6, 7, 8, 9, 10)
-**Last updated:** 2026-11-05
+**Status:** Not started (plan v1.1 approved 2026-11-09)
+**Source of truth:** [docs/development-plan.md](development-plan.md) v1.1 (§2 feature 3, §4, §5, §7); decision D-010
+**Last updated:** 2026-11-09
 
 ## Goal
-Tidy the app, dev setup and docs before public deployment, without changing the v1 contract beyond the recorded fixes.
+Show each airport's official forecast (TAF) for the next hours, with the conditions index applied per forecast period, clearly labelled as a forecast.
 
-## Work
-| PR | Items | Status |
-|---|---|---|
-| 1. Housekeeping | 6 Compose `frontend` dev service · 7 `httpx2` for Starlette's test client (removes the deprecation warning) · 8 milestone and ARCHITECTURE status · 10 development-plan §6 ticks | In review |
-| 2. Search and wording | 1 rank airports with scheduled service higher · 2 "6+" visibility reads "10 km or more" · 3 full timezone name when the browser has no abbreviation | Planned |
-| 3. README | 9 evaluate the README for portfolio readers; propose an outline for owner approval, then rewrite | Planned |
+## Next task
+Branch, then a CF-008 design/plan for approval:
+- the TAF adapter and parser (verify the AWC TAF format with a live probe);
+- the per-period index;
+- `/v1/airports/{code}/forecast`;
+- the UI.
 
-## Next milestone: CF-006 Public deployment (blocked on hosting)
-**Tracking:** [GitHub issue #7](https://github.com/Yoyo-su/ClearFlight-API/issues/7). Plan §5: Cloudflare Pages, Render, Upstash; secrets, CORS, limits, HTTPS, logs, smoke checks; release `v0.1.0`. Also remove the deprecated legacy `/airport/{code}` route and its AviationStack/WeatherStack services (owner decision 2026-11-02). The AviationStack trial access ends around 2026-11-12 (per the owner, 2026-11-05), after which that route can't work at all; the pilot itself doesn't use AviationStack.
+## Phase 2 order (plan v1.1)
+CF-008 forecast → CF-009 positions → CF-010 map → CF-011 movements → CF-012 disruption signals → CF-013 flight lookup. Then CF-006 public deployment (with the data-licence gate) and CF-007 validation.
+
+## Completed since CF-005
+- Cleanup PRs #20 (housekeeping), #21 (search ranking, visibility, zone names) and #22 (README rewrite; docs/API.md, docs/DEVELOPMENT.md), merged 2026-11-06/08.
+- RQ-002 free flight-data research (closed, follow-up), and plan v1.1 with its design critique.
 
 ## Previous milestones
 - CF-005 frontend MVP: done. PR #19 merged 2026-11-04 (`5a07e60`), issue #6 closed. Spec: [cf-005-design.md](cf-005-design.md); decision D-008.
