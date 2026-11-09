@@ -5,7 +5,13 @@ from fastapi.responses import JSONResponse
 from app.api.airport import airport_query
 from app.api.airport_search import search_query
 from app.api.conditions import ConditionsError, conditions_query
-from app.api.models import AirportSearchResponse, ConditionsResponse, ErrorResponse
+from app.api.forecast import forecast_query
+from app.api.models import (
+    AirportSearchResponse,
+    ConditionsResponse,
+    ErrorResponse,
+    ForecastResponse,
+)
 from app.services.airport_catalogue import get_catalogue
 
 
@@ -59,6 +65,16 @@ ERROR_RESPONSES = {
 def get_airport_conditions(code: str):
     """Observed conditions for an airport (IATA or ICAO code)."""
     return conditions_query(code)
+
+
+@app.get(
+    "/v1/airports/{code}/forecast",
+    response_model=ForecastResponse,
+    responses=ERROR_RESPONSES,
+)
+def get_airport_forecast(code: str):
+    """Forecast outlook for an airport from its TAF (next 12 hours)."""
+    return forecast_query(code)
 
 
 # Legacy prototype route, replaced by /v1/airports/{code}/conditions;

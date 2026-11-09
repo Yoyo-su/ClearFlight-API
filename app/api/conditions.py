@@ -28,18 +28,14 @@ class ConditionsError(HTTPException):
         super().__init__(status_code=status_code, detail=detail, headers=headers)
 
 
-def conditions_query(code: str) -> dict:
-    """Build the conditions response for an airport (IATA or ICAO code).
+def resolve_airport(code: str):
+    """Validate a code and find the airport; shared by the v1 airport routes.
 
     Raises:
-        ConditionsError: 400 invalid code, 404 unknown airport, 502/503/504
-            for METAR provider failures (D-006).
+        ConditionsError: 400 for a badly formed code, 404 for an unknown airport.
 
     Returns:
-        dict: airport, observation, conditions, data_status,
-            unavailable_reason, last_observed_at, and current_until and
-            stale_until (when the observation stops being current and
-            expires, from the configured thresholds; D-007, D-008).
+        tuple: (Airport, its public fields for responses).
     """
     normalised = code.strip().upper()
     if not code.isascii() or not CODE_PATTERN.fullmatch(normalised):
@@ -56,17 +52,20 @@ def conditions_query(code: str) -> dict:
         for key, value in airport.to_dict().items()
         if key not in ("type", "latitude", "longitude")
     }
+    return airport, airport_data
 
-    if airport.icao is None:
-        return unavailable(airport_data, "no_metar_station")
+
+def call_provider(fetch, *args):
+    """Call a weather-provider function, mapping its errors to HTTP (D-006)."""
     try:
-        observation = get_latest_observation(airport.icao)
+        return fetch(*args)
     except MetarTimeout:
         raise ConditionsError(504, "provider_timeout", "The weather provider timed out")
     except MetarUpstreamError as e:
-        raise ConditionsError(
-            502, "provider_error", f"The weather provider failed ({e.reason})"
+        reason = (
+            "invalid_forecast" if e.reason == "invalid_forecast" else "provider_error"
         )
+        raise ConditionsError(502, reason, f"The weather provider failed ({e.reason})")
     except MetarRateLimited as e:
         raise ConditionsError(
             503,
@@ -74,6 +73,25 @@ def conditions_query(code: str) -> dict:
             "Weather requests are temporarily limited; try again shortly",
             headers={"Retry-After": str(max(1, math.ceil(e.retry_after_s)))},
         )
+
+
+def conditions_query(code: str) -> dict:
+    """Build the conditions response for an airport (IATA or ICAO code).
+
+    Raises:
+        ConditionsError: 400 invalid code, 404 unknown airport, 502/503/504
+            for METAR provider failures (D-006).
+
+    Returns:
+        dict: airport, observation, conditions, data_status,
+            unavailable_reason, last_observed_at, and current_until and
+            stale_until (when the observation stops being current and
+            expires, from the configured thresholds; D-007, D-008).
+    """
+    airport, airport_data = resolve_airport(code)
+    if airport.icao is None:
+        return unavailable(airport_data, "no_metar_station")
+    observation = call_provider(get_latest_observation, airport.icao)
     if observation is None:
         return unavailable(airport_data, "no_report")
 

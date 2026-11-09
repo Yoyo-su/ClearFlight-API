@@ -42,7 +42,7 @@ Forecast values are always visibly distinct from the observed index: a "Forecast
    - Use the TAF for the requested station with `mostRecent = 1`; if there's none, use the latest `issueTime`.
    - Required: `issueTime`, `validTimeFrom` < `validTimeTo`, a base period (no `fcstChange`) starting at `validTimeFrom`, and every period with `timeFrom < timeTo` inside the validity (`timeBec`, when present, is ≥ `timeFrom` and inside the validity; `timeBec > timeTo` is allowed and seen live).
    - A station mismatch, a missing base or a period outside the validity means the **payload is invalid**: a 502 `provider_error` with reason `invalid_forecast` (the D-006/D-007 mapping, which is truthful: the provider's data is unusable). It is not cached as success.
-   - Unknown `fcstChange` values make the hours they overlap `unknown` rather than rejecting the whole TAF.
+   - Unknown `fcstChange` values don't reject the TAF. Because they can't be matched to a raw group, the raw/decoded alignment fails and every hour shows as `unknown` (more cautious than marking only the hours they overlap).
    - Now > `validTimeTo` → `unavailable` / `forecast_expired`.
 2. **Coverage per hour:**
    - an hour before `validTimeFrom` is `not_yet_valid` (no score; "Forecast starts at HH:MM");
@@ -54,7 +54,7 @@ Forecast values are always visibly distinct from the observed index: a "Forecast
    - **weather:** weather groups or `NSW`;
    - **sky:** cloud groups, `NSC`, `SKC`, `CAVOK` or `VV`.
    
-   The decoded values supply the numbers. For each element:
+   The decoded values supply the numbers, except that a metric visibility token (e.g. `0150`, `9999`) is read from the raw text exactly, since AWC's statute-mile decode is rounded. For each element:
    - **Omitted** (no token in a TEMPO/PROB/BECMG group): **inherit** from the state it modifies. In a base/FM group, which must be complete, an omitted element is **unknown**.
    - **Stated and valid:** the decoded value (D-006 ranges and units; `"6+"` → 10 km for metric TAFs with `9999`/`CAVOK`, else 6 SM "or more"; `NSW` → no significant weather; `vertVis` → ceiling; `VV///` → obscured, height unknown; `CAVOK`/`NSC`/`SKC` → no cloud ceiling).
    - **Stated but unusable** (e.g. `""` decoded while the raw group has a visibility token, or a value out of range): **unknown**, never inherited.
@@ -63,7 +63,7 @@ Forecast values are always visibly distinct from the observed index: a "Forecast
    - start: {base};
    - `FM` at t: the candidates become {FM state} from t;
    - `BECMG` from `timeFrom` to `timeBec`: during the transition, candidates = (the candidates in force at `timeFrom`) ∪ {the new state}; from `timeBec`, candidates = {the new state};
-   - a BECMG starting while an earlier one is still in transition takes **all** current candidates as its "old" set, so overlapping transitions accumulate candidates until each completes. For example, EGLL 11:00–12:00 has candidates {fog base, BECMG-1 state, BECMG-2 state};
+   - a BECMG starting while an earlier one is still in transition takes **all** current candidates as its "old" set, so overlapping transitions accumulate candidates until each completes. For example, EGLL 11:00–12:00 has four candidates: the fog base, the BECMG-1 state, and the BECMG-2 change applied to each of those two;
    - **prevailing score** for an hour = the worst score over all candidates and all instants in the hour; "changing" when more than one candidate applies;
    - each BECMG's new state is AWC's carried-forward state, re-checked against the raw group (step 3).
 5. **Possible variants** (TEMPO/PROB):
