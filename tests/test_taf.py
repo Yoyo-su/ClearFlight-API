@@ -300,18 +300,33 @@ class TestOutlook:
         hours = taf.hourly_outlook(meta, periods, NOW)
         assert hours[0]["prevailing"]["conditions"]["score"] is None
 
-    @pytest.mark.it(
-        "makes the sky unknown when raw and decoded cloud covers or heights disagree"
-    )
+    @pytest.mark.it("makes the sky unknown when raw and decoded cloud layers disagree")
     @pytest.mark.parametrize(
-        "layer", [{"cover": "FEW", "base": 3000}, {"cover": "FEW", "base": 200}]
+        "raw, layer, known",
+        [
+            ("FEW030", {"cover": "FEW", "base": 3000}, True),
+            ("FEW030", {"cover": "FEW", "base": 200}, False),  # height
+            ("BKN002", {"cover": "FEW", "base": 200}, False),  # cover
+            ("BKN///", {"cover": "BKN", "base": 6000}, False),  # unknown ceiling height
+            ("FEW///", {"cover": "FEW", "base": 6000}, True),  # not a ceiling
+        ],
     )
-    def test_cloud_mismatch(self, layer):
-        rec = record("taf_pilots", "RJBB")  # raw FEW030
+    def test_cloud_mismatch(self, raw, layer, known):
+        rec = record("taf_pilots", "RJBB")
+        rec["rawTAF"] = rec["rawTAF"].replace("FEW030", raw)
         rec["fcsts"][0]["clouds"] = [dict(layer, type=None)]
         _, periods = taf.parse_taf(rec, "RJBB")
-        expected = layer["base"] == 3000
-        assert (periods[0].elements["sky"] is not taf.UNKNOWN) == expected
+        assert (periods[0].elements["sky"] is not taf.UNKNOWN) == known
+
+    @pytest.mark.it(
+        "makes the sky unknown when raw and decoded vertical visibility disagree"
+    )
+    def test_vertical_visibility_mismatch(self):
+        rec = record("taf_eham_variants", "EHAM")
+        i = next(i for i, f in enumerate(rec["fcsts"]) if f.get("vertVis"))
+        rec["fcsts"][i]["vertVis"] = 6000  # raw says VV001
+        _, periods = taf.parse_taf(rec, "EHAM")
+        assert periods[i].elements["sky"] is taf.UNKNOWN
 
     @pytest.mark.it("uses forecast wording, never observation or delay claims")
     def test_wording(self):

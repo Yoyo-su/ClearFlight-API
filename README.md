@@ -1,18 +1,18 @@
 # ClearFlight
 
-**Airport weather, explained.** ClearFlight shows travellers the latest *observed* weather at an airport, how recent it is, and an experimental 0–10 conditions index with the reasons behind it. Search any of about 11,000 airports by name, city or code, then open a shareable page such as `/airport/EGLL`.
+**Airport weather, explained.** ClearFlight shows travellers the latest *observed* weather at an airport, how recent it is, and an experimental 0–10 conditions index with the reasons behind it, plus a clearly labelled 12-hour outlook from the airport's official forecast (TAF). Search any of about 11,000 airports by name, city or code, then open a shareable page such as `/airport/EGLL`.
 
 ![ClearFlight airport page for London Heathrow in mist: an 8/10 severe conditions index driven by 1.3 km visibility and a 200 ft cloud ceiling, next to the observed weather](docs/images/airport-page.png)
 
-ClearFlight shows observed weather only. It is not a forecast, an aviation briefing or a flight tracker, and its index does not predict delays, cancellations or flight safety.
+ClearFlight keeps observed weather and forecasts apart: the forecast outlook is always labelled as a forecast and never shown on the observed card. It is not an aviation briefing or a flight tracker, and neither index predicts delays, cancellations or flight safety.
 
 ## Status
 Under active development and **not publicly deployed**: public deployment waits until the app includes flight data and fuller predictive scoring (owner decision, 2026-11-07). The whole app runs locally with Docker.
 
 | | |
 |---|---|
-| Done | Airport catalogue and search (CF-002) · METAR weather adapter (CF-003) · conditions API and index v0.1 (CF-004) · web app (CF-005) |
-| Next | Phase 2 ([plan v1.1](docs/development-plan.md)): forecast outlook, live aircraft and airport map, observed movements, disruption signals, flight lookup |
+| Done | Airport catalogue and search (CF-002) · METAR weather adapter (CF-003) · conditions API and index v0.1 (CF-004) · web app (CF-005) · forecast outlook from TAFs (CF-008) |
+| Next | Rest of Phase 2 ([plan v1.1](docs/development-plan.md)): live aircraft and airport map, observed movements, disruption signals, flight lookup |
 | Deferred | Public deployment (CF-006) and traveller validation (CF-007), until that phase is built |
 
 **Known limitations:**
@@ -85,6 +85,7 @@ Three routes, documented in full in [docs/API.md](docs/API.md):
 |---|---|
 | `GET /v1/airports/search?q=…` | Matching airports with codes, place and timezone |
 | `GET /v1/airports/{code}/conditions` | Airport, latest observation, conditions index, freshness and eligibility times |
+| `GET /v1/airports/{code}/forecast` | Airport, TAF summary and a 12-hour forecast outlook (labelled forecast) |
 | `GET /health` | `{"status": "ok"}` |
 
 ## Development

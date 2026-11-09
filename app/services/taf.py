@@ -301,10 +301,11 @@ def decode_sky(fcst: dict, tokens: list[str]):
     if vv == "VV///":
         return {"sky_condition": "obscured", "ceiling_ft": None}
     if vv:
-        height = number(fcst.get("vertVis"), 0, 100000, "vertVis")
-        if height is None:
-            height = int(vv[2:]) * 100
-        return {"sky_condition": "clouds", "ceiling_ft": round(height)}
+        raw_height = int(vv[2:]) * 100
+        height = fcst.get("vertVis")
+        if height is not None and number(height, 0, 100000, "vertVis") != raw_height:
+            return UNKNOWN  # decoded and raw vertical visibility disagree
+        return {"sky_condition": "clouds", "ceiling_ft": raw_height}
     raw_layers = [t for t in tokens if SKY_TOKEN.fullmatch(t) and t[:3] in LAYER_COVERS]
     decoded = fcst.get("clouds") if isinstance(fcst.get("clouds"), list) else []
     layers = []
@@ -319,9 +320,12 @@ def decode_sky(fcst: dict, tokens: list[str]):
     if len(layers) != len(raw) or not layers:
         return UNKNOWN  # raw and decoded disagree: never guess
     for (cover, base), (raw_cover, raw_height) in zip(layers, raw):
-        if cover != raw_cover or (
-            raw_height != "///" and base != int(raw_height) * 100
-        ):
+        if cover != raw_cover:
+            return UNKNOWN
+        if raw_height == "///":
+            if cover in CEILING_COVERS:
+                return UNKNOWN  # a ceiling layer of unknown height
+        elif base != int(raw_height) * 100:
             return UNKNOWN
     ceilings = [base for cover, base in layers if cover in CEILING_COVERS]
     return {
