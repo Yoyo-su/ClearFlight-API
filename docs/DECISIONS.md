@@ -17,6 +17,34 @@ Locked pilot decisions live in [development-plan.md §1](development-plan.md) an
 
 ## Entries
 
+### D-010: Plan v1.1 — a free-data flight phase before public release (2026-11-09)
+- **Decision:** [Development plan v1.1](development-plan.md) replaces v1.0's weather-only scope with Phase 2 (CF-008–CF-013), before any public release:
+  1. a forecast outlook (TAF);
+  2. live aircraft positions;
+  3. an airport map;
+  4. observed movements;
+  5. disruption signals (heuristic; plus FAA NAS events for US airports);
+  6. a flight lookup with best-effort delays.
+  
+  **Policies:**
+  - Free data only.
+  - "Predictive scoring" means the forecast outlook plus disruption signals; per-flight delay prediction is deferred (P1).
+  - Public release (CF-006) only after all of Phase 2 (P2), with the forecast first (P3).
+  - OpenSky for development/educational use only; a data-licence gate before CF-006 covers positions, history, baselines and caches (P4).
+  - Movement detection needs ≥90% found and ≤5% false at a busy hour per pilot airport (P5).
+  - No background collection; positions are polled only while viewed (P6).
+  - Delays are shown only for same-event times and resolved flight instances, labelled partial.
+- **Why:** The owner wants flight data and fuller predictive scoring before going public (2026-11-07), on free data (2026-11-08). Research RQ-002 (verified 2026-11-08) found:
+  - free live positions exist (OpenSky with restrictive terms, adsb.lol under ODbL);
+  - free schedules exist only in small allowances (AeroDataBox 400 units/month, AviationStack 100 requests/month);
+  - free official delay data exists only for US airports at airport level (FAA NAS Status);
+  - callsigns don't reliably map to flight numbers.
+  
+  So complete per-flight delays aren't possible on free data. The design critique (4 High, 1 Medium) added the licence gate for baselines, the same-event delay rule, the split coverage states, the traffic-window completeness rule and the quota failure model.
+- **Alternatives considered:** a paid schedule source for complete delays (deferred; owner wants free data); a per-flight delay model (deferred, P1); release after a subset of Phase 2 (rejected, P2); background collection for the pilot airports (rejected, P6).
+- **Source:** owner decisions 2026-11-07 to 2026-11-09; plan v1.1 §11–§13.
+- **Status:** accepted 2026-11-09 by project owner.
+
 ### D-009: Search ranks airports with scheduled service higher; "6+" visibility is 10 km; full zone names (2026-11-05)
 - **Decision:**
   - **Snapshot (amends D-005):** the snapshot gains a `scheduled` column ("yes"/"no", from OurAirports' `scheduled_service`).
