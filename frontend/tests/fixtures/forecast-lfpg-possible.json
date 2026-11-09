@@ -57,7 +57,7 @@
                 "value": [],
                 "unit": null,
                 "score": 0,
-                "detail": "no significant weather reported"
+                "detail": "no significant weather forecast"
               }
             ],
             "explanation": "Forecast conditions index 0/10 (low): no significant wind, visibility, cloud or weather is forecast.",
@@ -138,7 +138,7 @@
                   "value": null,
                   "unit": "ft",
                   "score": null,
-                  "detail": "sky obscured; height not reported"
+                  "detail": "sky obscured; height not given in the forecast"
                 },
                 {
                   "name": "weather",
@@ -192,7 +192,7 @@
                 "value": [],
                 "unit": null,
                 "score": 0,
-                "detail": "no significant weather reported"
+                "detail": "no significant weather forecast"
               }
             ],
             "explanation": "Forecast conditions index 0/10 (low): no significant wind, visibility, cloud or weather is forecast.",
@@ -273,7 +273,7 @@
                   "value": null,
                   "unit": "ft",
                   "score": null,
-                  "detail": "sky obscured; height not reported"
+                  "detail": "sky obscured; height not given in the forecast"
                 },
                 {
                   "name": "weather",
@@ -327,7 +327,7 @@
                 "value": [],
                 "unit": null,
                 "score": 0,
-                "detail": "no significant weather reported"
+                "detail": "no significant weather forecast"
               }
             ],
             "explanation": "Forecast conditions index 0/10 (low): no significant wind, visibility, cloud or weather is forecast.",
@@ -418,7 +418,7 @@
                 "value": [],
                 "unit": null,
                 "score": 0,
-                "detail": "no significant weather reported"
+                "detail": "no significant weather forecast"
               }
             ],
             "explanation": "Forecast conditions index 0/10 (low): no significant wind, visibility, cloud or weather is forecast.",
@@ -509,7 +509,7 @@
                 "value": [],
                 "unit": null,
                 "score": 0,
-                "detail": "no significant weather reported"
+                "detail": "no significant weather forecast"
               }
             ],
             "explanation": "Forecast conditions index 0/10 (low): no significant wind, visibility, cloud or weather is forecast.",
@@ -555,7 +555,7 @@
                 "value": [],
                 "unit": null,
                 "score": 0,
-                "detail": "no significant weather reported"
+                "detail": "no significant weather forecast"
               }
             ],
             "explanation": "Forecast conditions index 0/10 (low): no significant wind, visibility, cloud or weather is forecast.",
@@ -601,7 +601,7 @@
                 "value": [],
                 "unit": null,
                 "score": 0,
-                "detail": "no significant weather reported"
+                "detail": "no significant weather forecast"
               }
             ],
             "explanation": "Forecast conditions index 0/10 (low): no significant wind, visibility, cloud or weather is forecast.",
@@ -647,7 +647,7 @@
                 "value": [],
                 "unit": null,
                 "score": 0,
-                "detail": "no significant weather reported"
+                "detail": "no significant weather forecast"
               }
             ],
             "explanation": "Forecast conditions index 0/10 (low): no significant wind, visibility, cloud or weather is forecast.",
@@ -693,7 +693,7 @@
                 "value": [],
                 "unit": null,
                 "score": 0,
-                "detail": "no significant weather reported"
+                "detail": "no significant weather forecast"
               }
             ],
             "explanation": "Forecast conditions index 0/10 (low): no significant wind, visibility, cloud or weather is forecast.",
@@ -739,7 +739,7 @@
                 "value": [],
                 "unit": null,
                 "score": 0,
-                "detail": "no significant weather reported"
+                "detail": "no significant weather forecast"
               }
             ],
             "explanation": "Forecast conditions index 0/10 (low): no significant wind, visibility, cloud or weather is forecast.",
@@ -785,7 +785,7 @@
                 "value": [],
                 "unit": null,
                 "score": 0,
-                "detail": "no significant weather reported"
+                "detail": "no significant weather forecast"
               }
             ],
             "explanation": "Forecast conditions index 0/10 (low): no significant wind, visibility, cloud or weather is forecast.",
@@ -831,7 +831,7 @@
                 "value": [],
                 "unit": null,
                 "score": 0,
-                "detail": "no significant weather reported"
+                "detail": "no significant weather forecast"
               }
             ],
             "explanation": "Forecast conditions index 0/10 (low): no significant wind, visibility, cloud or weather is forecast.",

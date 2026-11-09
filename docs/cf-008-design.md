@@ -78,7 +78,8 @@ Forecast values are always visibly distinct from the observed index: a "Forecast
      - it keeps every other rule.
    - The observed `evaluate()` is unchanged (regression test).
    - The forecast `conditions` object has the same shape as the observed one, including `version` and `disclaimer`, so the frontend schema reuses it.
-7. **Horizon:** the 12 hours starting with the current hour, cut at `validTimeTo` (F2).
+7. **TAF selection:** the newest TAF is used even in the hour or so after it is issued and before it becomes valid. During that window the current hours show "Forecast starts at HH:MM", although the previous TAF still covers them (quality review, 2026-11-09; accepted as cautious).
+8. **Horizon:** the 12 hours starting with the current hour, cut at `validTimeTo` (F2).
 
 ## 4. API: `GET /v1/airports/{code}/forecast`
 Same code handling, errors and provider-failure mapping as `/conditions` (D-007): 400, 404, 502, 503 (Retry-After), 504.

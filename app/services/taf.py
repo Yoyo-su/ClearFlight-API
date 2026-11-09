@@ -216,13 +216,17 @@ def decode_elements(fcst: dict, tokens: list[str], raw_taf: str, full: bool) -> 
     if present["wind"]:
         speed = number(fcst.get("wspd"), 0, 250, "wspd")
         gust = number(fcst.get("wgst"), 0, 300, "wgst")
-        if gust is not None and speed is not None and gust < speed:
+        token = next(t for t in tokens if WIND_TOKEN.fullmatch(t))
+        gust_stated = "G" in token
+        # A stated gust that can't be read makes the wind unknown (spec §3.3).
+        gust_bad = gust_stated and (gust is None or speed is None or gust < speed)
+        if not gust_stated:
             gust = None
         direction = fcst.get("wdir")
         variable = direction == "VRB"
         elements["wind"] = (
             UNKNOWN
-            if speed is None
+            if speed is None or gust_bad
             else {
                 "wind_speed_kt": round(speed),
                 "wind_gust_kt": None if gust is None else round(gust),
@@ -252,7 +256,8 @@ def decode_elements(fcst: dict, tokens: list[str], raw_taf: str, full: bool) -> 
                 "visibility_at_least": False,
             }
         else:
-            miles, at_least = parse_visibility(fcst.get("visib"), raw_taf)
+            # Only this group's tokens decide whether "6+" means 9999 (metric).
+            miles, at_least = parse_visibility(fcst.get("visib"), " ".join(tokens))
             metres = (
                 None
                 if miles is None
@@ -380,7 +385,18 @@ def parse_taf(record: dict, station: str) -> tuple[dict, list[Period]]:
 
 
 def candidates_at(periods: list[Period], t: datetime) -> list[ForecastState]:
-    """The prevailing states that could be in force at time t (spec §3.4)."""
+    """The prevailing states that could be in force at time t (spec §3.4).
+
+    A time no base, FM or BECMG period covers is a gap: unknown (spec §3.2).
+    A BECMG state counts until its transition completes, even past timeTo.
+    """
+    covered = any(
+        p.change in (None, "FM", "BECMG")
+        and p.start <= t < max(p.end, p.becoming or p.end)
+        for p in periods
+    )
+    if not covered:
+        return [EMPTY_STATE]
     candidates = [EMPTY_STATE.with_elements(periods[0].elements)]
     for period in periods[1:]:
         if period.change == "FM" and t >= period.start:

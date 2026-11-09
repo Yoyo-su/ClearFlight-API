@@ -50,7 +50,7 @@
                 "value": null,
                 "unit": "ft",
                 "score": null,
-                "detail": "sky obscured; height not reported"
+                "detail": "sky obscured; height not given in the forecast"
               },
               {
                 "name": "weather",
@@ -98,7 +98,7 @@
                 "value": null,
                 "unit": "ft",
                 "score": null,
-                "detail": "sky obscured; height not reported"
+                "detail": "sky obscured; height not given in the forecast"
               },
               {
                 "name": "weather",
@@ -146,7 +146,7 @@
                 "value": null,
                 "unit": "ft",
                 "score": null,
-                "detail": "sky obscured; height not reported"
+                "detail": "sky obscured; height not given in the forecast"
               },
               {
                 "name": "weather",
@@ -194,7 +194,7 @@
                 "value": null,
                 "unit": "ft",
                 "score": null,
-                "detail": "sky obscured; height not reported"
+                "detail": "sky obscured; height not given in the forecast"
               },
               {
                 "name": "weather",
@@ -242,7 +242,7 @@
                 "value": null,
                 "unit": "ft",
                 "score": null,
-                "detail": "sky obscured; height not reported"
+                "detail": "sky obscured; height not given in the forecast"
               },
               {
                 "name": "weather",
@@ -297,7 +297,7 @@
                 "value": [],
                 "unit": null,
                 "score": 0,
-                "detail": "no significant weather reported"
+                "detail": "no significant weather forecast"
               }
             ],
             "explanation": "Forecast conditions index 2/10 (low), mainly from wind of 10 kt.",
@@ -341,7 +341,7 @@
                   "value": [],
                   "unit": null,
                   "score": 0,
-                  "detail": "no significant weather reported"
+                  "detail": "no significant weather forecast"
                 }
               ],
               "explanation": "Forecast conditions index 3/10 (moderate), mainly from a cloud ceiling at 1,000 ft.",
@@ -386,7 +386,7 @@
                 "value": [],
                 "unit": null,
                 "score": 0,
-                "detail": "no significant weather reported"
+                "detail": "no significant weather forecast"
               }
             ],
             "explanation": "Forecast conditions index 2/10 (low), mainly from wind of 10 kt.",
@@ -430,7 +430,7 @@
                   "value": [],
                   "unit": null,
                   "score": 0,
-                  "detail": "no significant weather reported"
+                  "detail": "no significant weather forecast"
                 }
               ],
               "explanation": "Forecast conditions index 3/10 (moderate), mainly from a cloud ceiling at 1,000 ft.",
@@ -475,7 +475,7 @@
                 "value": [],
                 "unit": null,
                 "score": 0,
-                "detail": "no significant weather reported"
+                "detail": "no significant weather forecast"
               }
             ],
             "explanation": "Forecast conditions index 2/10 (low), mainly from wind of 10 kt.",
@@ -519,7 +519,7 @@
                   "value": [],
                   "unit": null,
                   "score": 0,
-                  "detail": "no significant weather reported"
+                  "detail": "no significant weather forecast"
                 }
               ],
               "explanation": "Forecast conditions index 3/10 (moderate), mainly from a cloud ceiling at 1,000 ft.",
@@ -564,7 +564,7 @@
                 "value": [],
                 "unit": null,
                 "score": 0,
-                "detail": "no significant weather reported"
+                "detail": "no significant weather forecast"
               }
             ],
             "explanation": "Forecast conditions index 2/10 (low), mainly from wind of 10 kt.",
@@ -608,7 +608,7 @@
                   "value": [],
                   "unit": null,
                   "score": 0,
-                  "detail": "no significant weather reported"
+                  "detail": "no significant weather forecast"
                 }
               ],
               "explanation": "Forecast conditions index 3/10 (moderate), mainly from a cloud ceiling at 1,000 ft.",
@@ -653,7 +653,7 @@
                 "value": [],
                 "unit": null,
                 "score": 0,
-                "detail": "no significant weather reported"
+                "detail": "no significant weather forecast"
               }
             ],
             "explanation": "Forecast conditions index 2/10 (low), mainly from wind of 10 kt.",
@@ -697,7 +697,7 @@
                   "value": [],
                   "unit": null,
                   "score": 0,
-                  "detail": "no significant weather reported"
+                  "detail": "no significant weather forecast"
                 }
               ],
               "explanation": "Forecast conditions index 3/10 (moderate), mainly from a cloud ceiling at 1,000 ft.",
@@ -742,7 +742,7 @@
                 "value": [],
                 "unit": null,
                 "score": 0,
-                "detail": "no significant weather reported"
+                "detail": "no significant weather forecast"
               }
             ],
             "explanation": "Forecast conditions index 2/10 (low), mainly from wind of 10 kt.",
@@ -786,7 +786,7 @@
                   "value": [],
                   "unit": null,
                   "score": 0,
-                  "detail": "no significant weather reported"
+                  "detail": "no significant weather forecast"
                 }
               ],
               "explanation": "Forecast conditions index 3/10 (moderate), mainly from a cloud ceiling at 1,000 ft.",
@@ -831,7 +831,7 @@
                 "value": [],
                 "unit": null,
                 "score": 0,
-                "detail": "no significant weather reported"
+                "detail": "no significant weather forecast"
               }
             ],
             "explanation": "Forecast conditions index 2/10 (low), mainly from wind of 10 kt.",
@@ -875,7 +875,7 @@
                   "value": [],
                   "unit": null,
                   "score": 0,
-                  "detail": "no significant weather reported"
+                  "detail": "no significant weather forecast"
                 }
               ],
               "explanation": "Forecast conditions index 3/10 (moderate), mainly from a cloud ceiling at 1,000 ft.",

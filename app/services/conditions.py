@@ -265,6 +265,14 @@ def evaluate_forecast(state) -> dict:
         ceiling_factor(state),
         weather_factor(state),
     ]
+    for f in factors:  # factor details in forecast wording
+        f["detail"] = (
+            f["detail"]
+            .replace(
+                "no significant weather reported", "no significant weather forecast"
+            )
+            .replace("not reported", "not given in the forecast")
+        )
     return score_conditions(state, factors, "forecast")
 
 

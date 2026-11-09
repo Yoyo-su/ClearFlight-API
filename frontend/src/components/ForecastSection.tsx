@@ -29,8 +29,9 @@ function worstPossible(hour: ForecastHour) {
   });
 }
 
-function HourCell({ hour, timeZone, selected, onSelect, id }: {
+function HourCell({ hour, timeZone, selected, onSelect, id, validFrom }: {
   hour: ForecastHour;
+  validFrom: string | null;
   timeZone: string | null;
   selected: boolean;
   onSelect: () => void;
@@ -41,7 +42,9 @@ function HourCell({ hour, timeZone, selected, onSelect, id }: {
     return (
       <li className="forecast-hour forecast-hour-pending">
         <span className="forecast-time">{time}</span>
-        <span className="forecast-note">Forecast not yet valid</span>
+        <span className="forecast-note">
+          {validFrom ? `Forecast starts at ${hourLabel(validFrom, timeZone)}` : "Forecast not yet valid"}
+        </span>
       </li>
     );
   }
@@ -88,8 +91,8 @@ function HourDetails({ hour, timeZone, id }: { hour: ForecastHour; timeZone: str
           <FactorRow key={factor.name} factor={factor} scored />
         ))}
       </ul>
-      {hour.possible.map((p) => (
-        <p key={p.label} className="forecast-possible-detail">
+      {hour.possible.map((p, i) => (
+        <p key={`${i}-${p.label}`} className="forecast-possible-detail">
           <strong>
             {p.conditions.score === null ? "May be worse" : `Up to ${p.conditions.score} / 10`} ({p.label}):
           </strong>{" "}
@@ -112,6 +115,7 @@ function Hours({ data, hours, timeZone }: { data: ForecastResponse; hours: Forec
             key={hour.start}
             hour={hour}
             timeZone={timeZone}
+            validFrom={forecast?.valid_from ?? null}
             selected={hour.start === selected}
             onSelect={() => setSelected(hour.start === selected ? null : hour.start)}
             id="forecast-details"
@@ -171,6 +175,9 @@ export function ForecastSection({ state, retry, now, timeZone }: {
     if (view.kind === "no-station") return null; // the conditions panel already says so
     if (view.kind === "no-forecast") body = <p className="panel-body">No forecast is available for this airport right now.</p>;
     else if (view.kind === "expired") body = <p className="panel-body">The latest forecast has expired.</p>;
+    else if (view.kind === "outdated") {
+      body = <p className="panel-body">The forecast hours shown have passed, and a newer outlook couldn’t be loaded yet.</p>;
+    }
     else body = <Hours data={data} hours={view.hours} timeZone={timeZone} />;
   }
   return (

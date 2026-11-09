@@ -124,6 +124,18 @@ class TestParse:
         _, periods = taf.parse_taf(record("taf_pilots", "KJFK"), "KJFK")
         assert all(p.elements["weather"] == {"weather_phenomena": ()} for p in periods)
 
+    @pytest.mark.it("makes the wind unknown when a stated gust can't be read")
+    @pytest.mark.parametrize("wgst", [None, 999, 10])
+    def test_unreadable_gust(self, wgst):
+        rec = record("taf_pilots", "KJFK")
+        rec["rawTAF"] = rec["rawTAF"].replace("26014KT", "26014G55KT", 1)
+        rec["fcsts"][0]["wgst"] = wgst
+        _, periods = taf.parse_taf(rec, "KJFK")
+        assert periods[0].elements["wind"] is taf.UNKNOWN
+        rec["fcsts"][0]["wgst"] = 55
+        _, periods = taf.parse_taf(rec, "KJFK")
+        assert periods[0].elements["wind"]["wind_gust_kt"] == 55
+
     @pytest.mark.it("reads a vertical visibility with a height as a ceiling")
     def test_vertical_visibility(self):
         _, periods = taf.parse_taf(record("taf_eham_variants", "EHAM"), "EHAM")
@@ -271,6 +283,15 @@ class TestOutlook:
         late = outlook("taf_pilots", "RJBB", now=utc(10, 2, 45))
         assert len(late) == 4 and late[-1]["end"] == utc(10, 6)
 
+    @pytest.mark.it("makes hours no prevailing period covers unknown (a gap)")
+    def test_gap(self):
+        rec = record("taf_pilots", "RJBB")
+        rec["fcsts"][0]["timeTo"] = rec["validTimeFrom"] + 3600  # base ends 01:00
+        meta, periods = taf.parse_taf(rec, "RJBB")
+        hours = taf.hourly_outlook(meta, periods, NOW)
+        assert scores(hours) == [None] * 12
+        assert {h["status"] for h in hours} == {"unknown"}
+
     @pytest.mark.it("uses forecast wording, never observation or delay claims")
     def test_wording(self):
         texts = []
@@ -288,7 +309,7 @@ class TestOutlook:
                     texts += [f["detail"] for f in c["factors"]]
         joined = " ".join(texts).lower()
         assert "forecast conditions index" in joined
-        for banned in ("observed", "delay", "safe"):
+        for banned in ("observed", "delay", "safe", "reported"):
             assert banned not in joined
 
 

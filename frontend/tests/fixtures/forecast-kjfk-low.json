@@ -57,7 +57,7 @@
                 "value": [],
                 "unit": null,
                 "score": 0,
-                "detail": "no significant weather reported"
+                "detail": "no significant weather forecast"
               }
             ],
             "explanation": "Forecast conditions index 2/10 (low), mainly from wind of 14 kt.",
@@ -103,7 +103,7 @@
                 "value": [],
                 "unit": null,
                 "score": 0,
-                "detail": "no significant weather reported"
+                "detail": "no significant weather forecast"
               }
             ],
             "explanation": "Forecast conditions index 2/10 (low), mainly from wind of 14 kt.",
@@ -149,7 +149,7 @@
                 "value": [],
                 "unit": null,
                 "score": 0,
-                "detail": "no significant weather reported"
+                "detail": "no significant weather forecast"
               }
             ],
             "explanation": "Forecast conditions index 2/10 (low), mainly from wind of 14 kt.",
@@ -195,7 +195,7 @@
                 "value": [],
                 "unit": null,
                 "score": 0,
-                "detail": "no significant weather reported"
+                "detail": "no significant weather forecast"
               }
             ],
             "explanation": "Forecast conditions index 2/10 (low), mainly from wind of 14 kt.",
@@ -241,7 +241,7 @@
                 "value": [],
                 "unit": null,
                 "score": 0,
-                "detail": "no significant weather reported"
+                "detail": "no significant weather forecast"
               }
             ],
             "explanation": "Forecast conditions index 2/10 (low), mainly from wind of 14 kt.",
@@ -287,7 +287,7 @@
                 "value": [],
                 "unit": null,
                 "score": 0,
-                "detail": "no significant weather reported"
+                "detail": "no significant weather forecast"
               }
             ],
             "explanation": "Forecast conditions index 4/10 (moderate), mainly from wind of 17 kt gusting 25 kt.",
@@ -333,7 +333,7 @@
                 "value": [],
                 "unit": null,
                 "score": 0,
-                "detail": "no significant weather reported"
+                "detail": "no significant weather forecast"
               }
             ],
             "explanation": "Forecast conditions index 4/10 (moderate), mainly from wind of 17 kt gusting 25 kt.",
@@ -379,7 +379,7 @@
                 "value": [],
                 "unit": null,
                 "score": 0,
-                "detail": "no significant weather reported"
+                "detail": "no significant weather forecast"
               }
             ],
             "explanation": "Forecast conditions index 4/10 (moderate), mainly from wind of 17 kt gusting 25 kt.",
@@ -425,7 +425,7 @@
                 "value": [],
                 "unit": null,
                 "score": 0,
-                "detail": "no significant weather reported"
+                "detail": "no significant weather forecast"
               }
             ],
             "explanation": "Forecast conditions index 4/10 (moderate), mainly from wind of 20 kt gusting 29 kt.",
@@ -471,7 +471,7 @@
                 "value": [],
                 "unit": null,
                 "score": 0,
-                "detail": "no significant weather reported"
+                "detail": "no significant weather forecast"
               }
             ],
             "explanation": "Forecast conditions index 4/10 (moderate), mainly from wind of 20 kt gusting 29 kt.",
@@ -517,7 +517,7 @@
                 "value": [],
                 "unit": null,
                 "score": 0,
-                "detail": "no significant weather reported"
+                "detail": "no significant weather forecast"
               }
             ],
             "explanation": "Forecast conditions index 4/10 (moderate), mainly from wind of 20 kt gusting 29 kt.",
@@ -563,7 +563,7 @@
                 "value": [],
                 "unit": null,
                 "score": 0,
-                "detail": "no significant weather reported"
+                "detail": "no significant weather forecast"
               }
             ],
             "explanation": "Forecast conditions index 4/10 (moderate), mainly from wind of 20 kt gusting 29 kt.",

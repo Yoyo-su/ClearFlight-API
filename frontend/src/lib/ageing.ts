@@ -38,6 +38,7 @@ export function conditionsFor(data: ConditionsResponse, view: View): Conditions 
 export type ForecastView =
   | { kind: "hours"; hours: ForecastHour[] }
   | { kind: "expired" }
+  | { kind: "outdated" } // every downloaded hour has passed, but the TAF is still valid
   | { kind: "no-forecast" }
   | { kind: "no-station" };
 
@@ -49,5 +50,5 @@ export function forecastViewAt(data: ForecastResponse, now: Date): ForecastView 
     return { kind: "expired" };
   }
   const hours = data.hours.filter((hour) => Date.parse(hour.end) > t);
-  return hours.length > 0 ? { kind: "hours", hours } : { kind: "expired" };
+  return hours.length > 0 ? { kind: "hours", hours } : { kind: "outdated" };
 }

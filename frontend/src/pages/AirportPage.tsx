@@ -273,7 +273,17 @@ export function AirportPage() {
       <DataView data={data} state={state} refresh={refresh} now={now} forecast={forecast} retryForecast={retryForecast} />
     );
   }
-  else if (state.failure) content = <FailureView code={param.toUpperCase()} failure={state.failure} state={state} retry={retry} now={now} />;
+  else if (state.failure) {
+    // A forecast that loaded stays available when the observation fails.
+    content = (
+      <>
+        <FailureView code={param.toUpperCase()} failure={state.failure} state={state} retry={retry} now={now} />
+        {forecastData?.data_status === "available" && (
+          <ForecastSection state={forecast} retry={retryForecast} now={now} timeZone={forecastData.airport.timezone} />
+        )}
+      </>
+    );
+  }
   else content = <Loading code={param.toUpperCase()} slow={state.slow} />;
 
   return (

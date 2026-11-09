@@ -593,7 +593,7 @@ describe("airport page: forecast outlook (CF-008)", () => {
     renderAt("/airport/EGLL");
     await settle();
     const hours = within(forecastSection()).getAllByRole("listitem");
-    expect(hours[0]).toHaveTextContent("Forecast not yet valid");
+    expect(hours[0]).toHaveTextContent("Forecast starts at 00:00");
     expect(hours[2]).toHaveTextContent("2 / 10 Low");
   });
 
@@ -606,7 +606,9 @@ describe("airport page: forecast outlook (CF-008)", () => {
     expect(within(forecastSection()).getAllByRole("listitem")[0]).toHaveTextContent("08:00");
     expect(within(forecastSection()).getAllByRole("listitem")).toHaveLength(11);
     forecastFetch = fixtureFetch(() => "network"); // refreshes now fail
-    await settle(11 * 60 * 60 * 1000); // 19:00: every hour has ended
+    await settle(11 * 60 * 60 * 1000); // 19:00: every hour has ended, TAF still valid
+    expect(within(forecastSection()).getByText(/The forecast hours shown have passed/)).toBeInTheDocument();
+    await settle(11 * 60 * 60 * 1000); // past valid_to (31 Oct 06:00)
     expect(within(forecastSection()).getByText("The latest forecast has expired.")).toBeInTheDocument();
   });
 
@@ -647,6 +649,15 @@ describe("airport page: forecast outlook (CF-008)", () => {
     forecastFetch = fixtureFetch(() => fixture("forecast-egll-fog"));
     fireEvent.click(within(forecastSection()).getByRole("button", { name: "Try again" }));
     await settle();
+    expect(within(forecastSection()).getAllByRole("listitem")).toHaveLength(12);
+  });
+
+  it("keeps showing a loaded forecast when the observation fails", async () => {
+    forecastFetch = fixtureFetch(() => fixture("forecast-egll-fog"));
+    stubFetch(fixtureFetch(() => fixture("error-502-provider")));
+    renderAt("/airport/EGLL");
+    await settle();
+    expect(screen.getByText("The weather service didn’t respond")).toBeInTheDocument();
     expect(within(forecastSection()).getAllByRole("listitem")).toHaveLength(12);
   });
 

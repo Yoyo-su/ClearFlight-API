@@ -254,8 +254,12 @@ describe("forecast ageing (CF-008 §5)", () => {
     expect(view.kind === "hours" && view.hours[0]!.start).toBe("2026-10-30T08:00:00Z");
   });
 
-  it("withdraws the forecast once every hour has passed or at valid_to", () => {
-    expect(forecastViewAt(egll, at("2026-10-30T19:00:00Z")).kind).toBe("expired");
+  it("says outdated, not expired, when the shown hours pass before valid_to", () => {
+    expect(forecastViewAt(egll, at("2026-10-30T19:00:00Z")).kind).toBe("outdated");
+    expect(forecastViewAt(egll, at("2026-10-31T05:59:59Z")).kind).toBe("outdated");
+  });
+
+  it("withdraws the forecast at valid_to", () => {
     expect(forecastViewAt(egll, at("2026-10-31T06:00:00Z")).kind).toBe("expired");
   });
 
