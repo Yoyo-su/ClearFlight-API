@@ -1,0 +1,143 @@
+[
+ {
+  "icaoId": "EGKK",
+  "dbPopTime": "2026-11-08T23:12:12.435Z",
+  "bulletinTime": "2026-11-08T23:00:00.000Z",
+  "issueTime": "2026-11-08T22:58:00.000Z",
+  "validTimeFrom": 1794182400,
+  "validTimeTo": 1794290400,
+  "rawTAF": "TAF EGKK 082258Z 0900/1006 VRB02KT 0300 FG VV/// PROB30 TEMPO 0900/0904 1000 BR SCT002 PROB40 0908/0911 2000 BR SCT004 BECMG 0911/0914 08010KT 9999 NSW FEW020 PROB30 0918/1006 8000",
+  "mostRecent": 1,
+  "remarks": "",
+  "lat": 51.148,
+  "lon": -0.19,
+  "elev": 58,
+  "prior": 5,
+  "name": "London/Gatwick Arpt",
+  "fcsts": [
+   {
+    "timeFrom": 1794182400,
+    "timeTo": 1794222000,
+    "timeBec": null,
+    "fcstChange": null,
+    "probability": null,
+    "wdir": "VRB",
+    "wspd": 2,
+    "wgst": null,
+    "wshearHgt": null,
+    "wshearDir": null,
+    "wshearSpd": null,
+    "visib": 0.19,
+    "altim": null,
+    "vertVis": null,
+    "wxString": "FG",
+    "notDecoded": null,
+    "clouds": [],
+    "icgTurb": [],
+    "temp": []
+   },
+   {
+    "timeFrom": 1794182400,
+    "timeTo": 1794196800,
+    "timeBec": null,
+    "fcstChange": "TEMPO",
+    "probability": 30,
+    "wdir": null,
+    "wspd": null,
+    "wgst": null,
+    "wshearHgt": null,
+    "wshearDir": null,
+    "wshearSpd": null,
+    "visib": 0.62,
+    "altim": null,
+    "vertVis": null,
+    "wxString": "BR",
+    "notDecoded": "VV/// ",
+    "clouds": [
+     {
+      "cover": "SCT",
+      "base": 200,
+      "type": null
+     }
+    ],
+    "icgTurb": [],
+    "temp": []
+   },
+   {
+    "timeFrom": 1794211200,
+    "timeTo": 1794222000,
+    "timeBec": null,
+    "fcstChange": "PROB",
+    "probability": 40,
+    "wdir": null,
+    "wspd": null,
+    "wgst": null,
+    "wshearHgt": null,
+    "wshearDir": null,
+    "wshearSpd": null,
+    "visib": 1.24,
+    "altim": null,
+    "vertVis": null,
+    "wxString": "BR",
+    "notDecoded": null,
+    "clouds": [
+     {
+      "cover": "SCT",
+      "base": 400,
+      "type": null
+     }
+    ],
+    "icgTurb": [],
+    "temp": []
+   },
+   {
+    "timeFrom": 1794222000,
+    "timeTo": 1794290400,
+    "timeBec": 1794232800,
+    "fcstChange": "BECMG",
+    "probability": null,
+    "wdir": 80,
+    "wspd": 10,
+    "wgst": null,
+    "wshearHgt": null,
+    "wshearDir": null,
+    "wshearSpd": null,
+    "visib": "6+",
+    "altim": null,
+    "vertVis": null,
+    "wxString": "NSW",
+    "notDecoded": null,
+    "clouds": [
+     {
+      "cover": "FEW",
+      "base": 2000,
+      "type": null
+     }
+    ],
+    "icgTurb": [],
+    "temp": []
+   },
+   {
+    "timeFrom": 1794247200,
+    "timeTo": 1794290400,
+    "timeBec": null,
+    "fcstChange": "PROB",
+    "probability": 30,
+    "wdir": null,
+    "wspd": null,
+    "wgst": null,
+    "wshearHgt": null,
+    "wshearDir": null,
+    "wshearSpd": null,
+    "visib": 4.97,
+    "altim": null,
+    "vertVis": null,
+    "wxString": null,
+    "notDecoded": null,
+    "clouds": [],
+    "icgTurb": [],
+    "temp": []
+   }
+  ]
+ }
+]

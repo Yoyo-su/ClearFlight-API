@@ -1,0 +1,133 @@
+[
+ {
+  "icaoId": "LFPG",
+  "dbPopTime": "2026-11-08T23:40:16.883Z",
+  "bulletinTime": "2026-11-08T23:00:00.000Z",
+  "issueTime": "2026-11-08T23:00:00.000Z",
+  "validTimeFrom": 1794182400,
+  "validTimeTo": 1794290400,
+  "rawTAF": "TAF LFPG 082300Z 0900/1006 13005KT CAVOK TX08/1006Z TN03/0906Z PROB40 TEMPO 0901/0911 4000 BR BKN007 PROB30 TEMPO 0905/0909 0300 FG VV/// BECMG 0923/0924 4000 -RA",
+  "mostRecent": 1,
+  "remarks": "",
+  "lat": 49.015,
+  "lon": 2.534,
+  "elev": 107,
+  "prior": 5,
+  "name": "Paris/De Gaulle Arpt",
+  "fcsts": [
+   {
+    "timeFrom": 1794182400,
+    "timeTo": 1794265200,
+    "timeBec": null,
+    "fcstChange": null,
+    "probability": null,
+    "wdir": 130,
+    "wspd": 5,
+    "wgst": null,
+    "wshearHgt": null,
+    "wshearDir": null,
+    "wshearSpd": null,
+    "visib": "6+",
+    "altim": null,
+    "vertVis": null,
+    "wxString": null,
+    "notDecoded": null,
+    "clouds": [
+     {
+      "cover": "NSC",
+      "base": null,
+      "type": null
+     }
+    ],
+    "icgTurb": [],
+    "temp": [
+     {
+      "validTime": 1794204000,
+      "surfaceTemp": 8,
+      "maxOrMin": "MAX"
+     },
+     {
+      "validTime": 1794204000,
+      "surfaceTemp": 3,
+      "maxOrMin": "MIN"
+     }
+    ]
+   },
+   {
+    "timeFrom": 1794186000,
+    "timeTo": 1794222000,
+    "timeBec": null,
+    "fcstChange": "TEMPO",
+    "probability": 40,
+    "wdir": null,
+    "wspd": null,
+    "wgst": null,
+    "wshearHgt": null,
+    "wshearDir": null,
+    "wshearSpd": null,
+    "visib": 2.49,
+    "altim": null,
+    "vertVis": null,
+    "wxString": "BR",
+    "notDecoded": null,
+    "clouds": [
+     {
+      "cover": "BKN",
+      "base": 700,
+      "type": null
+     }
+    ],
+    "icgTurb": [],
+    "temp": []
+   },
+   {
+    "timeFrom": 1794200400,
+    "timeTo": 1794214800,
+    "timeBec": null,
+    "fcstChange": "TEMPO",
+    "probability": 30,
+    "wdir": null,
+    "wspd": null,
+    "wgst": null,
+    "wshearHgt": null,
+    "wshearDir": null,
+    "wshearSpd": null,
+    "visib": 0.19,
+    "altim": null,
+    "vertVis": null,
+    "wxString": "FG",
+    "notDecoded": null,
+    "clouds": [],
+    "icgTurb": [],
+    "temp": []
+   },
+   {
+    "timeFrom": 1794265200,
+    "timeTo": 1794290400,
+    "timeBec": 1794268800,
+    "fcstChange": "BECMG",
+    "probability": null,
+    "wdir": 130,
+    "wspd": 5,
+    "wgst": null,
+    "wshearHgt": null,
+    "wshearDir": null,
+    "wshearSpd": null,
+    "visib": 2.49,
+    "altim": null,
+    "vertVis": null,
+    "wxString": "-RA",
+    "notDecoded": "VV/// ",
+    "clouds": [
+     {
+      "cover": "NSC",
+      "base": null,
+      "type": null
+     }
+    ],
+    "icgTurb": [],
+    "temp": []
+   }
+  ]
+ }
+]

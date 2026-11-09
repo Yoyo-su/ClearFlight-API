@@ -1,0 +1,379 @@
+[
+ {
+  "icaoId": "EGLL",
+  "dbPopTime": "2026-11-08T23:12:12.483Z",
+  "bulletinTime": "2026-11-08T23:00:00.000Z",
+  "issueTime": "2026-11-08T22:56:00.000Z",
+  "validTimeFrom": 1794182400,
+  "validTimeTo": 1794290400,
+  "rawTAF": "TAF EGLL 082256Z 0900/1006 VRB03KT 0150 FG VV/// PROB30 TEMPO 0900/0908 2500 BR BKN005 BECMG 0908/0912 9000 NSW SCT012 BECMG 0911/0913 07010KT PROB30 TEMPO 0912/0919 BKN010 PROB30 TEMPO 0919/0923 BKN008 PROB30 TEMPO 0923/1005 4000 BR BKN004",
+  "mostRecent": 1,
+  "remarks": "",
+  "lat": 51.477,
+  "lon": -0.461,
+  "elev": 26,
+  "prior": 0,
+  "name": "London/Heathrow Intl",
+  "fcsts": [
+   {
+    "timeFrom": 1794182400,
+    "timeTo": 1794211200,
+    "timeBec": null,
+    "fcstChange": null,
+    "probability": null,
+    "wdir": "VRB",
+    "wspd": 3,
+    "wgst": null,
+    "wshearHgt": null,
+    "wshearDir": null,
+    "wshearSpd": null,
+    "visib": 0.09,
+    "altim": null,
+    "vertVis": null,
+    "wxString": "FG",
+    "notDecoded": null,
+    "clouds": [],
+    "icgTurb": [],
+    "temp": []
+   },
+   {
+    "timeFrom": 1794182400,
+    "timeTo": 1794211200,
+    "timeBec": null,
+    "fcstChange": "TEMPO",
+    "probability": 30,
+    "wdir": null,
+    "wspd": null,
+    "wgst": null,
+    "wshearHgt": null,
+    "wshearDir": null,
+    "wshearSpd": null,
+    "visib": 1.55,
+    "altim": null,
+    "vertVis": null,
+    "wxString": "BR",
+    "notDecoded": "VV/// ",
+    "clouds": [
+     {
+      "cover": "BKN",
+      "base": 500,
+      "type": null
+     }
+    ],
+    "icgTurb": [],
+    "temp": []
+   },
+   {
+    "timeFrom": 1794211200,
+    "timeTo": 1794222000,
+    "timeBec": 1794225600,
+    "fcstChange": "BECMG",
+    "probability": null,
+    "wdir": "VRB",
+    "wspd": 3,
+    "wgst": null,
+    "wshearHgt": null,
+    "wshearDir": null,
+    "wshearSpd": null,
+    "visib": 5.59,
+    "altim": null,
+    "vertVis": null,
+    "wxString": "NSW",
+    "notDecoded": null,
+    "clouds": [
+     {
+      "cover": "SCT",
+      "base": 1200,
+      "type": null
+     }
+    ],
+    "icgTurb": [],
+    "temp": []
+   },
+   {
+    "timeFrom": 1794222000,
+    "timeTo": 1794290400,
+    "timeBec": 1794229200,
+    "fcstChange": "BECMG",
+    "probability": null,
+    "wdir": 70,
+    "wspd": 10,
+    "wgst": null,
+    "wshearHgt": null,
+    "wshearDir": null,
+    "wshearSpd": null,
+    "visib": 5.59,
+    "altim": null,
+    "vertVis": null,
+    "wxString": "NSW",
+    "notDecoded": null,
+    "clouds": [
+     {
+      "cover": "SCT",
+      "base": 1200,
+      "type": null
+     }
+    ],
+    "icgTurb": [],
+    "temp": []
+   },
+   {
+    "timeFrom": 1794225600,
+    "timeTo": 1794250800,
+    "timeBec": null,
+    "fcstChange": "TEMPO",
+    "probability": 30,
+    "wdir": null,
+    "wspd": null,
+    "wgst": null,
+    "wshearHgt": null,
+    "wshearDir": null,
+    "wshearSpd": null,
+    "visib": "",
+    "altim": null,
+    "vertVis": null,
+    "wxString": null,
+    "notDecoded": null,
+    "clouds": [
+     {
+      "cover": "BKN",
+      "base": 1000,
+      "type": null
+     }
+    ],
+    "icgTurb": [],
+    "temp": []
+   },
+   {
+    "timeFrom": 1794250800,
+    "timeTo": 1794265200,
+    "timeBec": null,
+    "fcstChange": "TEMPO",
+    "probability": 30,
+    "wdir": null,
+    "wspd": null,
+    "wgst": null,
+    "wshearHgt": null,
+    "wshearDir": null,
+    "wshearSpd": null,
+    "visib": "",
+    "altim": null,
+    "vertVis": null,
+    "wxString": null,
+    "notDecoded": null,
+    "clouds": [
+     {
+      "cover": "BKN",
+      "base": 800,
+      "type": null
+     }
+    ],
+    "icgTurb": [],
+    "temp": []
+   },
+   {
+    "timeFrom": 1794265200,
+    "timeTo": 1794286800,
+    "timeBec": null,
+    "fcstChange": "TEMPO",
+    "probability": 30,
+    "wdir": null,
+    "wspd": null,
+    "wgst": null,
+    "wshearHgt": null,
+    "wshearDir": null,
+    "wshearSpd": null,
+    "visib": 2.49,
+    "altim": null,
+    "vertVis": null,
+    "wxString": "BR",
+    "notDecoded": null,
+    "clouds": [
+     {
+      "cover": "BKN",
+      "base": 400,
+      "type": null
+     }
+    ],
+    "icgTurb": [],
+    "temp": []
+   }
+  ]
+ },
+ {
+  "icaoId": "KJFK",
+  "dbPopTime": "2026-11-08T23:25:42.222Z",
+  "bulletinTime": "2026-11-08T23:25:00.000Z",
+  "issueTime": "2026-11-08T23:25:00.000Z",
+  "validTimeFrom": 1794182400,
+  "validTimeTo": 1794290400,
+  "rawTAF": "TAF KJFK 082325Z 0900/1006 26014KT P6SM FEW045 FEW250 FM091200 27017G25KT P6SM SCT120 FM091500 30020G29KT P6SM BKN035 FM100000 30015KT P6SM SCT040",
+  "mostRecent": 1,
+  "remarks": "",
+  "lat": 40.63916,
+  "lon": -73.76394,
+  "elev": 3,
+  "prior": 0,
+  "name": "New York/JF Kennedy Intl",
+  "fcsts": [
+   {
+    "timeFrom": 1794182400,
+    "timeTo": 1794225600,
+    "timeBec": null,
+    "fcstChange": null,
+    "probability": null,
+    "wdir": 260,
+    "wspd": 14,
+    "wgst": null,
+    "wshearHgt": null,
+    "wshearDir": null,
+    "wshearSpd": null,
+    "visib": "6+",
+    "altim": null,
+    "vertVis": null,
+    "wxString": null,
+    "notDecoded": null,
+    "clouds": [
+     {
+      "cover": "FEW",
+      "base": 4500,
+      "type": null
+     },
+     {
+      "cover": "FEW",
+      "base": 25000,
+      "type": null
+     }
+    ],
+    "icgTurb": [],
+    "temp": []
+   },
+   {
+    "timeFrom": 1794225600,
+    "timeTo": 1794236400,
+    "timeBec": null,
+    "fcstChange": "FM",
+    "probability": null,
+    "wdir": 270,
+    "wspd": 17,
+    "wgst": 25,
+    "wshearHgt": null,
+    "wshearDir": null,
+    "wshearSpd": null,
+    "visib": "6+",
+    "altim": null,
+    "vertVis": null,
+    "wxString": null,
+    "notDecoded": null,
+    "clouds": [
+     {
+      "cover": "SCT",
+      "base": 12000,
+      "type": null
+     }
+    ],
+    "icgTurb": [],
+    "temp": []
+   },
+   {
+    "timeFrom": 1794236400,
+    "timeTo": 1794268800,
+    "timeBec": null,
+    "fcstChange": "FM",
+    "probability": null,
+    "wdir": 300,
+    "wspd": 20,
+    "wgst": 29,
+    "wshearHgt": null,
+    "wshearDir": null,
+    "wshearSpd": null,
+    "visib": "6+",
+    "altim": null,
+    "vertVis": null,
+    "wxString": null,
+    "notDecoded": null,
+    "clouds": [
+     {
+      "cover": "BKN",
+      "base": 3500,
+      "type": null
+     }
+    ],
+    "icgTurb": [],
+    "temp": []
+   },
+   {
+    "timeFrom": 1794268800,
+    "timeTo": 1794290400,
+    "timeBec": null,
+    "fcstChange": "FM",
+    "probability": null,
+    "wdir": 300,
+    "wspd": 15,
+    "wgst": null,
+    "wshearHgt": null,
+    "wshearDir": null,
+    "wshearSpd": null,
+    "visib": "6+",
+    "altim": null,
+    "vertVis": null,
+    "wxString": null,
+    "notDecoded": null,
+    "clouds": [
+     {
+      "cover": "SCT",
+      "base": 4000,
+      "type": null
+     }
+    ],
+    "icgTurb": [],
+    "temp": []
+   }
+  ]
+ },
+ {
+  "icaoId": "RJBB",
+  "dbPopTime": "2026-11-08T23:27:34.889Z",
+  "bulletinTime": "2026-11-08T23:00:00.000Z",
+  "issueTime": "2026-11-08T23:07:00.000Z",
+  "validTimeFrom": 1794182400,
+  "validTimeTo": 1794290400,
+  "rawTAF": "TAF RJBB 082307Z 0900/1006 03011KT 9999 FEW030",
+  "mostRecent": 1,
+  "remarks": "",
+  "lat": 34.434,
+  "lon": 135.233,
+  "elev": 8,
+  "prior": 4,
+  "name": "Osaka/Kansai Intl",
+  "fcsts": [
+   {
+    "timeFrom": 1794182400,
+    "timeTo": 1794290400,
+    "timeBec": null,
+    "fcstChange": null,
+    "probability": null,
+    "wdir": 30,
+    "wspd": 11,
+    "wgst": null,
+    "wshearHgt": null,
+    "wshearDir": null,
+    "wshearSpd": null,
+    "visib": "6+",
+    "altim": null,
+    "vertVis": null,
+    "wxString": null,
+    "notDecoded": null,
+    "clouds": [
+     {
+      "cover": "FEW",
+      "base": 3000,
+      "type": null
+     }
+    ],
+    "icgTurb": [],
+    "temp": []
+   }
+  ]
+ }
+]

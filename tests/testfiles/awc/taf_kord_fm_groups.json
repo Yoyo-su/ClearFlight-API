@@ -1,0 +1,101 @@
+[
+ {
+  "icaoId": "KORD",
+  "dbPopTime": "2026-11-08T23:20:13.166Z",
+  "bulletinTime": "2026-11-08T23:20:00.000Z",
+  "issueTime": "2026-11-08T23:20:00.000Z",
+  "validTimeFrom": 1794182400,
+  "validTimeTo": 1794290400,
+  "rawTAF": "TAF KORD 082320Z 0900/1006 29007KT P6SM FEW250 FM091300 27003KT P6SM SCT250 FM091700 25010KT P6SM SCT250",
+  "mostRecent": 1,
+  "remarks": "",
+  "lat": 41.96017,
+  "lon": -87.93161,
+  "elev": 202,
+  "prior": 0,
+  "name": "Chicago/O'Hare Intl",
+  "fcsts": [
+   {
+    "timeFrom": 1794182400,
+    "timeTo": 1794229200,
+    "timeBec": null,
+    "fcstChange": null,
+    "probability": null,
+    "wdir": 290,
+    "wspd": 7,
+    "wgst": null,
+    "wshearHgt": null,
+    "wshearDir": null,
+    "wshearSpd": null,
+    "visib": "6+",
+    "altim": null,
+    "vertVis": null,
+    "wxString": null,
+    "notDecoded": null,
+    "clouds": [
+     {
+      "cover": "FEW",
+      "base": 25000,
+      "type": null
+     }
+    ],
+    "icgTurb": [],
+    "temp": []
+   },
+   {
+    "timeFrom": 1794229200,
+    "timeTo": 1794243600,
+    "timeBec": null,
+    "fcstChange": "FM",
+    "probability": null,
+    "wdir": 270,
+    "wspd": 3,
+    "wgst": null,
+    "wshearHgt": null,
+    "wshearDir": null,
+    "wshearSpd": null,
+    "visib": "6+",
+    "altim": null,
+    "vertVis": null,
+    "wxString": null,
+    "notDecoded": null,
+    "clouds": [
+     {
+      "cover": "SCT",
+      "base": 25000,
+      "type": null
+     }
+    ],
+    "icgTurb": [],
+    "temp": []
+   },
+   {
+    "timeFrom": 1794243600,
+    "timeTo": 1794290400,
+    "timeBec": null,
+    "fcstChange": "FM",
+    "probability": null,
+    "wdir": 250,
+    "wspd": 10,
+    "wgst": null,
+    "wshearHgt": null,
+    "wshearDir": null,
+    "wshearSpd": null,
+    "visib": "6+",
+    "altim": null,
+    "vertVis": null,
+    "wxString": null,
+    "notDecoded": null,
+    "clouds": [
+     {
+      "cover": "SCT",
+      "base": 25000,
+      "type": null
+     }
+    ],
+    "icgTurb": [],
+    "temp": []
+   }
+  ]
+ }
+]
