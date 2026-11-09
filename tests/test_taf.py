@@ -292,6 +292,27 @@ class TestOutlook:
         assert scores(hours) == [None] * 12
         assert {h["status"] for h in hours} == {"unknown"}
 
+    @pytest.mark.it("makes an hour unknown when a gap starts part-way through it")
+    def test_mid_hour_gap(self):
+        rec = record("taf_pilots", "RJBB")
+        rec["fcsts"][0]["timeTo"] = int(utc(9, 7, 30).timestamp())
+        meta, periods = taf.parse_taf(rec, "RJBB")
+        hours = taf.hourly_outlook(meta, periods, NOW)
+        assert hours[0]["prevailing"]["conditions"]["score"] is None
+
+    @pytest.mark.it(
+        "makes the sky unknown when raw and decoded cloud covers or heights disagree"
+    )
+    @pytest.mark.parametrize(
+        "layer", [{"cover": "FEW", "base": 3000}, {"cover": "FEW", "base": 200}]
+    )
+    def test_cloud_mismatch(self, layer):
+        rec = record("taf_pilots", "RJBB")  # raw FEW030
+        rec["fcsts"][0]["clouds"] = [dict(layer, type=None)]
+        _, periods = taf.parse_taf(rec, "RJBB")
+        expected = layer["base"] == 3000
+        assert (periods[0].elements["sky"] is not taf.UNKNOWN) == expected
+
     @pytest.mark.it("uses forecast wording, never observation or delay claims")
     def test_wording(self):
         texts = []

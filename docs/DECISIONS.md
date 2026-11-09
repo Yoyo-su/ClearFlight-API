@@ -24,7 +24,7 @@ Locked pilot decisions live in [development-plan.md §1](development-plan.md) an
   - F3: the worse state during transitions;
   - F4: outlined forecast styling, never on the observed card;
   - F5: "may be worse (details unknown)" and "not yet valid" are shown plainly.
-  
+
   **Implementation rules:**
   - Field presence comes from the raw TAF groups.
   - Metric visibility is read from the raw token.
@@ -46,7 +46,7 @@ Locked pilot decisions live in [development-plan.md §1](development-plan.md) an
   4. observed movements;
   5. disruption signals (heuristic; plus FAA NAS events for US airports);
   6. a flight lookup with best-effort delays.
-  
+
   **Policies:**
   - Free data only.
   - "Predictive scoring" means the forecast outlook plus disruption signals; per-flight delay prediction is deferred (P1).
@@ -60,7 +60,7 @@ Locked pilot decisions live in [development-plan.md §1](development-plan.md) an
   - free schedules exist only in small allowances (AeroDataBox 400 units/month, AviationStack 100 requests/month);
   - free official delay data exists only for US airports at airport level (FAA NAS Status);
   - callsigns don't reliably map to flight numbers.
-  
+
   So complete per-flight delays aren't possible on free data. The design critique (4 High, 1 Medium) added the licence gate for baselines, the same-event delay rule, the split coverage states, the traffic-window completeness rule and the quota failure model.
 - **Alternatives considered:** a paid schedule source for complete delays (deferred; owner wants free data); a per-flight delay model (deferred, P1); release after a subset of Phase 2 (rejected, P2); background collection for the pilot airports (rejected, P6).
 - **Source:** owner decisions 2026-11-07 to 2026-11-09; plan v1.1 §11–§13.

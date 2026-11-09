@@ -53,7 +53,7 @@ Forecast values are always visibly distinct from the observed index: a "Forecast
    - **visibility:** a 4-digit metres value, `nSM`, `PnSM` or `CAVOK`;
    - **weather:** weather groups or `NSW`;
    - **sky:** cloud groups, `NSC`, `SKC`, `CAVOK` or `VV`.
-   
+
    The decoded values supply the numbers, except that a metric visibility token (e.g. `0150`, `9999`) is read from the raw text exactly, since AWC's statute-mile decode is rounded. For each element:
    - **Omitted** (no token in a TEMPO/PROB/BECMG group): **inherit** from the state it modifies. In a base/FM group, which must be complete, an omitted element is **unknown**.
    - **Stated and valid:** the decoded value (D-006 ranges and units; `"6+"` → 10 km for metric TAFs with `9999`/`CAVOK`, else 6 SM "or more"; `NSW` → no significant weather; `vertVis` → ceiling; `VV///` → obscured, height unknown; `CAVOK`/`NSC`/`SKC` → no cloud ceiling).

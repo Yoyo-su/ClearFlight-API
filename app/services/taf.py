@@ -315,8 +315,14 @@ def decode_sky(fcst: dict, tokens: list[str]):
         if base is None:
             return UNKNOWN
         layers.append((layer["cover"], round(base)))
-    if len(layers) != len(raw_layers) or not layers:
+    raw = [(t[:3], t[3:6]) for t in raw_layers]
+    if len(layers) != len(raw) or not layers:
         return UNKNOWN  # raw and decoded disagree: never guess
+    for (cover, base), (raw_cover, raw_height) in zip(layers, raw):
+        if cover != raw_cover or (
+            raw_height != "///" and base != int(raw_height) * 100
+        ):
+            return UNKNOWN
     ceilings = [base for cover, base in layers if cover in CEILING_COVERS]
     return {
         "sky_condition": "clouds",
@@ -469,7 +475,7 @@ def hourly_outlook(meta: dict, periods: list[Period], now: datetime) -> list[dic
         instants = {lo} | {
             t
             for p in periods
-            for t in (p.start, p.becoming)
+            for t in (p.start, p.becoming, p.end)  # ends: coverage can stop
             if t is not None and lo < t < hi
         }
         states = []
