@@ -1,4 +1,4 @@
-import type { Conditions, ConditionsResponse } from "../api/types";
+import type { Conditions, ConditionsResponse, ForecastHour, ForecastResponse } from "../api/types";
 
 // Data kept on screen ages (spec §4, D11). The API's current_until and
 // stale_until come from the backend's thresholds (the single freshness
@@ -29,4 +29,25 @@ export const STALE_EXPLANATION =
 export function conditionsFor(data: ConditionsResponse, view: View): Conditions {
   if (view !== "stale" || data.conditions.score === null) return data.conditions;
   return { ...data.conditions, score: null, level: "unknown", explanation: STALE_EXPLANATION };
+}
+
+// Forecasts age too (CF-008 spec §5): an hour leaves the screen once it has
+// ended, and the whole forecast is withdrawn at valid_to, including while
+// refreshes fail or the tab was in the background.
+
+export type ForecastView =
+  | { kind: "hours"; hours: ForecastHour[] }
+  | { kind: "expired" }
+  | { kind: "no-forecast" }
+  | { kind: "no-station" };
+
+export function forecastViewAt(data: ForecastResponse, now: Date): ForecastView {
+  if (data.unavailable_reason === "no_metar_station") return { kind: "no-station" };
+  if (data.unavailable_reason === "no_forecast") return { kind: "no-forecast" };
+  const t = now.getTime();
+  if (data.unavailable_reason === "forecast_expired" || !data.forecast || t >= Date.parse(data.forecast.valid_to)) {
+    return { kind: "expired" };
+  }
+  const hours = data.hours.filter((hour) => Date.parse(hour.end) > t);
+  return hours.length > 0 ? { kind: "hours", hours } : { kind: "expired" };
 }

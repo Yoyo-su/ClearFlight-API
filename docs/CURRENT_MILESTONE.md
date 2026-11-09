@@ -1,6 +1,6 @@
 # Current milestone: CF-008 Forecast outlook (Phase 2 begins)
 
-**Status:** Not started (plan v1.1 approved 2026-11-09)
+**Status:** Implemented on `feat/cf-008-forecast-outlook`; in review (design approved 2026-11-09, D-011)
 **Source of truth:** [docs/development-plan.md](development-plan.md) v1.1 (§2 feature 3, §4, §5, §7); decision D-010
 **Last updated:** 2026-11-09
 
@@ -8,11 +8,8 @@
 Show each airport's official forecast (TAF) for the next hours, with the conditions index applied per forecast period, clearly labelled as a forecast.
 
 ## Next task
-Branch, then a CF-008 design/plan for approval:
-- the TAF adapter and parser (verify the AWC TAF format with a live probe);
-- the per-period index;
-- `/v1/airports/{code}/forecast`;
-- the UI.
+Finish CF-008 reviews (quality-reviewer and Codex), then open the PR for owner merge. Design: [cf-008-design.md](cf-008-design.md).
+- **Done:** the TAF adapter and parser (live AWC probe, recorded fixtures), the hourly outlook and index, `GET /v1/airports/{code}/forecast`, and the frontend forecast section with ageing, contract fixtures, unit tests and e2e/axe tests.
 
 ## Phase 2 order (plan v1.1)
 CF-008 forecast → CF-009 positions → CF-010 map → CF-011 movements → CF-012 disruption signals → CF-013 flight lookup. Then CF-006 public deployment (with the data-licence gate) and CF-007 validation.

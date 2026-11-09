@@ -27,15 +27,18 @@ export function useNow(intervalMs: number, deadlines: readonly (number | null)[]
     return () => window.clearTimeout(timer);
   }, [refreshKey]);
 
-  const next = deadlines.reduce<number>(
-    (soonest, deadline) => (deadline !== null && deadline >= now.getTime() && deadline < soonest ? deadline : soonest),
-    Infinity,
-  );
+  // A timer for every future deadline, not just the soonest, so a later one
+  // never depends on a re-render happening in between.
+  const key = [...new Set(deadlines.filter((d): d is number => d !== null && d >= now.getTime()))]
+    .sort((a, b) => a - b)
+    .join(",");
   useEffect(() => {
-    if (!Number.isFinite(next)) return;
-    const timer = window.setTimeout(() => setNow(new Date()), Math.max(0, next - Date.now()) + 1);
-    return () => window.clearTimeout(timer);
-  }, [next]);
+    if (!key) return;
+    const timers = key.split(",").map((deadline) =>
+      window.setTimeout(() => setNow(new Date()), Math.max(0, Number(deadline) - Date.now()) + 1),
+    );
+    return () => timers.forEach((timer) => window.clearTimeout(timer));
+  }, [key]);
 
   return now;
 }

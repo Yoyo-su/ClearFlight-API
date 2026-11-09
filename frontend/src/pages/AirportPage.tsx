@@ -4,9 +4,10 @@ import { useLocation, useNavigate, useParams } from "react-router";
 import type { ConditionsResponse } from "../api/types";
 import { AirportHeading } from "../components/AirportHeading";
 import { ConditionsCard } from "../components/ConditionsCard";
+import { ForecastSection } from "../components/ForecastSection";
 import { Layout, SearchForm } from "../components/Layout";
 import { ObservationCard } from "../components/ObservationCard";
-import { useConditions, type ConditionsState, type Failure } from "../hooks/useConditions";
+import { useConditions, useForecast, type ConditionsState, type Failure, type ForecastState } from "../hooks/useConditions";
 import { useNow } from "../hooks/useNow";
 import { conditionsFor, viewAt } from "../lib/ageing";
 import { formatAgo, formatDuration, formatUtcTime, minutesSince } from "../lib/format";
@@ -147,11 +148,13 @@ function SourceRow({ data, state, refresh, now }: {
   );
 }
 
-function DataView({ data, state, refresh, now }: {
+function DataView({ data, state, refresh, now, forecast, retryForecast }: {
   data: ConditionsResponse;
   state: ConditionsState;
   refresh: () => void;
   now: Date;
+  forecast: ForecastState;
+  retryForecast: () => void;
 }) {
   const view = viewAt(data, now);
   const coolingDown = now.getTime() < state.cooldownUntil;
@@ -220,6 +223,7 @@ function DataView({ data, state, refresh, now }: {
       <AirportHeading airport={data.airport} now={now} />
       {failedNote}
       {body}
+      <ForecastSection state={forecast} retry={retryForecast} now={now} timeZone={data.airport.timezone} />
     </>
   );
 }
@@ -231,8 +235,14 @@ export function AirportPage() {
   // After the URL is rewritten to the canonical code (D8), keep using the code
   // that was requested, so the rewrite doesn't trigger a second fetch.
   const requested = (location.state as { requested?: string } | null)?.requested ?? param.toUpperCase();
-  const { state, refresh, retry } = useConditions(requested);
+  const { state, refresh: refreshConditions, retry } = useConditions(requested);
+  const { state: forecast, refresh: refreshForecast, retry: retryForecast } = useForecast(requested);
+  const refresh = () => {
+    refreshConditions();
+    refreshForecast();
+  };
   const data = state.data;
+  const forecastData = forecast.data;
   const now = useNow(
     state.retryAt !== null ? 1000 : 15000,
     [
@@ -240,6 +250,9 @@ export function AirportPage() {
       data?.stale_until ? Date.parse(data.stale_until) : null,
       state.cooldownUntil || null,
       state.retryAt,
+      // Forecast hours leave the screen as they end (CF-008 §5).
+      forecastData?.forecast ? Date.parse(forecastData.forecast.valid_to) : null,
+      ...(forecastData?.hours ?? []).map((hour) => Date.parse(hour.end)),
     ],
     data,
   );
@@ -255,7 +268,11 @@ export function AirportPage() {
   }, [data, param, requested, navigate]);
 
   let content;
-  if (data) content = <DataView data={data} state={state} refresh={refresh} now={now} />;
+  if (data) {
+    content = (
+      <DataView data={data} state={state} refresh={refresh} now={now} forecast={forecast} retryForecast={retryForecast} />
+    );
+  }
   else if (state.failure) content = <FailureView code={param.toUpperCase()} failure={state.failure} state={state} retry={retry} now={now} />;
   else content = <Loading code={param.toUpperCase()} slow={state.slow} />;
 

@@ -92,6 +92,57 @@ export const ConditionsResponseSchema = refine(conditionsResponseFields, (r) => 
 
 export const ErrorResponseSchema = obj({ detail: str, reason: str });
 
+// CF-008 forecast outlook (docs/cf-008-design.md §4).
+export const ForecastSummarySchema = obj({
+  source: str,
+  station: str,
+  issued_at: datetime,
+  valid_from: datetime,
+  valid_to: datetime,
+  raw_text: str,
+});
+const ForecastPossibleSchema = obj({
+  label: str,
+  probability: nullable(num),
+  temporary: bool,
+  conditions: ConditionsSchema,
+});
+export const ForecastHourSchema = refine(
+  obj({
+    start: datetime,
+    end: datetime,
+    status: literal("forecast", "not_yet_valid", "unknown"),
+    prevailing: nullable(obj({ conditions: ConditionsSchema, changing: bool })),
+    possible: arr(ForecastPossibleSchema),
+  }),
+  (h) => {
+    if (Date.parse(h.end) <= Date.parse(h.start)) return "hour ends before it starts";
+    if (h.status === "not_yet_valid") return h.prevailing === null ? null : "not-yet-valid hour has a forecast";
+    return h.prevailing === null ? `${h.status} hour has no prevailing conditions` : null;
+  },
+);
+const forecastResponseFields = obj({
+  airport: AirportSchema,
+  forecast: nullable(ForecastSummarySchema),
+  hours: arr(ForecastHourSchema),
+  data_status: literal("available", "unavailable"),
+  unavailable_reason: nullable(literal("no_metar_station", "no_forecast", "forecast_expired")),
+  disclaimer: str,
+});
+
+// Cross-field rules the on-screen ageing depends on: an available forecast
+// carries its summary (valid_to) and hours; an unavailable one has no hours.
+export const ForecastResponseSchema = refine(forecastResponseFields, (r) => {
+  if (r.data_status === "unavailable") {
+    if (r.hours.length > 0) return "unavailable forecast has hours";
+    if (r.unavailable_reason === null) return "unavailable forecast has no reason";
+    return null;
+  }
+  if (r.forecast === null) return "available forecast has no summary";
+  if (r.unavailable_reason !== null) return "available forecast has an unavailable_reason";
+  return null;
+});
+
 export type Airport = Infer<typeof AirportSchema>;
 export type AirportResult = Infer<typeof AirportResultSchema>;
 export type AirportSearchResponse = Infer<typeof AirportSearchResponseSchema>;
@@ -106,3 +157,7 @@ export type ConditionsResponse = Infer<typeof ConditionsResponseSchema>;
 export type DataStatus = ConditionsResponse["data_status"];
 export type UnavailableReason = NonNullable<ConditionsResponse["unavailable_reason"]>;
 export type ErrorResponse = Infer<typeof ErrorResponseSchema>;
+export type ForecastSummary = Infer<typeof ForecastSummarySchema>;
+export type ForecastHour = Infer<typeof ForecastHourSchema>;
+export type ForecastPossible = ForecastHour["possible"][number];
+export type ForecastResponse = Infer<typeof ForecastResponseSchema>;

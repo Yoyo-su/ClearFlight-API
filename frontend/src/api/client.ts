@@ -2,8 +2,10 @@ import { validate, type Schema } from "./schema";
 import {
   AirportSearchResponseSchema,
   ConditionsResponseSchema,
+  ForecastResponseSchema,
   type AirportSearchResponse,
   type ConditionsResponse,
+  type ForecastResponse,
   type ErrorResponse,
 } from "./types";
 
@@ -64,6 +66,10 @@ async function getJson<T>(path: string, schema: Schema<T>, signal: AbortSignal):
 
 export function fetchConditions(code: string, signal: AbortSignal): Promise<ApiResult<ConditionsResponse>> {
   return getJson(`/v1/airports/${encodeURIComponent(code)}/conditions`, ConditionsResponseSchema, signal);
+}
+
+export function fetchForecast(code: string, signal: AbortSignal): Promise<ApiResult<ForecastResponse>> {
+  return getJson(`/v1/airports/${encodeURIComponent(code)}/forecast`, ForecastResponseSchema, signal);
 }
 
 export function searchAirports(query: string, signal: AbortSignal): Promise<ApiResult<AirportSearchResponse>> {

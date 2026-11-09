@@ -27,7 +27,7 @@ export function levelOf(score: number | null): Level {
   return "severe";
 }
 
-function FactorRow({ factor, scored }: { factor: Factor; scored: boolean }) {
+export function FactorRow({ factor, scored }: { factor: Factor; scored: boolean }) {
   const unknown = factor.score === null;
   const level = levelOf(factor.score);
   return (

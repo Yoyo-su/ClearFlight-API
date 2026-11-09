@@ -1,0 +1,581 @@
+{
+  "status": 200,
+  "headers": {},
+  "body": {
+    "airport": {
+      "code": "KJFK",
+      "icao": "KJFK",
+      "iata": "JFK",
+      "name": "John F. Kennedy International Airport",
+      "city": "New York",
+      "country": "United States",
+      "country_code": "US",
+      "timezone": "America/New_York"
+    },
+    "forecast": {
+      "source": "NOAA Aviation Weather Center: Terminal Aerodrome Forecast",
+      "station": "KJFK",
+      "issued_at": "2026-10-29T23:25:00Z",
+      "valid_from": "2026-10-30T00:00:00Z",
+      "valid_to": "2026-10-31T06:00:00Z",
+      "raw_text": "TAF KJFK 292325Z 3000/3106 26014KT P6SM FEW045 FEW250 FM301200 27017G25KT P6SM SCT120 FM301500 30020G29KT P6SM BKN035 FM310000 30015KT P6SM SCT040"
+    },
+    "hours": [
+      {
+        "start": "2026-10-30T07:00:00Z",
+        "end": "2026-10-30T08:00:00Z",
+        "status": "forecast",
+        "prevailing": {
+          "conditions": {
+            "version": "0.1",
+            "score": 2,
+            "level": "low",
+            "factors": [
+              {
+                "name": "wind",
+                "value": 14,
+                "unit": "kt",
+                "score": 2,
+                "detail": "14 kt"
+              },
+              {
+                "name": "visibility",
+                "value": 9656,
+                "unit": "m",
+                "score": 0,
+                "detail": "9.7 km or more"
+              },
+              {
+                "name": "ceiling",
+                "value": null,
+                "unit": "ft",
+                "score": 0,
+                "detail": "no cloud ceiling"
+              },
+              {
+                "name": "weather",
+                "value": [],
+                "unit": null,
+                "score": 0,
+                "detail": "no significant weather reported"
+              }
+            ],
+            "explanation": "Forecast conditions index 2/10 (low), mainly from wind of 14 kt.",
+            "disclaimer": "Forecast from the airport's official TAF. It is not observed weather and does not predict delays, cancellations or flight safety."
+          },
+          "changing": false
+        },
+        "possible": []
+      },
+      {
+        "start": "2026-10-30T08:00:00Z",
+        "end": "2026-10-30T09:00:00Z",
+        "status": "forecast",
+        "prevailing": {
+          "conditions": {
+            "version": "0.1",
+            "score": 2,
+            "level": "low",
+            "factors": [
+              {
+                "name": "wind",
+                "value": 14,
+                "unit": "kt",
+                "score": 2,
+                "detail": "14 kt"
+              },
+              {
+                "name": "visibility",
+                "value": 9656,
+                "unit": "m",
+                "score": 0,
+                "detail": "9.7 km or more"
+              },
+              {
+                "name": "ceiling",
+                "value": null,
+                "unit": "ft",
+                "score": 0,
+                "detail": "no cloud ceiling"
+              },
+              {
+                "name": "weather",
+                "value": [],
+                "unit": null,
+                "score": 0,
+                "detail": "no significant weather reported"
+              }
+            ],
+            "explanation": "Forecast conditions index 2/10 (low), mainly from wind of 14 kt.",
+            "disclaimer": "Forecast from the airport's official TAF. It is not observed weather and does not predict delays, cancellations or flight safety."
+          },
+          "changing": false
+        },
+        "possible": []
+      },
+      {
+        "start": "2026-10-30T09:00:00Z",
+        "end": "2026-10-30T10:00:00Z",
+        "status": "forecast",
+        "prevailing": {
+          "conditions": {
+            "version": "0.1",
+            "score": 2,
+            "level": "low",
+            "factors": [
+              {
+                "name": "wind",
+                "value": 14,
+                "unit": "kt",
+                "score": 2,
+                "detail": "14 kt"
+              },
+              {
+                "name": "visibility",
+                "value": 9656,
+                "unit": "m",
+                "score": 0,
+                "detail": "9.7 km or more"
+              },
+              {
+                "name": "ceiling",
+                "value": null,
+                "unit": "ft",
+                "score": 0,
+                "detail": "no cloud ceiling"
+              },
+              {
+                "name": "weather",
+                "value": [],
+                "unit": null,
+                "score": 0,
+                "detail": "no significant weather reported"
+              }
+            ],
+            "explanation": "Forecast conditions index 2/10 (low), mainly from wind of 14 kt.",
+            "disclaimer": "Forecast from the airport's official TAF. It is not observed weather and does not predict delays, cancellations or flight safety."
+          },
+          "changing": false
+        },
+        "possible": []
+      },
+      {
+        "start": "2026-10-30T10:00:00Z",
+        "end": "2026-10-30T11:00:00Z",
+        "status": "forecast",
+        "prevailing": {
+          "conditions": {
+            "version": "0.1",
+            "score": 2,
+            "level": "low",
+            "factors": [
+              {
+                "name": "wind",
+                "value": 14,
+                "unit": "kt",
+                "score": 2,
+                "detail": "14 kt"
+              },
+              {
+                "name": "visibility",
+                "value": 9656,
+                "unit": "m",
+                "score": 0,
+                "detail": "9.7 km or more"
+              },
+              {
+                "name": "ceiling",
+                "value": null,
+                "unit": "ft",
+                "score": 0,
+                "detail": "no cloud ceiling"
+              },
+              {
+                "name": "weather",
+                "value": [],
+                "unit": null,
+                "score": 0,
+                "detail": "no significant weather reported"
+              }
+            ],
+            "explanation": "Forecast conditions index 2/10 (low), mainly from wind of 14 kt.",
+            "disclaimer": "Forecast from the airport's official TAF. It is not observed weather and does not predict delays, cancellations or flight safety."
+          },
+          "changing": false
+        },
+        "possible": []
+      },
+      {
+        "start": "2026-10-30T11:00:00Z",
+        "end": "2026-10-30T12:00:00Z",
+        "status": "forecast",
+        "prevailing": {
+          "conditions": {
+            "version": "0.1",
+            "score": 2,
+            "level": "low",
+            "factors": [
+              {
+                "name": "wind",
+                "value": 14,
+                "unit": "kt",
+                "score": 2,
+                "detail": "14 kt"
+              },
+              {
+                "name": "visibility",
+                "value": 9656,
+                "unit": "m",
+                "score": 0,
+                "detail": "9.7 km or more"
+              },
+              {
+                "name": "ceiling",
+                "value": null,
+                "unit": "ft",
+                "score": 0,
+                "detail": "no cloud ceiling"
+              },
+              {
+                "name": "weather",
+                "value": [],
+                "unit": null,
+                "score": 0,
+                "detail": "no significant weather reported"
+              }
+            ],
+            "explanation": "Forecast conditions index 2/10 (low), mainly from wind of 14 kt.",
+            "disclaimer": "Forecast from the airport's official TAF. It is not observed weather and does not predict delays, cancellations or flight safety."
+          },
+          "changing": false
+        },
+        "possible": []
+      },
+      {
+        "start": "2026-10-30T12:00:00Z",
+        "end": "2026-10-30T13:00:00Z",
+        "status": "forecast",
+        "prevailing": {
+          "conditions": {
+            "version": "0.1",
+            "score": 4,
+            "level": "moderate",
+            "factors": [
+              {
+                "name": "wind",
+                "value": 25,
+                "unit": "kt",
+                "score": 4,
+                "detail": "17 kt gusting 25 kt"
+              },
+              {
+                "name": "visibility",
+                "value": 9656,
+                "unit": "m",
+                "score": 0,
+                "detail": "9.7 km or more"
+              },
+              {
+                "name": "ceiling",
+                "value": null,
+                "unit": "ft",
+                "score": 0,
+                "detail": "no cloud ceiling"
+              },
+              {
+                "name": "weather",
+                "value": [],
+                "unit": null,
+                "score": 0,
+                "detail": "no significant weather reported"
+              }
+            ],
+            "explanation": "Forecast conditions index 4/10 (moderate), mainly from wind of 17 kt gusting 25 kt.",
+            "disclaimer": "Forecast from the airport's official TAF. It is not observed weather and does not predict delays, cancellations or flight safety."
+          },
+          "changing": false
+        },
+        "possible": []
+      },
+      {
+        "start": "2026-10-30T13:00:00Z",
+        "end": "2026-10-30T14:00:00Z",
+        "status": "forecast",
+        "prevailing": {
+          "conditions": {
+            "version": "0.1",
+            "score": 4,
+            "level": "moderate",
+            "factors": [
+              {
+                "name": "wind",
+                "value": 25,
+                "unit": "kt",
+                "score": 4,
+                "detail": "17 kt gusting 25 kt"
+              },
+              {
+                "name": "visibility",
+                "value": 9656,
+                "unit": "m",
+                "score": 0,
+                "detail": "9.7 km or more"
+              },
+              {
+                "name": "ceiling",
+                "value": null,
+                "unit": "ft",
+                "score": 0,
+                "detail": "no cloud ceiling"
+              },
+              {
+                "name": "weather",
+                "value": [],
+                "unit": null,
+                "score": 0,
+                "detail": "no significant weather reported"
+              }
+            ],
+            "explanation": "Forecast conditions index 4/10 (moderate), mainly from wind of 17 kt gusting 25 kt.",
+            "disclaimer": "Forecast from the airport's official TAF. It is not observed weather and does not predict delays, cancellations or flight safety."
+          },
+          "changing": false
+        },
+        "possible": []
+      },
+      {
+        "start": "2026-10-30T14:00:00Z",
+        "end": "2026-10-30T15:00:00Z",
+        "status": "forecast",
+        "prevailing": {
+          "conditions": {
+            "version": "0.1",
+            "score": 4,
+            "level": "moderate",
+            "factors": [
+              {
+                "name": "wind",
+                "value": 25,
+                "unit": "kt",
+                "score": 4,
+                "detail": "17 kt gusting 25 kt"
+              },
+              {
+                "name": "visibility",
+                "value": 9656,
+                "unit": "m",
+                "score": 0,
+                "detail": "9.7 km or more"
+              },
+              {
+                "name": "ceiling",
+                "value": null,
+                "unit": "ft",
+                "score": 0,
+                "detail": "no cloud ceiling"
+              },
+              {
+                "name": "weather",
+                "value": [],
+                "unit": null,
+                "score": 0,
+                "detail": "no significant weather reported"
+              }
+            ],
+            "explanation": "Forecast conditions index 4/10 (moderate), mainly from wind of 17 kt gusting 25 kt.",
+            "disclaimer": "Forecast from the airport's official TAF. It is not observed weather and does not predict delays, cancellations or flight safety."
+          },
+          "changing": false
+        },
+        "possible": []
+      },
+      {
+        "start": "2026-10-30T15:00:00Z",
+        "end": "2026-10-30T16:00:00Z",
+        "status": "forecast",
+        "prevailing": {
+          "conditions": {
+            "version": "0.1",
+            "score": 4,
+            "level": "moderate",
+            "factors": [
+              {
+                "name": "wind",
+                "value": 29,
+                "unit": "kt",
+                "score": 4,
+                "detail": "20 kt gusting 29 kt"
+              },
+              {
+                "name": "visibility",
+                "value": 9656,
+                "unit": "m",
+                "score": 0,
+                "detail": "9.7 km or more"
+              },
+              {
+                "name": "ceiling",
+                "value": 3500,
+                "unit": "ft",
+                "score": 0,
+                "detail": "3,500 ft"
+              },
+              {
+                "name": "weather",
+                "value": [],
+                "unit": null,
+                "score": 0,
+                "detail": "no significant weather reported"
+              }
+            ],
+            "explanation": "Forecast conditions index 4/10 (moderate), mainly from wind of 20 kt gusting 29 kt.",
+            "disclaimer": "Forecast from the airport's official TAF. It is not observed weather and does not predict delays, cancellations or flight safety."
+          },
+          "changing": false
+        },
+        "possible": []
+      },
+      {
+        "start": "2026-10-30T16:00:00Z",
+        "end": "2026-10-30T17:00:00Z",
+        "status": "forecast",
+        "prevailing": {
+          "conditions": {
+            "version": "0.1",
+            "score": 4,
+            "level": "moderate",
+            "factors": [
+              {
+                "name": "wind",
+                "value": 29,
+                "unit": "kt",
+                "score": 4,
+                "detail": "20 kt gusting 29 kt"
+              },
+              {
+                "name": "visibility",
+                "value": 9656,
+                "unit": "m",
+                "score": 0,
+                "detail": "9.7 km or more"
+              },
+              {
+                "name": "ceiling",
+                "value": 3500,
+                "unit": "ft",
+                "score": 0,
+                "detail": "3,500 ft"
+              },
+              {
+                "name": "weather",
+                "value": [],
+                "unit": null,
+                "score": 0,
+                "detail": "no significant weather reported"
+              }
+            ],
+            "explanation": "Forecast conditions index 4/10 (moderate), mainly from wind of 20 kt gusting 29 kt.",
+            "disclaimer": "Forecast from the airport's official TAF. It is not observed weather and does not predict delays, cancellations or flight safety."
+          },
+          "changing": false
+        },
+        "possible": []
+      },
+      {
+        "start": "2026-10-30T17:00:00Z",
+        "end": "2026-10-30T18:00:00Z",
+        "status": "forecast",
+        "prevailing": {
+          "conditions": {
+            "version": "0.1",
+            "score": 4,
+            "level": "moderate",
+            "factors": [
+              {
+                "name": "wind",
+                "value": 29,
+                "unit": "kt",
+                "score": 4,
+                "detail": "20 kt gusting 29 kt"
+              },
+              {
+                "name": "visibility",
+                "value": 9656,
+                "unit": "m",
+                "score": 0,
+                "detail": "9.7 km or more"
+              },
+              {
+                "name": "ceiling",
+                "value": 3500,
+                "unit": "ft",
+                "score": 0,
+                "detail": "3,500 ft"
+              },
+              {
+                "name": "weather",
+                "value": [],
+                "unit": null,
+                "score": 0,
+                "detail": "no significant weather reported"
+              }
+            ],
+            "explanation": "Forecast conditions index 4/10 (moderate), mainly from wind of 20 kt gusting 29 kt.",
+            "disclaimer": "Forecast from the airport's official TAF. It is not observed weather and does not predict delays, cancellations or flight safety."
+          },
+          "changing": false
+        },
+        "possible": []
+      },
+      {
+        "start": "2026-10-30T18:00:00Z",
+        "end": "2026-10-30T19:00:00Z",
+        "status": "forecast",
+        "prevailing": {
+          "conditions": {
+            "version": "0.1",
+            "score": 4,
+            "level": "moderate",
+            "factors": [
+              {
+                "name": "wind",
+                "value": 29,
+                "unit": "kt",
+                "score": 4,
+                "detail": "20 kt gusting 29 kt"
+              },
+              {
+                "name": "visibility",
+                "value": 9656,
+                "unit": "m",
+                "score": 0,
+                "detail": "9.7 km or more"
+              },
+              {
+                "name": "ceiling",
+                "value": 3500,
+                "unit": "ft",
+                "score": 0,
+                "detail": "3,500 ft"
+              },
+              {
+                "name": "weather",
+                "value": [],
+                "unit": null,
+                "score": 0,
+                "detail": "no significant weather reported"
+              }
+            ],
+            "explanation": "Forecast conditions index 4/10 (moderate), mainly from wind of 20 kt gusting 29 kt.",
+            "disclaimer": "Forecast from the airport's official TAF. It is not observed weather and does not predict delays, cancellations or flight safety."
+          },
+          "changing": false
+        },
+        "possible": []
+      }
+    ],
+    "data_status": "available",
+    "unavailable_reason": null,
+    "disclaimer": "Forecast from the airport's official TAF. It is not observed weather and does not predict delays, cancellations or flight safety."
+  }
+}

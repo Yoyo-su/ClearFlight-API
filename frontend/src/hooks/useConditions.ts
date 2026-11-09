@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
-import { fetchConditions, isAbort, type ApiResult } from "../api/client";
-import type { ConditionsResponse } from "../api/types";
+import { fetchConditions, fetchForecast, isAbort, type ApiResult } from "../api/client";
+import type { ConditionsResponse, ForecastResponse } from "../api/types";
 
-// Loads and refreshes one airport's conditions (spec §4, §8):
+// Loads and refreshes one airport's data, its conditions or its forecast
+// (spec §4, §8; CF-008 §5):
 // - every request, retry and timer belongs to the airport on screen; changing
 //   airport or leaving aborts them, and a late response is ignored;
 // - auto-refresh every 5 minutes while the tab is visible, and when it becomes
@@ -17,11 +18,12 @@ export const COOLDOWN_MS = 60 * 1000;
 export const SLOW_MS = 10 * 1000;
 const DEFAULT_RETRY_S = 5;
 
-export type Failure = Exclude<ApiResult<ConditionsResponse>, { kind: "ok" }>;
+export type Failure = Exclude<ApiResult<unknown>, { kind: "ok" }>;
+type Fetcher<T> = (code: string, signal: AbortSignal) => Promise<ApiResult<T>>;
 
-export interface ConditionsState {
+export interface PolledState<T> {
   owner: string; // the airport code this state belongs to
-  data: ConditionsResponse | null;
+  data: T | null;
   failure: Failure | null; // only when there's no data to show
   loading: boolean;
   slow: boolean;
@@ -30,7 +32,10 @@ export interface ConditionsState {
   retryAt: number | null; // epoch ms of the automatic retry after a 503
 }
 
-const EMPTY: ConditionsState = {
+export type ConditionsState = PolledState<ConditionsResponse>;
+export type ForecastState = PolledState<ForecastResponse>;
+
+const EMPTY: PolledState<never> = {
   owner: "",
   data: null,
   failure: null,
@@ -44,7 +49,16 @@ const EMPTY: ConditionsState = {
 type Mode = "initial" | "refresh" | "retry";
 
 export function useConditions(code: string) {
-  const [state, setState] = useState<ConditionsState>({ ...EMPTY, owner: code });
+  return useAirportData(code, fetchConditions);
+}
+
+export function useForecast(code: string) {
+  return useAirportData(code, fetchForecast);
+}
+
+/** `fetcher` must be stable (a module-level function). */
+function useAirportData<T>(code: string, fetcher: Fetcher<T>) {
+  const [state, setState] = useState<PolledState<T>>({ ...EMPTY, owner: code });
   const runRef = useRef<(mode: Mode) => void>(() => {});
   const lastFetchRef = useRef(0);
   const cooldownRef = useRef(0);
@@ -83,9 +97,9 @@ export function useConditions(code: string) {
           if (!disposed && id === requestId) setState((s) => (s.loading ? { ...s, slow: true } : s));
         }, SLOW_MS);
       }
-      let result: ApiResult<ConditionsResponse>;
+      let result: ApiResult<T>;
       try {
-        result = await fetchConditions(code, controller.signal);
+        result = await fetcher(code, controller.signal);
       } catch (error) {
         if (isAbort(error)) return;
         result = { kind: "network" };
@@ -135,7 +149,7 @@ export function useConditions(code: string) {
       document.removeEventListener("visibilitychange", onVisible);
       runRef.current = () => {};
     };
-  }, [code]);
+  }, [code, fetcher]);
 
   /** Manual refresh: at most once a minute (D4). */
   const refresh = useCallback(() => {

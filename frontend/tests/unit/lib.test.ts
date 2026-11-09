@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import type { ConditionsResponse, Observation } from "../../src/api/types";
-import { conditionsFor, STALE_EXPLANATION, viewAt } from "../../src/lib/ageing";
+import type { ConditionsResponse, ForecastResponse, Observation } from "../../src/api/types";
+import { conditionsFor, forecastViewAt, STALE_EXPLANATION, viewAt } from "../../src/lib/ageing";
 import { isValidTimeZone, readClock } from "../../src/lib/clock";
 import {
   describeWeather,
@@ -234,5 +234,35 @@ describe("recently viewed (browser only)", () => {
     } finally {
       Object.defineProperty(window, "localStorage", original);
     }
+  });
+});
+
+describe("forecast ageing (CF-008 §5)", () => {
+  const egll = fixture("forecast-egll-fog").body as ForecastResponse;
+  const at = (iso: string) => new Date(iso);
+
+  it("shows the hours that haven't ended yet", () => {
+    const view = forecastViewAt(egll, at("2026-10-30T07:55:00Z"));
+    expect(view.kind === "hours" && view.hours.length).toBe(12);
+    const later = forecastViewAt(egll, at("2026-10-30T10:00:00Z"));
+    expect(later.kind === "hours" && later.hours[0]!.start).toBe("2026-10-30T10:00:00Z");
+    expect(later.kind === "hours" && later.hours.length).toBe(9);
+  });
+
+  it("drops an hour exactly when it ends", () => {
+    const view = forecastViewAt(egll, at("2026-10-30T08:00:00Z"));
+    expect(view.kind === "hours" && view.hours[0]!.start).toBe("2026-10-30T08:00:00Z");
+  });
+
+  it("withdraws the forecast once every hour has passed or at valid_to", () => {
+    expect(forecastViewAt(egll, at("2026-10-30T19:00:00Z")).kind).toBe("expired");
+    expect(forecastViewAt(egll, at("2026-10-31T06:00:00Z")).kind).toBe("expired");
+  });
+
+  it("maps unavailable reasons", () => {
+    const of = (name: string) => forecastViewAt(fixture(name).body as ForecastResponse, at("2026-10-30T07:55:00Z")).kind;
+    expect(of("forecast-rjbb-no-forecast")).toBe("no-forecast");
+    expect(of("forecast-egll-expired")).toBe("expired");
+    expect(of("forecast-aai-no-station")).toBe("no-station");
   });
 });
