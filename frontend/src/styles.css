@@ -736,3 +736,112 @@ h2 {
     grid-template-columns: 80px minmax(0, 1fr) 68px;
   }
 }
+
+/* Forecast outlook (CF-008, F4): outlined cells, never filled level chips, so
+   forecast values can't be mistaken for the observed index. */
+.forecast-hours {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(112px, 1fr));
+  gap: 10px;
+}
+.forecast-hour {
+  border: 2px dashed var(--border-strong);
+  border-radius: 10px;
+  min-width: 0;
+}
+.forecast-hour-pending {
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  color: var(--muted);
+}
+.forecast-hour-button {
+  all: unset;
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 44px;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  cursor: pointer;
+  border-radius: 8px;
+}
+.forecast-hour-button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.forecast-hour-button[aria-expanded="true"] {
+  background: var(--ground);
+}
+.forecast-time {
+  font-family: var(--mono);
+  font-size: 14px;
+  color: var(--muted);
+}
+.forecast-score {
+  font-weight: 600;
+  font-size: 17px;
+}
+.forecast-level {
+  font-weight: 500;
+  font-size: 14px;
+}
+.forecast-level-low .forecast-score {
+  color: var(--low-fg);
+}
+.forecast-level-moderate .forecast-score {
+  color: var(--moderate-fg);
+}
+.forecast-level-high .forecast-score {
+  color: var(--high-fg);
+}
+.forecast-level-severe .forecast-score {
+  color: var(--severe-fg);
+}
+.forecast-level-unknown .forecast-score {
+  color: var(--unknown-fg);
+}
+.forecast-possible {
+  font-size: 14px;
+  font-weight: 500;
+}
+.forecast-note {
+  display: block;
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--muted);
+}
+.forecast-details {
+  border: 2px dashed var(--border);
+  border-radius: 10px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.forecast-range,
+.forecast-possible-detail {
+  margin: 0;
+  font-size: 15px;
+}
+
+@media (max-width: 600px) {
+  .forecast-hours {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .forecast-hour-button,
+  .forecast-hour-pending {
+    display: grid;
+    grid-template-columns: 56px minmax(0, 1fr);
+    column-gap: 12px;
+  }
+  .forecast-hour-button > :not(.forecast-time),
+  .forecast-hour-pending > :not(.forecast-time) {
+    grid-column: 2;
+  }
+}

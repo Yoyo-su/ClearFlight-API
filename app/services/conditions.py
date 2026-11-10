@@ -133,6 +133,8 @@ def ceiling_factor(obs: Observation) -> dict:
 
 def weather_factor(obs: Observation) -> dict:
     tokens = obs.weather_phenomena
+    if tokens is None:  # forecasts only: weather stated but unreadable
+        return factor("weather", None, None, None, "weather not given")
     if not tokens:
         return factor("weather", [], None, 0, "no significant weather reported")
     scores = [weather_token_score(token) for token in tokens]
@@ -161,6 +163,7 @@ MISSING_TEXT = {
     "wind": "the wind speed",
     "visibility": "the visibility",
     "ceiling": "the cloud ceiling",
+    "weather": "the weather",
 }
 
 
@@ -176,14 +179,41 @@ def level(score: int | None) -> str:
     return "severe"
 
 
-def unscored(explanation: str, factors: list | None = None) -> dict:
+FORECAST_DISCLAIMER = (
+    "Forecast from the airport's official TAF. It is not observed weather and "
+    "does not predict delays, cancellations or flight safety."
+)
+# Wording per kind; the scoring itself is shared (CF-008 spec §3.6).
+KIND_TEXT = {
+    "observed": {
+        "name": "Observed conditions index",
+        "nothing": "no significant wind, visibility, cloud or weather was reported",
+        "missing_one": "wasn't reported",
+        "missing_many": "weren't reported",
+        "weather": "reported weather {detail}",
+        "disclaimer": DISCLAIMER,
+    },
+    "forecast": {
+        "name": "Forecast conditions index",
+        "nothing": "no significant wind, visibility, cloud or weather is forecast",
+        "missing_one": "isn't given in the forecast",
+        "missing_many": "aren't given in the forecast",
+        "weather": "forecast weather {detail}",
+        "disclaimer": FORECAST_DISCLAIMER,
+    },
+}
+
+
+def unscored(
+    explanation: str, factors: list | None = None, disclaimer: str = DISCLAIMER
+) -> dict:
     return {
         "version": VERSION,
         "score": None,
         "level": "unknown",
         "factors": factors or [],
         "explanation": explanation,
-        "disclaimer": DISCLAIMER,
+        "disclaimer": disclaimer,
     }
 
 
@@ -220,52 +250,87 @@ def evaluate(
             factors,
         )
 
+    return score_conditions(obs, factors, "observed")
+
+
+def evaluate_forecast(state) -> dict:
+    """The conditions index for one forecast state (CF-008).
+
+    `state` has the same condition attributes as an Observation. Forecast
+    validity is checked by the caller, so there is no freshness rule here.
+    """
+    factors = [
+        wind_factor(state),
+        visibility_factor(state),
+        ceiling_factor(state),
+        weather_factor(state),
+    ]
+    for f in factors:  # factor details in forecast wording
+        f["detail"] = (
+            f["detail"]
+            .replace(
+                "no significant weather reported", "no significant weather forecast"
+            )
+            .replace("not reported", "not given in the forecast")
+        )
+    return score_conditions(state, factors, "forecast")
+
+
+def score_conditions(obs, factors: list[dict], kind: str) -> dict:
+    """Score factors: the highest wins; unknown unless known factors reach 10."""
+    words = KIND_TEXT[kind]
     known = [f for f in factors if f["score"] is not None]
     unknown = [f for f in factors if f["score"] is None]
     top = max((f["score"] for f in known), default=None)
     if unknown and (top is None or top < MAX_SCORE):
-        return unscored(f"No score: {why_unknown(unknown, obs)}.", factors)
+        return unscored(
+            f"No score: {why_unknown(unknown, obs, kind)}.",
+            factors,
+            words["disclaimer"],
+        )
 
+    driver_text = {**DRIVER_TEXT, "weather": words["weather"]}
     drivers = [
-        DRIVER_TEXT[f["name"]].format(detail=f["detail"])
+        driver_text[f["name"]].format(detail=f["detail"])
         for f in known
         if f["score"] == top
     ]
     if top == 0:
-        text = (
-            "Observed conditions index 0/10 (low): no significant wind, visibility, "
-            "cloud or weather was reported."
-        )
+        text = f"{words['name']} 0/10 (low): {words['nothing']}."
     else:
-        text = f"Observed conditions index {top}/10 ({level(top)}), mainly from {join(drivers)}."
+        text = f"{words['name']} {top}/10 ({level(top)}), mainly from {join(drivers)}."
     if unknown:
-        text += f" ({why_unknown(unknown, obs).capitalize()}.)"
+        text += f" ({why_unknown(unknown, obs, kind).capitalize()}.)"
     return {
         "version": VERSION,
         "score": top,
         "level": level(top),
         "factors": factors,
         "explanation": text,
-        "disclaimer": DISCLAIMER,
+        "disclaimer": words["disclaimer"],
     }
 
 
-def why_unknown(unknown: list[dict], obs: Observation) -> str:
+def why_unknown(unknown: list[dict], obs, kind: str = "observed") -> str:
     """Explain the unknown factors, e.g. "the visibility wasn't reported"."""
     parts = []
-    missing = [MISSING_TEXT[f["name"]] for f in unknown if f["name"] != "weather"]
+    unreadable = obs.weather_phenomena is None
+    missing = [
+        MISSING_TEXT[f["name"]] for f in unknown if f["name"] != "weather" or unreadable
+    ]
     if missing:
-        parts.append(not_reported(missing))
-    if any(f["name"] == "weather" for f in unknown):
+        parts.append(not_reported(missing, kind))
+    if not unreadable and any(f["name"] == "weather" for f in unknown):
         groups = unrecognised_groups(obs.weather_phenomena)
         noun = "weather group" if len(groups) == 1 else "weather groups"
         parts.append(f"the {noun} {' '.join(groups)} couldn't be interpreted")
     return " and ".join(parts)
 
 
-def not_reported(missing: list[str]) -> str:
-    verb = "wasn't" if len(missing) == 1 else "weren't"
-    return f"{join(missing)} {verb} reported"
+def not_reported(missing: list[str], kind: str = "observed") -> str:
+    words = KIND_TEXT[kind]
+    verb = words["missing_one"] if len(missing) == 1 else words["missing_many"]
+    return f"{join(missing)} {verb}"
 
 
 def join(items: list[str]) -> str:

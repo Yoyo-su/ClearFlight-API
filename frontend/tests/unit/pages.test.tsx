@@ -39,6 +39,22 @@ function setVisibility(state: "visible" | "hidden") {
   document.dispatchEvent(new Event("visibilitychange"));
 }
 
+// The page also loads the forecast (CF-008). Tests that count or script
+// conditions requests see only those; forecast requests go to `forecastFetch`.
+const FORECASTS: Record<string, string> = { EGLL: "forecast-egll-fog", LHR: "forecast-egll-fog", KJFK: "forecast-kjfk-low", JFK: "forecast-kjfk-low" };
+let forecastFetch = fixtureFetch(() => "network");
+function defaultForecasts() {
+  return fixtureFetch((url) => {
+    const code = decodeURIComponent(/airports\/([^/]+)\/forecast/.exec(url)?.[1] ?? "");
+    return fixture(FORECASTS[code.toUpperCase()] ?? "forecast-rjbb-no-forecast");
+  });
+}
+function stubFetch(conditions: (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>) {
+  vi.stubGlobal("fetch", (input: RequestInfo | URL, init?: RequestInit) =>
+    String(input).includes("/forecast") ? forecastFetch(input, init) : conditions(input, init),
+  );
+}
+
 function routeByCode(map: Record<string, Fixture | "network">) {
   return fixtureFetch((url) => {
     const match = /airports\/([^/]+)\/conditions/.exec(url);
@@ -52,6 +68,7 @@ beforeEach(() => {
   vi.useFakeTimers({ shouldAdvanceTime: false });
   vi.setSystemTime(NOW);
   setVisibility("visible");
+  forecastFetch = defaultForecasts();
 });
 
 afterEach(() => {
@@ -61,7 +78,7 @@ afterEach(() => {
 
 describe("airport page: current data", () => {
   it("shows the airport, clocks, status, score, factors and observation", async () => {
-    vi.stubGlobal("fetch", routeByCode({ EGLL: fixture("conditions-egll-severe") }));
+    stubFetch(routeByCode({ EGLL: fixture("conditions-egll-severe") }));
     renderAt("/airport/EGLL");
     await settle();
     expect(screen.getByRole("heading", { level: 1, name: "London Heathrow Airport" })).toBeInTheDocument();
@@ -85,7 +102,7 @@ describe("airport page: current data", () => {
 
   it("rewrites the URL to the canonical code without fetching again (D8)", async () => {
     const fetch = routeByCode({ LHR: fixture("conditions-egll-severe") });
-    vi.stubGlobal("fetch", fetch);
+    stubFetch(fetch);
     renderAt("/airport/lhr");
     await settle();
     expect(screen.getByTestId("path")).toHaveTextContent("/airport/EGLL");
@@ -95,7 +112,7 @@ describe("airport page: current data", () => {
   });
 
   it("keeps an IATA-only airport's code as canonical", async () => {
-    vi.stubGlobal("fetch", routeByCode({ AAI: fixture("conditions-aai-no-station") }));
+    stubFetch(routeByCode({ AAI: fixture("conditions-aai-no-station") }));
     renderAt("/airport/aai");
     await settle();
     expect(screen.getByTestId("path")).toHaveTextContent("/airport/AAI");
@@ -104,7 +121,7 @@ describe("airport page: current data", () => {
   });
 
   it("remembers the airport as recently viewed", async () => {
-    vi.stubGlobal("fetch", routeByCode({ EGLL: fixture("conditions-egll-severe") }));
+    stubFetch(routeByCode({ EGLL: fixture("conditions-egll-severe") }));
     renderAt("/airport/EGLL");
     await settle();
     expect(JSON.parse(window.localStorage.getItem("clearflight.recentAirports")!)).toEqual([
@@ -113,7 +130,7 @@ describe("airport page: current data", () => {
   });
 
   it("shows 'Unknown' with the reason when a factor is missing", async () => {
-    vi.stubGlobal("fetch", routeByCode({ EGLL: fixture("conditions-egll-unknown") }));
+    stubFetch(routeByCode({ EGLL: fixture("conditions-egll-unknown") }));
     renderAt("/airport/EGLL");
     await settle();
     const index = screen.getByRole("region", { name: "Experimental conditions index" });
@@ -123,7 +140,7 @@ describe("airport page: current data", () => {
   });
 
   it("scores dense fog with an obscured sky", async () => {
-    vi.stubGlobal("fetch", routeByCode({ EGKK: fixture("conditions-egkk-fog") }));
+    stubFetch(routeByCode({ EGKK: fixture("conditions-egkk-fog") }));
     renderAt("/airport/EGKK");
     await settle();
     expect(screen.getByText("10")).toBeInTheDocument();
@@ -131,7 +148,7 @@ describe("airport page: current data", () => {
   });
 
   it("shows a stale report unscored, with its age", async () => {
-    vi.stubGlobal("fetch", routeByCode({ EGLL: fixture("conditions-egll-stale") }));
+    stubFetch(routeByCode({ EGLL: fixture("conditions-egll-stale") }));
     renderAt("/airport/EGLL");
     await settle();
     expect(screen.getByText(/This report is 2 h 5 min old/)).toBeInTheDocument();
@@ -148,7 +165,7 @@ describe("airport page: unavailable data and errors", () => {
     ["error-502-provider", "EGLL", "The weather service didn’t respond", /usually temporary/, "Try again"],
     ["error-504-timeout", "EGLL", "The weather service didn’t respond", /usually temporary/, "Try again"],
   ])("%s", async (name, code, title, body, button) => {
-    vi.stubGlobal("fetch", routeByCode({ [code]: fixture(name) }));
+    stubFetch(routeByCode({ [code]: fixture(name) }));
     renderAt(`/airport/${code}`);
     await settle();
     expect(screen.getByRole("heading", { name: title })).toBeInTheDocument();
@@ -157,7 +174,7 @@ describe("airport page: unavailable data and errors", () => {
   });
 
   it("explains an invalid code and offers search", async () => {
-    vi.stubGlobal("fetch", routeByCode({ XX: fixture("error-400-invalid-code") }));
+    stubFetch(routeByCode({ XX: fixture("error-400-invalid-code") }));
     renderAt("/airport/xx");
     await settle();
     expect(screen.getByText(/“XX” isn’t an airport code/)).toBeInTheDocument();
@@ -168,7 +185,7 @@ describe("airport page: unavailable data and errors", () => {
   });
 
   it("explains an unknown airport", async () => {
-    vi.stubGlobal("fetch", routeByCode({ ZZZ: fixture("error-404-not-found") }));
+    stubFetch(routeByCode({ ZZZ: fixture("error-404-not-found") }));
     renderAt("/airport/ZZZ");
     await settle();
     expect(screen.getByText("We couldn’t find an airport with the code ZZZ.")).toBeInTheDocument();
@@ -176,11 +193,11 @@ describe("airport page: unavailable data and errors", () => {
 
   it("explains a network failure and retries on request", async () => {
     const fetch = routeByCode({ EGLL: "network" });
-    vi.stubGlobal("fetch", fetch);
+    stubFetch(fetch);
     renderAt("/airport/EGLL");
     await settle();
     expect(screen.getByRole("heading", { name: "Can’t reach ClearFlight" })).toBeInTheDocument();
-    vi.stubGlobal("fetch", routeByCode({ EGLL: fixture("conditions-egll-severe") }));
+    stubFetch(routeByCode({ EGLL: fixture("conditions-egll-severe") }));
     await act(async () => screen.getByRole("button", { name: "Try again" }).click());
     await settle();
     expect(screen.getByText("London Heathrow Airport")).toBeInTheDocument();
@@ -189,7 +206,7 @@ describe("airport page: unavailable data and errors", () => {
   it("counts down on 503, retries once automatically, then succeeds", async () => {
     const replies = [fixture("error-503-busy"), fixture("conditions-egll-severe")];
     const fetch = fixtureFetch(() => replies.shift()!);
-    vi.stubGlobal("fetch", fetch);
+    stubFetch(fetch);
     renderAt("/airport/EGLL");
     await settle();
     expect(screen.getByText("Trying again automatically in 13 s…")).toBeInTheDocument();
@@ -202,7 +219,7 @@ describe("airport page: unavailable data and errors", () => {
   });
 
   it("enables Try again after the automatic retry also fails", async () => {
-    vi.stubGlobal("fetch", routeByCode({ EGLL: fixture("error-503-busy") }));
+    stubFetch(routeByCode({ EGLL: fixture("error-503-busy") }));
     renderAt("/airport/EGLL");
     await settle(13000);
     await settle(1000);
@@ -212,7 +229,7 @@ describe("airport page: unavailable data and errors", () => {
 
   it("says when loading is slow", async () => {
     const { fn } = controlledFetch();
-    vi.stubGlobal("fetch", fn);
+    stubFetch(fn);
     renderAt("/airport/EGLL");
     await settle();
     expect(screen.getByText("Loading weather…")).toBeInTheDocument();
@@ -225,7 +242,7 @@ describe("airport page: unavailable data and errors", () => {
 describe("airport page: refresh and ageing (D4, D11)", () => {
   it("refreshes every 5 minutes while visible, not while hidden", async () => {
     const fetch = routeByCode({ EGLL: fixture("conditions-egll-severe") });
-    vi.stubGlobal("fetch", fetch);
+    stubFetch(fetch);
     renderAt("/airport/EGLL");
     await settle();
     await settle(5 * 60 * 1000);
@@ -240,7 +257,7 @@ describe("airport page: refresh and ageing (D4, D11)", () => {
 
   it("limits manual refresh to once a minute", async () => {
     const fetch = routeByCode({ EGLL: fixture("conditions-egll-severe") });
-    vi.stubGlobal("fetch", fetch);
+    stubFetch(fetch);
     renderAt("/airport/EGLL");
     await settle();
     const button = screen.getByRole("button", { name: "Refresh" });
@@ -257,7 +274,7 @@ describe("airport page: refresh and ageing (D4, D11)", () => {
 
   it("keeps the last good data when a refresh fails, and ages it", async () => {
     const replies: (Fixture | "network")[] = [fixture("conditions-egll-severe")];
-    vi.stubGlobal("fetch", fixtureFetch(() => replies.shift() ?? "network"));
+    stubFetch(fixtureFetch(() => replies.shift() ?? "network"));
     renderAt("/airport/EGLL");
     await settle();
     expect(screen.getByText("8")).toBeInTheDocument();
@@ -278,7 +295,7 @@ describe("airport page: refresh and ageing (D4, D11)", () => {
 
   it("withdraws the score exactly at current_until, not at the next 15 s tick", async () => {
     vi.setSystemTime(new Date("2026-10-30T08:49:50Z")); // 10 s before current_until
-    vi.stubGlobal("fetch", fixtureFetch(() => fixture("conditions-egll-severe")));
+    stubFetch(fixtureFetch(() => fixture("conditions-egll-severe")));
     renderAt("/airport/EGLL");
     await settle();
     expect(screen.getByText("8")).toBeInTheDocument();
@@ -303,11 +320,11 @@ describe("airport page: refresh and ageing (D4, D11)", () => {
   });
 
   it("applies ageing on return from a background tab", async () => {
-    vi.stubGlobal("fetch", fixtureFetch(() => "network"));
-    vi.stubGlobal("fetch", fixtureFetch(() => fixture("conditions-egll-severe")));
+    stubFetch(fixtureFetch(() => "network"));
+    stubFetch(fixtureFetch(() => fixture("conditions-egll-severe")));
     renderAt("/airport/EGLL");
     await settle();
-    vi.stubGlobal("fetch", fixtureFetch(() => "network"));
+    stubFetch(fixtureFetch(() => "network"));
     setVisibility("hidden");
     vi.setSystemTime(new Date("2026-10-30T11:00:00Z"));
     await act(async () => setVisibility("visible"));
@@ -319,7 +336,7 @@ describe("airport page: refresh and ageing (D4, D11)", () => {
 describe("airport page: request ownership", () => {
   it("ignores a late response for the previous airport", async () => {
     const { fn, pending } = controlledFetch();
-    vi.stubGlobal("fetch", fn);
+    stubFetch(fn);
     renderAt("/airport/EGLL");
     await settle();
     await act(async () => navigateTo("/airport/KJFK"));
@@ -339,7 +356,7 @@ describe("airport page: request ownership", () => {
 
   it("applies only the newest of overlapping refreshes", async () => {
     const { fn, pending } = controlledFetch();
-    vi.stubGlobal("fetch", fn);
+    stubFetch(fn);
     renderAt("/airport/EGLL");
     await settle();
     await act(async () => pending[0]!.resolve(response(fixture("conditions-egll-severe"))));
@@ -381,7 +398,7 @@ describe("airport page: request ownership", () => {
       fixture("conditions-egll-severe"), // manual refresh at +3 s succeeds
     ];
     const fetch = fixtureFetch(() => replies.shift() ?? fixture("error-503-busy"));
-    vi.stubGlobal("fetch", fetch);
+    stubFetch(fetch);
     renderAt("/airport/EGLL");
     await settle();
     await settle(5 * 60 * 1000);
@@ -398,7 +415,7 @@ describe("airport page: request ownership", () => {
 
   it("cancels a 503 retry when leaving the airport", async () => {
     const fetch = routeByCode({ EGLL: fixture("error-503-busy"), KJFK: fixture("conditions-kjfk-low") });
-    vi.stubGlobal("fetch", fetch);
+    stubFetch(fetch);
     renderAt("/airport/EGLL");
     await settle();
     await act(async () => navigateTo("/airport/KJFK"));
@@ -420,7 +437,7 @@ describe("home page and search (D3, D5)", () => {
   }
 
   it("shows the hint and pilot shortcuts before typing", () => {
-    vi.stubGlobal("fetch", searchFetch({}));
+    stubFetch(searchFetch({}));
     renderAt("/");
     expect(screen.getByLabelText("Airport name, city or code")).toBeInTheDocument();
     expect(screen.getByText("Type at least 2 characters.")).toBeInTheDocument();
@@ -430,7 +447,7 @@ describe("home page and search (D3, D5)", () => {
 
   it("searches as you type after a pause and lists results as links", async () => {
     const fetch = searchFetch({ lon: fixture("search-lon") });
-    vi.stubGlobal("fetch", fetch);
+    stubFetch(fetch);
     renderAt("/");
     fireEvent.change(screen.getByLabelText("Airport name, city or code"), { target: { value: "lon" } });
     expect(screen.getByText("Searching…")).toBeInTheDocument();
@@ -447,17 +464,17 @@ describe("home page and search (D3, D5)", () => {
   });
 
   it("opens the first result on Enter", async () => {
-    vi.stubGlobal("fetch", searchFetch({ osaka: fixture("search-osaka") }));
+    stubFetch(searchFetch({ osaka: fixture("search-osaka") }));
     renderAt("/?q=osaka");
     await settle(250);
-    vi.stubGlobal("fetch", routeByCode({ RJBB: fixture("conditions-rjbb-moderate") }));
+    stubFetch(routeByCode({ RJBB: fixture("conditions-rjbb-moderate") }));
     fireEvent.submit(screen.getByRole("search"));
     await settle();
     expect(screen.getByTestId("path")).toHaveTextContent("/airport/RJBB");
   });
 
   it("explains no results", async () => {
-    vi.stubGlobal("fetch", searchFetch({ zzqq: fixture("search-none") }));
+    stubFetch(searchFetch({ zzqq: fixture("search-none") }));
     renderAt("/?q=zzqq");
     await settle(250);
     expect(screen.getByText(/No airports match “zzqq”/)).toBeInTheDocument();
@@ -465,18 +482,18 @@ describe("home page and search (D3, D5)", () => {
   });
 
   it("offers Retry when search fails", async () => {
-    vi.stubGlobal("fetch", searchFetch({ lon: "network" }));
+    stubFetch(searchFetch({ lon: "network" }));
     renderAt("/?q=lon");
     await settle(250);
     expect(screen.getByText("Search isn’t available right now.")).toBeInTheDocument();
-    vi.stubGlobal("fetch", searchFetch({ lon: fixture("search-lon") }));
+    stubFetch(searchFetch({ lon: fixture("search-lon") }));
     await act(async () => screen.getByRole("button", { name: "Retry" }).click());
     await settle(250);
     expect(screen.getByText(/airports found/)).toBeInTheDocument();
   });
 
   it("treats a server error as unavailable search", async () => {
-    vi.stubGlobal("fetch", searchFetch({ lon: fixture("error-502-provider") }));
+    stubFetch(searchFetch({ lon: fixture("error-502-provider") }));
     renderAt("/?q=lon");
     await settle(250);
     expect(screen.getByText("Search isn’t available right now.")).toBeInTheDocument();
@@ -484,7 +501,7 @@ describe("home page and search (D3, D5)", () => {
 
   it("only applies the latest query", async () => {
     const fetch = searchFetch({ os: fixture("search-none"), osaka: fixture("search-osaka") });
-    vi.stubGlobal("fetch", fetch);
+    stubFetch(fetch);
     renderAt("/");
     const input = screen.getByLabelText("Airport name, city or code");
     for (const text of ["o", "os", "osa", "osak", "osaka"]) {
@@ -499,7 +516,7 @@ describe("home page and search (D3, D5)", () => {
   it("lists recently viewed airports and clears them", async () => {
     rememberAirport({ code: "KJFK", iata: "JFK", name: "John F. Kennedy International Airport" });
     rememberAirport({ code: "AAI", iata: "AAI", name: "Arraias Airport" });
-    vi.stubGlobal("fetch", searchFetch({}));
+    stubFetch(searchFetch({}));
     renderAt("/");
     const heading = screen.getByRole("heading", { name: "Recently viewed" });
     expect(heading).toBeInTheDocument();
@@ -510,7 +527,7 @@ describe("home page and search (D3, D5)", () => {
 
   it("shows a code when a recent airport has no IATA code", () => {
     rememberAirport({ code: "EGKB", iata: null, name: "London Biggin Hill Airport" });
-    vi.stubGlobal("fetch", searchFetch({}));
+    stubFetch(searchFetch({}));
     renderAt("/");
     expect(screen.getByRole("link", { name: "London Biggin Hill Airport · EGKB" })).toBeInTheDocument();
   });
@@ -521,5 +538,136 @@ describe("not found page", () => {
     renderAt("/nowhere");
     expect(screen.getByRole("heading", { name: "Page not found" })).toBeInTheDocument();
     expect(document.title).toBe("Page not found – ClearFlight");
+  });
+});
+
+describe("airport page: forecast outlook (CF-008)", () => {
+  function forecastSection() {
+    return screen.getByRole("region", { name: "Forecast (next 12 hours)" });
+  }
+
+  function withForecast(name: string | "network") {
+    forecastFetch = fixtureFetch(() => (name === "network" ? "network" : fixture(name)));
+    stubFetch(fixtureFetch(() => fixture("conditions-egll-severe")));
+  }
+
+  it("shows 12 forecast hours in local time, labelled and styled apart from observed (F4)", async () => {
+    withForecast("forecast-egll-fog");
+    renderAt("/airport/EGLL");
+    await settle();
+    const section = forecastSection();
+    const hours = within(section).getAllByRole("listitem");
+    expect(hours).toHaveLength(12);
+    expect(hours[0]).toHaveTextContent("07:00");
+    expect(hours[0]).toHaveTextContent("10 / 10 Severe");
+    expect(hours[1]).toHaveTextContent("Changing");
+    expect(hours[5]).toHaveTextContent("2 / 10 Low");
+    expect(hours[5]).toHaveTextContent("Up to 3 / 10 30% chance, temporarily");
+    expect(within(section).getByText("Forecast conditions index · not observed weather")).toBeInTheDocument();
+    // No filled level chips in the forecast; the observed card keeps its own.
+    expect(section.querySelector("[class*='level-chip']")).toBeNull();
+    expect(section.querySelectorAll(".forecast-hour")).toHaveLength(12);
+    expect(within(section).getByText(/It is not observed weather and does not predict delays/)).toBeInTheDocument();
+    expect(within(section).getByText("Issued 22:56 UTC · Valid until 06:00 UTC")).toBeInTheDocument();
+  });
+
+  it("shows an hour's factors and possible conditions when selected", async () => {
+    withForecast("forecast-lfpg-possible");
+    renderAt("/airport/EGLL");
+    await settle();
+    const first = within(forecastSection()).getAllByRole("button")[0]!;
+    expect(first).toHaveTextContent("Up to 10 / 10");
+    fireEvent.click(first);
+    expect(first).toHaveAttribute("aria-expanded", "true");
+    const details = screen.getByRole("region", { name: /Forecast details 07:00–08:00/ });
+    expect(within(details).getByText(/Forecast conditions index 0\/10/)).toBeInTheDocument();
+    expect(within(details).getByText(/Up to 10 \/ 10 \(30% chance, temporarily\):/)).toBeInTheDocument();
+    expect(within(details).getByText(/07:00–08:00 local · 07:00–08:00 UTC/)).toBeInTheDocument();
+    fireEvent.click(first);
+    expect(screen.queryByRole("region", { name: /Forecast details/ })).not.toBeInTheDocument();
+  });
+
+  it("shows hours before the forecast starts as not yet valid (F5)", async () => {
+    vi.setSystemTime(new Date("2026-10-29T22:10:00Z"));
+    withForecast("forecast-rjbb-not-yet-valid");
+    renderAt("/airport/EGLL");
+    await settle();
+    const hours = within(forecastSection()).getAllByRole("listitem");
+    expect(hours[0]).toHaveTextContent("Forecast starts at 00:00");
+    expect(hours[2]).toHaveTextContent("2 / 10 Low");
+  });
+
+  it("removes hours as they end, and withdraws an expired forecast", async () => {
+    withForecast("forecast-egll-fog");
+    renderAt("/airport/EGLL");
+    await settle();
+    expect(within(forecastSection()).getAllByRole("listitem")[0]).toHaveTextContent("07:00");
+    await settle(5 * 60 * 1000 + 1); // 08:00:00.001
+    expect(within(forecastSection()).getAllByRole("listitem")[0]).toHaveTextContent("08:00");
+    expect(within(forecastSection()).getAllByRole("listitem")).toHaveLength(11);
+    forecastFetch = fixtureFetch(() => "network"); // refreshes now fail
+    await settle(11 * 60 * 60 * 1000); // 19:00: every hour has ended, TAF still valid
+    expect(within(forecastSection()).getByText(/The forecast hours shown have passed/)).toBeInTheDocument();
+    await settle(11 * 60 * 60 * 1000); // past valid_to (31 Oct 06:00)
+    expect(within(forecastSection()).getByText("The latest forecast has expired.")).toBeInTheDocument();
+  });
+
+  it("keeps the remaining hours and says so when a forecast refresh fails", async () => {
+    withForecast("forecast-egll-fog");
+    renderAt("/airport/EGLL");
+    await settle();
+    forecastFetch = fixtureFetch(() => "network");
+    await settle(5 * 60 * 1000);
+    expect(within(forecastSection()).getByText(/Couldn’t update the forecast just now — showing the forecast issued 22:56 UTC/)).toBeInTheDocument();
+    expect(within(forecastSection()).getAllByRole("listitem")).toHaveLength(11);
+  });
+
+  it.each([
+    ["forecast-rjbb-no-forecast", "No forecast is available for this airport right now."],
+    ["forecast-egll-expired", "The latest forecast has expired."],
+  ])("explains %s", async (name, text) => {
+    withForecast(name);
+    renderAt("/airport/EGLL");
+    await settle();
+    expect(within(forecastSection()).getByText(text)).toBeInTheDocument();
+  });
+
+  it("shows nothing extra when the airport has no station", async () => {
+    forecastFetch = fixtureFetch(() => fixture("forecast-aai-no-station"));
+    stubFetch(fixtureFetch(() => fixture("conditions-aai-no-station")));
+    renderAt("/airport/AAI");
+    await settle();
+    expect(screen.queryByRole("region", { name: "Forecast (next 12 hours)" })).not.toBeInTheDocument();
+  });
+
+  it("offers a retry when the forecast can't load, without affecting the conditions", async () => {
+    withForecast("network");
+    renderAt("/airport/EGLL");
+    await settle();
+    expect(screen.getByText("8")).toBeInTheDocument();
+    expect(within(forecastSection()).getByText("The forecast couldn’t be loaded just now.")).toBeInTheDocument();
+    forecastFetch = fixtureFetch(() => fixture("forecast-egll-fog"));
+    fireEvent.click(within(forecastSection()).getByRole("button", { name: "Try again" }));
+    await settle();
+    expect(within(forecastSection()).getAllByRole("listitem")).toHaveLength(12);
+  });
+
+  it("keeps showing a loaded forecast when the observation fails", async () => {
+    forecastFetch = fixtureFetch(() => fixture("forecast-egll-fog"));
+    stubFetch(fixtureFetch(() => fixture("error-502-provider")));
+    renderAt("/airport/EGLL");
+    await settle();
+    expect(screen.getByText("The weather service didn’t respond")).toBeInTheDocument();
+    expect(within(forecastSection()).getAllByRole("listitem")).toHaveLength(12);
+  });
+
+  it("refreshes the forecast with the Refresh button", async () => {
+    withForecast("forecast-egll-fog");
+    renderAt("/airport/EGLL");
+    await settle();
+    expect(forecastFetch).toHaveBeenCalledTimes(1);
+    fireEvent.click(screen.getByRole("button", { name: "Refresh" }));
+    await settle();
+    expect(forecastFetch).toHaveBeenCalledTimes(2);
   });
 });

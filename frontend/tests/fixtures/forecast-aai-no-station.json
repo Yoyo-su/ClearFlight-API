@@ -1,0 +1,21 @@
+{
+  "status": 200,
+  "headers": {},
+  "body": {
+    "airport": {
+      "code": "AAI",
+      "icao": null,
+      "iata": "AAI",
+      "name": "Arraias Airport",
+      "city": "Arraias",
+      "country": "Brazil",
+      "country_code": "BR",
+      "timezone": "America/Araguaina"
+    },
+    "forecast": null,
+    "hours": [],
+    "data_status": "unavailable",
+    "unavailable_reason": "no_metar_station",
+    "disclaimer": "Forecast from the airport's official TAF. It is not observed weather and does not predict delays, cancellations or flight safety."
+  }
+}

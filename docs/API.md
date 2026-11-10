@@ -84,6 +84,30 @@ Visibility arrives from the provider in statute miles rounded to 0.01. Band comp
 - The METAR request budget is per server process.
 - A provider timeout can make a lookup take up to about 21 s.
 
+## GET /v1/airports/{code}/forecast
+The airport's official forecast (TAF) from the NOAA Aviation Weather Center, as an hourly outlook for the next 12 hours (CF-008; [design](cf-008-design.md), D-011). Codes and errors are as for `/conditions` (400, 404, 502, 503 with `Retry-After`, 504), plus **502 `invalid_forecast`** when the provider's TAF fails validation.
+
+**Response:**
+- `airport`;
+- `forecast`: `source`, `station`, `issued_at`, `valid_from`, `valid_to`, `raw_text`; null when there's no forecast;
+- `hours`: one per hour from the current hour, cut at `valid_to`. Each has:
+  - `start` and `end`;
+  - `status`: `forecast`, `not_yet_valid` or `unknown`;
+  - `prevailing`: `{conditions, changing}`, or null when not yet valid;
+  - `possible`: TEMPO/PROB states that could be worse than the prevailing one, each `{label, probability, temporary, conditions}`;
+- `data_status`: `available` or `unavailable`;
+- `unavailable_reason`: `no_metar_station`, `no_forecast` or `forecast_expired`;
+- `disclaimer`.
+
+`conditions` has the same shape as on `/conditions`, with forecast wording and the forecast disclaimer.
+
+**How the outlook is built:**
+- The raw TAF decides which elements each change group states: an omitted element is inherited, while one that is stated but unreadable is unknown.
+- An hour scores the worst of every state that may apply in it: during a BECMG transition both the old and new states, including overlapping transitions (marked `changing`).
+- TAFs are cached for 30 minutes per station, and an empty provider response for 30 minutes as `no_forecast`.
+
+**Known limitations:** temperature, icing, turbulence and wind-shear groups aren't used. A TAF whose raw groups don't line up with AWC's decoded periods shows as unknown.
+
 ## GET /v1/airports/search
 Searches the local airport catalogue (OurAirports data, no provider call) by IATA or ICAO code, name or city. Matching ignores case and accents.
 

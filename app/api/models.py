@@ -96,6 +96,48 @@ class ConditionsResponse(BaseModel):
     stale_until: datetime | None
 
 
+class ForecastSummary(BaseModel):
+    source: str
+    station: str
+    issued_at: datetime
+    valid_from: datetime
+    valid_to: datetime
+    raw_text: str
+
+
+class ForecastPrevailing(BaseModel):
+    conditions: Conditions
+    # True when more than one state may apply, e.g. during a BECMG transition.
+    changing: bool
+
+
+class ForecastPossible(BaseModel):
+    label: str  # e.g. "temporarily", "30% chance", "40% chance, temporarily"
+    probability: Literal[30, 40] | None
+    temporary: bool
+    conditions: Conditions
+
+
+class ForecastHour(BaseModel):
+    start: datetime
+    end: datetime
+    status: Literal["forecast", "not_yet_valid", "unknown"]
+    prevailing: ForecastPrevailing | None  # null when not yet valid
+    # Only states that could be worse than the prevailing one (F1, F5).
+    possible: list[ForecastPossible]
+
+
+class ForecastResponse(BaseModel):
+    airport: ConditionsAirport
+    forecast: ForecastSummary | None
+    hours: list[ForecastHour]
+    data_status: Literal["available", "unavailable"]
+    unavailable_reason: (
+        Literal["no_metar_station", "no_forecast", "forecast_expired"] | None
+    )
+    disclaimer: str
+
+
 class ErrorResponse(BaseModel):
     detail: str
     reason: str

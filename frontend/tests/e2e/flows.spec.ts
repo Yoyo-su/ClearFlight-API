@@ -14,12 +14,19 @@ function load(name: string) {
   };
 }
 
-async function mockApi(page: Page, conditions: Record<string, string>, searches: Record<string, string> = {}) {
+async function mockApi(
+  page: Page,
+  conditions: Record<string, string>,
+  searches: Record<string, string> = {},
+  forecasts: Record<string, string> = {},
+) {
   await page.route("**/v1/airports/**", async (route) => {
     const url = new URL(route.request().url());
+    const code = decodeURIComponent(url.pathname.split("/")[3] ?? "");
     let name: string | undefined;
     if (url.pathname === "/v1/airports/search") name = searches[url.searchParams.get("q") ?? ""];
-    else name = conditions[decodeURIComponent(url.pathname.split("/")[3] ?? "")];
+    else if (url.pathname.endsWith("/forecast")) name = forecasts[code] ?? "forecast-rjbb-no-forecast";
+    else name = conditions[code];
     if (!name) return route.fulfill({ status: 500, body: "unexpected request" });
     const f = load(name);
     await route.fulfill({ status: f.status, headers: f.headers, contentType: "application/json", body: JSON.stringify(f.body) });
@@ -131,4 +138,22 @@ test("unknown paths show a not-found page", async ({ page }) => {
   await page.goto("/nowhere");
   await expect(page.getByRole("heading", { name: "Page not found" })).toBeVisible();
   await expectAccessible(page);
+});
+
+test("the forecast outlook is labelled, distinct from observed, and accessible (CF-008)", async ({ page }) => {
+  await mockApi(page, { EGLL: "conditions-egll-severe" }, {}, { EGLL: "forecast-lfpg-possible" });
+  await page.goto("/airport/EGLL");
+  const forecast = page.getByRole("region", { name: "Forecast (next 12 hours)" });
+  await expect(forecast.getByRole("listitem")).toHaveCount(12);
+  await expect(forecast.getByText("Forecast conditions index · not observed weather")).toBeVisible();
+  const first = forecast.getByRole("button").first();
+  await expect(first).toContainText("Up to 10 / 10");
+  // Outlined (dashed) forecast cells; the observed index keeps its filled chip.
+  const border = await forecast.locator(".forecast-hour").first().evaluate((el) => getComputedStyle(el).borderStyle);
+  expect(border).toBe("dashed");
+  await expect(forecast.locator("[class*='level-chip']")).toHaveCount(0);
+  await first.click();
+  await expect(page.getByRole("region", { name: /Forecast details 07:00–08:00/ })).toBeVisible();
+  await expectAccessible(page);
+  await expectNoHorizontalScroll(page);
 });

@@ -11,6 +11,7 @@ tests/test_frontend_fixtures.py fails until the fixtures match the models.
 """
 
 import json
+import re
 import sys
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -75,6 +76,70 @@ ERRORS = {
     "error-503-busy": ("EGLL", MetarRateLimited(12.3)),
     "error-504-timeout": ("EGLL", MetarTimeout("timeout")),
 }
+
+
+def taf_recorded(name: str, station: str, **changes):
+    """A recorded TAF shifted 10 days earlier, so it is current at NOW.
+
+    The TAFs were recorded around 2026-11-09 07:30Z; the shift keeps the hours
+    and moves the day-of-month in the raw text to match.
+    """
+    rows = json.loads((AWC / f"{name}.json").read_text())
+    rec = json.loads(json.dumps(next(r for r in rows if r["icaoId"] == station)))
+    shift = 10 * 86400
+    for key in ("validTimeFrom", "validTimeTo"):
+        rec[key] -= shift
+    for fcst in rec["fcsts"]:
+        for key in ("timeFrom", "timeTo", "timeBec"):
+            if fcst.get(key) is not None:
+                fcst[key] -= shift
+    issued = datetime.fromisoformat(rec["issueTime"].replace("Z", "+00:00"))
+    rec["issueTime"] = (issued - timedelta(days=10)).strftime("%Y-%m-%dT%H:%M:%S.000Z")
+    days = {"08": "29", "09": "30", "10": "31"}
+
+    def shift_token(token):
+        # Only time tokens: ddhhmmZ, ddhh/ddhh, FMddhhmm, TX../ddhhZ, TN../ddhhZ.
+        def day(d):
+            return days.get(d, d)
+
+        if m := re.fullmatch(r"(\d{2})(\d{4}Z)", token):
+            return day(m[1]) + m[2]
+        if m := re.fullmatch(r"(\d{2})(\d{2})/(\d{2})(\d{2})", token):
+            return f"{day(m[1])}{m[2]}/{day(m[3])}{m[4]}"
+        if m := re.fullmatch(r"FM(\d{2})(\d{4})", token):
+            return f"FM{day(m[1])}{m[2]}"
+        if m := re.fullmatch(r"(T[XN]M?\d{2}/)(\d{2})(\d{2}Z)", token):
+            return m[1] + day(m[2]) + m[3]
+        return token
+
+    rec["rawTAF"] = " ".join(shift_token(t) for t in rec["rawTAF"].split())
+    rec.update(changes)
+    return rec
+
+
+FORECASTS = {
+    "forecast-egll-fog": ("EGLL", taf_recorded("taf_pilots", "EGLL"), NOW),
+    "forecast-lfpg-possible": ("LFPG", taf_recorded("taf_lfpg_becmg", "LFPG"), NOW),
+    "forecast-kjfk-low": ("KJFK", taf_recorded("taf_pilots", "KJFK"), NOW),
+    "forecast-rjbb-not-yet-valid": (
+        "RJBB",
+        taf_recorded("taf_pilots", "RJBB"),
+        datetime(2026, 10, 29, 22, 10, tzinfo=timezone.utc),
+    ),
+    "forecast-rjbb-no-forecast": ("RJBB", None, NOW),
+    "forecast-egll-expired": (
+        "EGLL",
+        taf_recorded("taf_pilots", "EGLL"),
+        datetime(2026, 10, 31, 6, 0, tzinfo=timezone.utc),
+    ),
+    "forecast-aai-no-station": ("AAI", None, NOW),
+}
+FORECAST_ERRORS = {
+    "error-502-invalid-forecast": (
+        "EGLL",
+        MetarUpstreamError("invalid_forecast", "station mismatch"),
+    ),
+}
 SEARCHES = {
     "search-lon": "lon",
     "search-osaka": "osaka",
@@ -116,6 +181,14 @@ def main(out: Path = OUT) -> int:
                 "app.api.conditions.get_latest_observation", side_effect=error
             ):
                 save(name, client.get(f"/v1/airports/{code}/conditions"))
+    for name, (code, rec, now) in FORECASTS.items():
+        with mock.patch("app.api.forecast.utc_now", return_value=now), mock.patch(
+            "app.api.forecast.taf.get_latest_forecast", return_value=rec
+        ):
+            save(name, client.get(f"/v1/airports/{code}/forecast"))
+    for name, (code, error) in FORECAST_ERRORS.items():
+        with mock.patch("app.api.forecast.taf.get_latest_forecast", side_effect=error):
+            save(name, client.get(f"/v1/airports/{code}/forecast"))
     for name, query in SEARCHES.items():
         save(name, client.get("/v1/airports/search", params={"q": query}))
 

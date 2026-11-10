@@ -1,0 +1,230 @@
+[
+ {
+  "icaoId": "EHAM",
+  "dbPopTime": "2026-11-08T23:25:17.647Z",
+  "bulletinTime": "2026-11-08T23:00:00.000Z",
+  "issueTime": "2026-11-08T23:07:00.000Z",
+  "validTimeFrom": 1794182400,
+  "validTimeTo": 1794290400,
+  "rawTAF": "TAF EHAM 082307Z 0900/1006 13005KT 7000 FEW021 BECMG 0900/0903 4000 BR MIFG PROB40 TEMPO 0903/0909 0800 BCFG BECMG 0908/0911 CAVOK BECMG 0919/0922 6000 BECMG 0922/0924 4000 BR MIFG BECMG 1000/1003 1400 BCFG PROB40 1002/1006 0400 FG VV001",
+  "mostRecent": 1,
+  "remarks": "",
+  "lat": 52.315,
+  "lon": 4.79,
+  "elev": -2,
+  "prior": 1,
+  "name": "Amsterdam/Schiphol Arpt",
+  "fcsts": [
+   {
+    "timeFrom": 1794182400,
+    "timeTo": 1794290400,
+    "timeBec": null,
+    "fcstChange": null,
+    "probability": null,
+    "wdir": 130,
+    "wspd": 5,
+    "wgst": null,
+    "wshearHgt": null,
+    "wshearDir": null,
+    "wshearSpd": null,
+    "visib": 4.35,
+    "altim": null,
+    "vertVis": null,
+    "wxString": null,
+    "notDecoded": null,
+    "clouds": [
+     {
+      "cover": "FEW",
+      "base": 2100,
+      "type": null
+     }
+    ],
+    "icgTurb": [],
+    "temp": []
+   },
+   {
+    "timeFrom": 1794182400,
+    "timeTo": 1794211200,
+    "timeBec": 1794193200,
+    "fcstChange": "BECMG",
+    "probability": null,
+    "wdir": 130,
+    "wspd": 5,
+    "wgst": null,
+    "wshearHgt": null,
+    "wshearDir": null,
+    "wshearSpd": null,
+    "visib": 2.49,
+    "altim": null,
+    "vertVis": null,
+    "wxString": "BR MIFG",
+    "notDecoded": null,
+    "clouds": [
+     {
+      "cover": "FEW",
+      "base": 2100,
+      "type": null
+     }
+    ],
+    "icgTurb": [],
+    "temp": []
+   },
+   {
+    "timeFrom": 1794193200,
+    "timeTo": 1794214800,
+    "timeBec": null,
+    "fcstChange": "TEMPO",
+    "probability": 40,
+    "wdir": null,
+    "wspd": null,
+    "wgst": null,
+    "wshearHgt": null,
+    "wshearDir": null,
+    "wshearSpd": null,
+    "visib": 0.5,
+    "altim": null,
+    "vertVis": null,
+    "wxString": "BCFG",
+    "notDecoded": null,
+    "clouds": [],
+    "icgTurb": [],
+    "temp": []
+   },
+   {
+    "timeFrom": 1794211200,
+    "timeTo": 1794250800,
+    "timeBec": 1794222000,
+    "fcstChange": "BECMG",
+    "probability": null,
+    "wdir": 130,
+    "wspd": 5,
+    "wgst": null,
+    "wshearHgt": null,
+    "wshearDir": null,
+    "wshearSpd": null,
+    "visib": "6+",
+    "altim": null,
+    "vertVis": null,
+    "wxString": "NSW",
+    "notDecoded": null,
+    "clouds": [
+     {
+      "cover": "NSC",
+      "base": null,
+      "type": null
+     }
+    ],
+    "icgTurb": [],
+    "temp": []
+   },
+   {
+    "timeFrom": 1794250800,
+    "timeTo": 1794261600,
+    "timeBec": 1794261600,
+    "fcstChange": "BECMG",
+    "probability": null,
+    "wdir": 130,
+    "wspd": 5,
+    "wgst": null,
+    "wshearHgt": null,
+    "wshearDir": null,
+    "wshearSpd": null,
+    "visib": 3.73,
+    "altim": null,
+    "vertVis": null,
+    "wxString": "NSW",
+    "notDecoded": null,
+    "clouds": [
+     {
+      "cover": "NSC",
+      "base": null,
+      "type": null
+     }
+    ],
+    "icgTurb": [],
+    "temp": []
+   },
+   {
+    "timeFrom": 1794261600,
+    "timeTo": 1794268800,
+    "timeBec": 1794268800,
+    "fcstChange": "BECMG",
+    "probability": null,
+    "wdir": 130,
+    "wspd": 5,
+    "wgst": null,
+    "wshearHgt": null,
+    "wshearDir": null,
+    "wshearSpd": null,
+    "visib": 2.49,
+    "altim": null,
+    "vertVis": null,
+    "wxString": "BR MIFG",
+    "notDecoded": null,
+    "clouds": [
+     {
+      "cover": "NSC",
+      "base": null,
+      "type": null
+     }
+    ],
+    "icgTurb": [],
+    "temp": []
+   },
+   {
+    "timeFrom": 1794268800,
+    "timeTo": 1794290400,
+    "timeBec": 1794279600,
+    "fcstChange": "BECMG",
+    "probability": null,
+    "wdir": 130,
+    "wspd": 5,
+    "wgst": null,
+    "wshearHgt": null,
+    "wshearDir": null,
+    "wshearSpd": null,
+    "visib": 0.87,
+    "altim": null,
+    "vertVis": null,
+    "wxString": "BCFG",
+    "notDecoded": null,
+    "clouds": [
+     {
+      "cover": "NSC",
+      "base": null,
+      "type": null
+     }
+    ],
+    "icgTurb": [],
+    "temp": []
+   },
+   {
+    "timeFrom": 1794276000,
+    "timeTo": 1794290400,
+    "timeBec": null,
+    "fcstChange": "PROB",
+    "probability": 40,
+    "wdir": null,
+    "wspd": null,
+    "wgst": null,
+    "wshearHgt": null,
+    "wshearDir": null,
+    "wshearSpd": null,
+    "visib": 0.25,
+    "altim": null,
+    "vertVis": 100,
+    "wxString": "FG",
+    "notDecoded": null,
+    "clouds": [
+     {
+      "cover": "OVX",
+      "base": null,
+      "type": null
+     }
+    ],
+    "icgTurb": [],
+    "temp": []
+   }
+  ]
+ }
+]

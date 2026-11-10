@@ -7,6 +7,7 @@ import {
   AirportSearchResponseSchema,
   ConditionsResponseSchema,
   ErrorResponseSchema,
+  ForecastResponseSchema,
 } from "../../src/api/types";
 import { fixture } from "./helpers";
 
@@ -22,6 +23,7 @@ const names = readdirSync(join(__dirname, "..", "fixtures"))
 
 function schemaFor(name: string, status: number): Schema<unknown> {
   if (name.startsWith("search-")) return AirportSearchResponseSchema;
+  if (name.startsWith("forecast-")) return ForecastResponseSchema;
   return status === 200 ? ConditionsResponseSchema : ErrorResponseSchema;
 }
 
@@ -71,5 +73,31 @@ describe("the schema rejects contract changes", () => {
     ],
   ])("rejects %s", (_, body, message) => {
     expect(() => validate(ConditionsResponseSchema, body)).toThrow(message);
+  });
+});
+
+describe("the forecast schema rejects contract changes", () => {
+  const good = fixture("forecast-egll-fog").body as Record<string, unknown>;
+  const hour = (good.hours as Record<string, unknown>[])[0] as Record<string, unknown>;
+
+  it.each([
+    ["available without a summary", { ...good, forecast: null }, "available forecast has no summary"],
+    ["available with a reason", { ...good, unavailable_reason: "no_forecast" }, "has an unavailable_reason"],
+    ["unavailable with hours", { ...good, data_status: "unavailable", unavailable_reason: "no_forecast" }, "unavailable forecast has hours"],
+    [
+      "an unavailable forecast without a reason",
+      { ...(fixture("forecast-rjbb-no-forecast").body as object), unavailable_reason: null },
+      "unavailable forecast has no reason",
+    ],
+    ["an unknown hour status", { ...good, hours: [{ ...hour, status: "observed" }] }, "hours[0].status: expected"],
+    ["a forecast hour without conditions", { ...good, hours: [{ ...hour, prevailing: null }] }, "forecast hour has no prevailing"],
+    [
+      "a not-yet-valid hour with conditions",
+      { ...good, hours: [{ ...hour, status: "not_yet_valid" }] },
+      "not-yet-valid hour has a forecast",
+    ],
+    ["an hour that ends before it starts", { ...good, hours: [{ ...hour, end: hour.start }] }, "hour ends before it starts"],
+  ])("rejects %s", (_, body, message) => {
+    expect(() => validate(ForecastResponseSchema, body)).toThrow(message);
   });
 });

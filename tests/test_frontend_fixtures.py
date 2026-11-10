@@ -4,7 +4,12 @@ from pathlib import Path
 
 import pytest
 
-from app.api.models import AirportSearchResponse, ConditionsResponse, ErrorResponse
+from app.api.models import (
+    AirportSearchResponse,
+    ConditionsResponse,
+    ErrorResponse,
+    ForecastResponse,
+)
 
 """
 Contract test: the frontend's recorded API responses (frontend/tests/fixtures)
@@ -24,6 +29,8 @@ def fixture_files():
 def model_for(name: str, status: int):
     if name.startswith("search-"):
         return AirportSearchResponse
+    if name.startswith("forecast-"):
+        return ForecastResponse
     if status == 200:
         return ConditionsResponse
     return ErrorResponse
@@ -38,15 +45,24 @@ class TestFrontendFixtures:
         statuses = {b.get("data_status") for b in bodies} - {None}
         reasons = {b.get("unavailable_reason") for b in bodies} - {None}
         errors = {b.get("reason") for b in bodies} - {None}
-        assert statuses == {"current", "stale", "unavailable"}
-        assert reasons == {"no_metar_station", "no_report", "observation_too_old"}
+        assert statuses == {"current", "stale", "unavailable", "available"}
+        assert reasons == {
+            "no_metar_station",
+            "no_report",
+            "observation_too_old",
+            "no_forecast",
+            "forecast_expired",
+        }
         assert errors == {
             "invalid_code",
             "airport_not_found",
             "provider_error",
             "rate_limited",
             "provider_timeout",
+            "invalid_forecast",
         }
+        hour_states = {h["status"] for b in bodies for h in b.get("hours", [])}
+        assert {"forecast", "not_yet_valid"} <= hour_states
         assert {"search-lon", "search-none"} <= names
 
     @pytest.mark.it("validate against the current models with exactly their fields")

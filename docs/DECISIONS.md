@@ -17,6 +17,27 @@ Locked pilot decisions live in [development-plan.md §1](development-plan.md) an
 
 ## Entries
 
+### D-011: CF-008 forecast outlook rules (2026-11-09)
+- **Decision:** The forecast outlook follows [cf-008-design.md](cf-008-design.md) r3. The owner chose F1–F5, all as recommended:
+  - F1: an hourly outlook with the prevailing score, plus "up to N" for TEMPO/PROB;
+  - F2: 12 hours;
+  - F3: the worse state during transitions;
+  - F4: outlined forecast styling, never on the observed card;
+  - F5: "may be worse (details unknown)" and "not yet valid" are shown plainly.
+
+  **Implementation rules:**
+  - Field presence comes from the raw TAF groups.
+  - Metric visibility is read from the raw token.
+  - A base/FM group without weather means no significant weather.
+  - An unknown change type, or misaligned raw/decoded groups, makes the whole TAF unknown.
+  - Invalid payloads are a 502 `invalid_forecast`.
+  - The index scoring is shared, with per-kind wording.
+  - On screen, hours age by their `end` and the forecast is withdrawn at `valid_to`.
+- **Why:** to keep forecasts unmistakable from observations, and to never show missing or uncertain data as reassuring (plan §1, §7).
+- **Alternatives considered:** listing the TAF groups as written; the full 24–30 h validity; new conditions from the start of a transition.
+- **Source:** cf-008-design.md §7 and §9 (Codex design critique: 4 High and 2 Medium, all fixed); branch `feat/cf-008-forecast-outlook`.
+- **Status:** accepted
+
 ### D-010: Plan v1.1 — a free-data flight phase before public release (2026-11-09)
 - **Decision:** [Development plan v1.1](development-plan.md) replaces v1.0's weather-only scope with Phase 2 (CF-008–CF-013), before any public release:
   1. a forecast outlook (TAF);
@@ -25,7 +46,7 @@ Locked pilot decisions live in [development-plan.md §1](development-plan.md) an
   4. observed movements;
   5. disruption signals (heuristic; plus FAA NAS events for US airports);
   6. a flight lookup with best-effort delays.
-  
+
   **Policies:**
   - Free data only.
   - "Predictive scoring" means the forecast outlook plus disruption signals; per-flight delay prediction is deferred (P1).
@@ -39,7 +60,7 @@ Locked pilot decisions live in [development-plan.md §1](development-plan.md) an
   - free schedules exist only in small allowances (AeroDataBox 400 units/month, AviationStack 100 requests/month);
   - free official delay data exists only for US airports at airport level (FAA NAS Status);
   - callsigns don't reliably map to flight numbers.
-  
+
   So complete per-flight delays aren't possible on free data. The design critique (4 High, 1 Medium) added the licence gate for baselines, the same-event delay rule, the split coverage states, the traffic-window completeness rule and the quota failure model.
 - **Alternatives considered:** a paid schedule source for complete delays (deferred; owner wants free data); a per-flight delay model (deferred, P1); release after a subset of Phase 2 (rejected, P2); background collection for the pilot airports (rejected, P6).
 - **Source:** owner decisions 2026-11-07 to 2026-11-09; plan v1.1 §11–§13.
