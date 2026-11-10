@@ -1,3 +1,4 @@
+import json
 import logging
 import math
 import random
@@ -5,6 +6,7 @@ import threading
 import time
 from datetime import datetime, timedelta, timezone
 
+import redis
 import requests
 
 from app.core.config import settings
@@ -41,6 +43,7 @@ weather adapter's typed errors, so the API maps them the same way (D-006).
 logger = logging.getLogger(__name__)
 
 MIN_ATTEMPT_S = 2.0  # no new attempt starts with less time left
+MAX_STATES_CALLS = 2  # per box, retries and 401 refreshes together
 BACKOFF_S = 0.5
 
 # OpenSky emitter categories (state vector index 17) as ADS-B categories.
@@ -72,29 +75,59 @@ def utc(seconds: float) -> datetime:
     return datetime.fromtimestamp(seconds, timezone.utc)
 
 
-def get(url: str, deadline: float, **kwargs) -> requests.Response:
-    """One HTTP GET bounded by the operation deadline."""
+MAX_BODY_BYTES = 8_000_000
+
+
+class Reply:
+    """A fully read response: status, headers and body."""
+
+    def __init__(self, status_code: int, headers, content: bytes):
+        self.status_code = status_code
+        self.headers = headers
+        self.content = content
+
+    def json(self):
+        return json.loads(self.content)
+
+
+def send(method: str, url: str, deadline: float, **kwargs) -> Reply:
+    """One HTTP request whose whole duration is bounded by the deadline.
+
+    requests' timeout only limits each wait for data, so the body is streamed
+    and the deadline is checked between chunks (design r3 §5). The worst case
+    is the deadline plus one socket read timeout, inside the lock lease.
+    """
     left = remaining(deadline)
     if left < MIN_ATTEMPT_S:
         raise MetarTimeout("deadline")
     timeout = min(settings.PROVIDER_TIMEOUT, left)
+    headers = {"User-Agent": settings.METAR_USER_AGENT, **kwargs.pop("headers", {})}
     try:
-        return requests.get(
-            url,
-            timeout=timeout,
-            headers={
-                "User-Agent": settings.METAR_USER_AGENT,
-                **kwargs.pop("headers", {}),
-            },
-            **kwargs,
-        )
+        call = requests.post if method == "POST" else requests.get
+        response = call(url, timeout=timeout, headers=headers, stream=True, **kwargs)
+        try:
+            chunks, size = [], 0
+            for chunk in response.iter_content(65536):
+                if remaining(deadline) <= 0:
+                    raise MetarTimeout("deadline")
+                size += len(chunk)
+                if size > MAX_BODY_BYTES:
+                    raise MetarUpstreamError("response_too_large")
+                chunks.append(chunk)
+            return Reply(response.status_code, response.headers, b"".join(chunks))
+        finally:
+            response.close()
     except requests.Timeout:
         raise MetarTimeout("timeout")
     except requests.RequestException as e:
         raise MetarUpstreamError("connection_error", type(e).__name__)
 
 
-def json_body(response: requests.Response):
+def get(url: str, deadline: float, **kwargs) -> Reply:
+    return send("GET", url, deadline, **kwargs)
+
+
+def json_body(response: Reply):
     try:
         return response.json()
     except ValueError:
@@ -163,7 +196,9 @@ class AdsbLol:
             if not isinstance(ac, dict):
                 collector.add(None)
                 continue
-            flags = ac.get("dbFlags") if isinstance(ac.get("dbFlags"), int) else 0
+            flags = ac.get("dbFlags", 0)
+            if not isinstance(flags, int) or isinstance(flags, bool):
+                flags = 12  # unreadable privacy flags: withhold (fail closed)
             collector.add(
                 AdsbLol.row(ac, observed_at),
                 withheld=bool(flags & 12),  # PIA (4) or LADD (8)
@@ -231,7 +266,11 @@ class OpenSky:
         self.limit = (
             self.ANONYMOUS_LIMIT if self.credentials is None else self.ACCOUNT_LIMIT
         )
-        budget = settings.OPENSKY_DAILY_CREDIT_BUDGET or int(self.limit * 0.9)
+        budget = settings.OPENSKY_DAILY_CREDIT_BUDGET
+        if budget is None:
+            budget = int(self.limit * 0.9)
+        elif not 1 <= budget <= self.limit:
+            raise ProviderDisabled("invalid_budget")
         self.budget = DailyBudget(redis_client, "opensky", budget, clock)
         self.token: tuple[str, float] | None = None  # (token, monotonic expiry)
         self.token_lock = threading.Lock()
@@ -240,32 +279,36 @@ class OpenSky:
     def bearer(self, deadline: float, refresh: bool = False) -> dict:
         if self.credentials is None:
             return {}
-        with self.token_lock:
+        if not self.token_lock.acquire(
+            timeout=max(0.0, remaining(deadline) - MIN_ATTEMPT_S)
+        ):
+            raise MetarTimeout("deadline")
+        try:
             if refresh:
                 self.token = None
             if self.token is None or time.monotonic() >= self.token[1]:
                 self.token = self.request_token(deadline)
             return {"Authorization": f"Bearer {self.token[0]}"}
+        finally:
+            self.token_lock.release()
 
     def request_token(self, deadline: float) -> tuple[str, float]:
-        left = remaining(deadline)
-        if left < MIN_ATTEMPT_S:
-            raise MetarTimeout("deadline")
         client_id, secret = self.credentials
-        timeout = min(settings.PROVIDER_TIMEOUT, left)
         try:
-            response = requests.post(
+            response = send(
+                "POST",
                 settings.OPENSKY_TOKEN_URL,
+                deadline,
                 data={
                     "grant_type": "client_credentials",
                     "client_id": client_id,
                     "client_secret": secret,
                 },
-                timeout=timeout,
-                headers={"User-Agent": settings.METAR_USER_AGENT},
             )
             body = response.json() if response.status_code == 200 else None
-        except (requests.RequestException, ValueError):
+        except MetarTimeout:
+            raise MetarTimeout("token_timeout")  # a slow server isn't bad credentials
+        except (MetarUpstreamError, ValueError):
             body = None
         token = body.get("access_token") if isinstance(body, dict) else None
         expires = (
@@ -292,13 +335,21 @@ class OpenSky:
             except BudgetExhausted as e:
                 raise QuotaExhausted(e.reason, e.retry_at)
 
-    def reconcile(self, response: requests.Response) -> None:
+    def reconcile(self, response: Reply) -> None:
         header = response.headers.get("x-rate-limit-remaining", "")
         if header.isdigit():
-            self.budget.raise_to(max(0, self.limit - int(header)))
+            try:
+                self.budget.raise_to(max(0, self.limit - int(header)))
+            except redis.RedisError as e:  # the reservation already counted
+                logger.warning(
+                    "Couldn't reconcile OpenSky credits: %s", type(e).__name__
+                )
 
-    def exhausted(self, response: requests.Response) -> QuotaExhausted:
-        self.budget.raise_to(self.budget.budget)
+    def exhausted(self, response: Reply) -> QuotaExhausted:
+        try:
+            self.budget.raise_to(self.budget.budget)
+        except redis.RedisError as e:
+            logger.warning("Couldn't record OpenSky exhaustion: %s", type(e).__name__)
         retry = response.headers.get("x-rate-limit-retry-after-seconds", "")
         now = datetime.now(timezone.utc)
         if retry.isdigit():
@@ -335,27 +386,29 @@ class OpenSky:
             "lamin": round(lamin, 4), "lomin": round(lomin, 4),
             "lamax": round(lamax, 4), "lomax": round(lomax, 4), "extended": 1,
         }  # fmt: skip
-        retried = refreshed = False
+        calls, refreshed = 0, False
         while True:
+            # The token first, so the per-second slot is used only by the call
+            # it was reserved for (design r3 §5).
+            headers = self.bearer(deadline)
             self.reserve(deadline)  # every call, retries included
+            calls += 1
+            last = calls >= MAX_STATES_CALLS  # one shared limit (design r3 §6)
             try:
-                response = get(
-                    self.URL, deadline, params=params, headers=self.bearer(deadline)
-                )
+                response = get(self.URL, deadline, params=params, headers=headers)
             except (MetarTimeout, MetarUpstreamError) as e:
                 if (
-                    retried
+                    last
                     or not retryable(e)
                     or remaining(deadline) < MIN_ATTEMPT_S + BACKOFF_S
                 ):
                     raise
-                retried = True
                 time.sleep(BACKOFF_S + random.uniform(0, 0.25))
                 continue
             self.reconcile(response)
             status = response.status_code
             if status == 401:
-                if self.credentials is None or refreshed:
+                if self.credentials is None or refreshed or last:
                     raise MetarUpstreamError(
                         "provider_auth_failed", "states call rejected"
                     )
@@ -366,10 +419,9 @@ class OpenSky:
                 raise self.exhausted(response)
             if (
                 status >= 500
-                and not retried
+                and not last
                 and remaining(deadline) >= MIN_ATTEMPT_S + BACKOFF_S
             ):
-                retried = True
                 time.sleep(BACKOFF_S + random.uniform(0, 0.25))
                 continue
             if status != 200:

@@ -451,15 +451,24 @@ class TestBudget:
 
 
 class FakeResponse:
-    def __init__(self, status=200, body=None, headers=None):
-        self.status_code = status
-        self._body = body
-        self.headers = headers or {}
+    """A streamed requests response; an Exception body gives invalid JSON."""
 
-    def json(self):
-        if isinstance(self._body, Exception):
-            raise self._body
-        return self._body
+    def __init__(self, status=200, body=None, headers=None, chunks=None):
+        self.status_code = status
+        self.headers = headers or {}
+        if chunks is not None:
+            self.chunks = chunks
+        elif isinstance(body, Exception):
+            self.chunks = [b"not json"]
+        else:
+            self.chunks = [json.dumps(body).encode()] if body is not None else []
+        self.closed = False
+
+    def iter_content(self, size):
+        yield from self.chunks
+
+    def close(self):
+        self.closed = True
 
 
 @pytest.fixture
@@ -634,7 +643,8 @@ class TestService:
 
     @pytest.mark.it("fetches once, caches for 30 s and records coverage evidence")
     def test_cache(self, fake_redis, adsblol_settings):
-        result = AdsbLol.parse(adsblol("rjbb"), area("rjbb"), datetime.now(UTC))
+        recorded = datetime.fromtimestamp(1794271841, UTC)  # the fixture's fetch time
+        result = AdsbLol.parse(adsblol("rjbb"), area("rjbb"), recorded)
         provider = positions_service.get_provider()
         with mock.patch.object(provider, "fetch", return_value=result) as fetch:
             first = positions_service.get_positions("RJBB", area("rjbb"))
@@ -758,7 +768,9 @@ class TestEndpoint:
         assert "registration" not in json.dumps(body) and '"t"' not in json.dumps(body)
         assert "safety" in body["disclaimer"]
 
-    @pytest.mark.it("withdraws positions as they expire, then reports unusable data")
+    @pytest.mark.it(
+        "withdraws positions as they expire, then reports the feed as stale"
+    )
     def test_expiry(self, client):
         result = AdsbLol.parse(adsblol("rjbb"), area("rjbb"), datetime.now(UTC))
         later = result.observed_at + timedelta(seconds=61)
@@ -766,7 +778,7 @@ class TestEndpoint:
         assert (body["aircraft"], body["data_status"], body["unavailable_reason"]) == (
             [],
             "coverage_unknown",
-            "unusable_data",
+            "stale_feed",
         )
 
     @pytest.mark.it("reports the gate, quota and busy states")
@@ -938,3 +950,218 @@ class TestSettings:
             None,
             None,
         )
+
+
+@pytest.mark.describe("Review round 1 fixes")
+class TestReviewRound1:
+    NOW = datetime(2026, 11, 10, 0, 50, 30, tzinfo=UTC)
+
+    def deadline(self):
+        return time.monotonic() + 20
+
+    @pytest.mark.it("reports a stale withheld-only feed as stale, not available")
+    def test_stale_withheld(self):
+        stale = feed(withheld=3, observed_at=self.NOW - timedelta(seconds=90))
+        assert assess(stale, self.NOW, 60, True) == ("coverage_unknown", "stale_feed")
+        fresh = feed(withheld=3, observed_at=self.NOW - timedelta(seconds=5))
+        assert assess(fresh, self.NOW, 60, True) == ("available", None)
+
+    @pytest.mark.it("withholds aircraft whose privacy flags can't be read")
+    @pytest.mark.parametrize("flags", ["8", 8.0, None, True])
+    def test_unreadable_flags(self, flags):
+        ac = dict(adsblol("rjbb")["ac"][0], dbFlags=flags)
+        result = AdsbLol.parse(
+            {"ac": [ac], "now": 1794271840001}, area("rjbb"), datetime.now(UTC)
+        )
+        assert (result.targets, result.withheld) == ([], 1)
+
+    @pytest.mark.it(
+        "stops reading a body that outlives the deadline, and caps its size"
+    )
+    def test_bounded_read(self):
+        def slow():
+            yield b'{"ac": ['
+            time.sleep(0.3)
+            yield b"]}"
+
+        from app.services import positions_providers
+        from app.services.positions_providers import get
+
+        reply = FakeResponse(chunks=slow())
+        with mock.patch("requests.get", return_value=reply), mock.patch.object(
+            positions_providers, "MIN_ATTEMPT_S", 0.05
+        ):
+            with pytest.raises(MetarTimeout):
+                get("https://example.invalid", time.monotonic() + 0.2)
+        assert reply.closed
+        big = FakeResponse(chunks=[b"x" * 5_000_000, b"x" * 5_000_000])
+        with mock.patch("requests.get", return_value=big):
+            with pytest.raises(MetarUpstreamError, match="response_too_large"):
+                get("https://example.invalid", self.deadline())
+
+    @pytest.mark.it("fetches the token before reserving the per-second slot")
+    def test_token_before_slot(self, fake_redis, opensky_settings):
+        adapter = OpenSky(fake_redis)
+        order = []
+        token = FakeResponse(body={"access_token": "tok", "expires_in": 1800})
+        states = FakeResponse(body=states_body())
+
+        def post(*args, **kwargs):
+            order.append("token")
+            return token
+
+        real_reserve = adapter.budget.reserve
+
+        def reserve(cost=1):
+            order.append("reserve")
+            return real_reserve(cost)
+
+        with mock.patch("requests.post", side_effect=post), mock.patch(
+            "requests.get", return_value=states
+        ), mock.patch.object(adapter.budget, "reserve", side_effect=reserve):
+            adapter.fetch(area("rjbb"), self.deadline())
+        assert order == ["token", "reserve"]
+
+    @pytest.mark.it("makes at most two states calls, whatever mix of 5xx and 401")
+    @pytest.mark.parametrize(
+        "replies",
+        [
+            [FakeResponse(500), FakeResponse(401), FakeResponse(body=states_body())],
+            [FakeResponse(401), FakeResponse(500), FakeResponse(body=states_body())],
+            [requests.Timeout(), FakeResponse(401), FakeResponse(body=states_body())],
+        ],
+    )
+    def test_call_limit(self, fake_redis, opensky_settings, replies):
+        clock = itertools.count(1794268800)
+        adapter = OpenSky(fake_redis, clock=lambda: next(clock))
+        token = FakeResponse(body={"access_token": "tok", "expires_in": 1800})
+        with mock.patch("requests.post", return_value=token), mock.patch(
+            "requests.get", side_effect=replies
+        ) as get, mock.patch("time.sleep"):
+            with pytest.raises((MetarUpstreamError, MetarTimeout)):
+                adapter.fetch(area("rjbb"), self.deadline())
+        assert get.call_count == 2 and adapter.budget.used() == 2
+
+    @pytest.mark.it(
+        "reports a slow token server as a timeout (504), not bad credentials"
+    )
+    def test_token_timeout(self, fake_redis, opensky_settings, client):
+        adapter = OpenSky(fake_redis)
+        with mock.patch("requests.post", side_effect=requests.Timeout()), mock.patch(
+            "requests.get"
+        ) as get:
+            with pytest.raises(MetarTimeout):
+                adapter.fetch(area("rjbb"), self.deadline())
+        assert not get.called and adapter.budget.used() is None  # no credit spent
+
+    @pytest.mark.it("refuses an invalid credit budget")
+    @pytest.mark.parametrize("budget", [0, -5, 4001])
+    def test_invalid_budget(self, fake_redis, opensky_settings, budget):
+        with mock.patch.multiple(settings, OPENSKY_DAILY_CREDIT_BUDGET=budget):
+            with pytest.raises(ProviderDisabled):
+                OpenSky(fake_redis)
+
+    @pytest.mark.it("keeps fetched data when reconciliation can't reach Redis")
+    def test_reconcile_failure(self, fake_redis, opensky_settings):
+        clock = itertools.count(1794268800)
+        adapter = OpenSky(fake_redis, clock=lambda: next(clock))
+        token = FakeResponse(body={"access_token": "tok", "expires_in": 1800})
+        states = FakeResponse(
+            body=states_body(), headers={"x-rate-limit-remaining": "3990"}
+        )
+        with mock.patch("requests.post", return_value=token), mock.patch(
+            "requests.get", return_value=states
+        ), mock.patch.object(
+            adapter.budget, "raise_to", side_effect=redis.ConnectionError("down")
+        ):
+            assert len(adapter.fetch(area("rjbb"), self.deadline()).targets) == 19
+
+    @pytest.mark.it(
+        "answers budget_unavailable (200), not 500, when Redis fails mid-fetch"
+    )
+    def test_redis_mid_fetch(self, fake_redis, opensky_settings, client):
+        provider = positions_service.get_provider()
+        with mock.patch.object(
+            provider.budget, "reserve", side_effect=redis.ConnectionError("down")
+        ), mock.patch(
+            "requests.post",
+            return_value=FakeResponse(body={"access_token": "tok", "expires_in": 1800}),
+        ), mock.patch(
+            "requests.get"
+        ) as get:
+            response = client.get("/v1/airports/KIX/aircraft")
+        body = response.json()
+        assert response.status_code == 200
+        assert (body["data_status"], body["unavailable_reason"]) == (
+            "quota_exhausted",
+            "budget_unavailable",
+        )
+        assert not get.called
+
+    @pytest.mark.it("re-checks the cache after taking the lock")
+    def test_recheck(self, fake_redis, adsblol_settings):
+        recorded = datetime.fromtimestamp(1794271841, UTC)
+        result = AdsbLol.parse(adsblol("rjbb"), area("rjbb"), recorded)
+        provider = positions_service.get_provider()
+        real_acquire = Lock.acquire
+
+        def acquire(lock):
+            fake_redis.set(
+                "positions:v1:adsblol:RJBB", json.dumps(result.to_dict()), ex=30
+            )
+            return real_acquire(lock)
+
+        with mock.patch.object(Lock, "acquire", acquire), mock.patch.object(
+            provider, "fetch"
+        ) as fetch:
+            got, _, _ = positions_service.get_positions("RJBB", area("rjbb"))
+        assert got == result and not fetch.called
+
+    @pytest.mark.it(
+        "tells waiting requests why the fetch failed, without waiting it out"
+    )
+    def test_waiters_learn_failure(self, fake_redis, adsblol_settings):
+        provider = positions_service.get_provider()
+        started = threading.Event()
+
+        def failing(*args):
+            started.set()
+            time.sleep(0.3)
+            raise MetarUpstreamError("http_502")
+
+        errors = []
+
+        def call():
+            try:
+                positions_service.get_positions("RJBB", area("rjbb"))
+            except Exception as e:
+                errors.append(type(e).__name__ + ":" + getattr(e, "reason", ""))
+
+        with mock.patch.object(
+            provider, "fetch", side_effect=failing
+        ), mock.patch.object(positions_service, "WAIT_POLL_S", 0.05):
+            begin = time.monotonic()
+            threads = [threading.Thread(target=call) for _ in range(4)]
+            [t.start() for t in threads]
+            [t.join() for t in threads]
+        assert errors == ["MetarUpstreamError:http_502"] * 4
+        assert time.monotonic() - begin < 5
+
+    @pytest.mark.it("treats a corrupt cache entry as a miss")
+    def test_corrupt_cache(self, fake_redis, adsblol_settings):
+        fake_redis.set("positions:v1:adsblol:RJBB", "{not json", ex=30)
+        result = AdsbLol.parse(adsblol("rjbb"), area("rjbb"), datetime.now(UTC))
+        provider = positions_service.get_provider()
+        with mock.patch.object(provider, "fetch", return_value=result) as fetch:
+            assert positions_service.get_positions("RJBB", area("rjbb"))[0] == result
+        assert fetch.called
+
+    @pytest.mark.it("doesn't record coverage evidence from a stale feed")
+    def test_stale_evidence(self, fake_redis, adsblol_settings):
+        result = AdsbLol.parse(
+            adsblol("rjbb"), area("rjbb"), datetime.now(UTC)
+        )  # recorded long ago
+        provider = positions_service.get_provider()
+        with mock.patch.object(provider, "fetch", return_value=result):
+            positions_service.get_positions("RJBB", area("rjbb"))
+        assert not fake_redis.exists("positions:coverage:adsblol:RJBB")

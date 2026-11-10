@@ -210,12 +210,14 @@ def assess(
     result: FeedResult, now: datetime, max_age_s: int, coverage_evidence: bool
 ) -> tuple[str, str | None]:
     """(data_status, reason) for a visible result at `now` (spec §4)."""
-    if result.targets or result.withheld:
+    if result.targets:
         return "available", None
-    if result.dropped:
-        return "coverage_unknown", "unusable_data"
     if abs((now - result.observed_at).total_seconds()) > max_age_s:
         return "coverage_unknown", "stale_feed"
+    if result.withheld:
+        return "available", None  # aircraft exist, but can't be shown (C5)
+    if result.dropped:
+        return "coverage_unknown", "unusable_data"
     if not coverage_evidence:
         return "coverage_unknown", "no_coverage_evidence"
     return "no_aircraft", None

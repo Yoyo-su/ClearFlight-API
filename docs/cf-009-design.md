@@ -67,13 +67,13 @@
   - The response carries each target's `expires_at`, and the frontend (CF-010) drops each one at that time (the D-008 pattern).
   - Positions already past `expires_at` at fetch time count as `dropped`.
 - **Privacy** (**[C5]**):
-  - Aircraft flagged LADD or PIA (adsb.lol `dbFlags` & 12) are omitted and counted in `withheld`.
+  - Aircraft flagged LADD or PIA (adsb.lol `dbFlags` & 12) are omitted and counted in `withheld`. Unreadable flags are treated as flagged (fail closed).
   - Registration, owner and type are never exposed.
   - OpenSky has no such flags. The response says `privacy_filter: "unavailable"`, and P4 already confines OpenSky to development.
 
 ## 4. States: no aircraft vs unknown coverage
 `data_status` is one of `available`, `no_aircraft`, `coverage_unknown`, `quota_exhausted` or `unavailable`. This follows plan §4: an empty response alone never proves coverage. Rules, in order:
-- **`available`:** one or more shown targets (aircraft or unclassified), **or** an empty list where some targets were `withheld` for privacy. The latter is never reported as `no_aircraft`.
+- **`available`:** one or more shown targets (aircraft or unclassified), **or**, with a fresh feed, an empty list where some targets were `withheld` for privacy. The latter is never reported as `no_aircraft`; a stale feed is `stale_feed` even when aircraft were withheld.
 - **`coverage_unknown`**, with a reason:
   - `unusable_data` ([r3: critique 4]): the list is empty and some rows were `dropped` (bad or expired positions). The data couldn't establish current traffic.
   - `stale_feed`: the feed's data time (`time` / `now`) is more than 60 s from our clock.
@@ -81,7 +81,7 @@
   - `busy`: single-flight wait timed out (§5).
 - **`no_aircraft`:** the provider answered with a valid structure and a fresh data time, **and** the area had **no rows at all after the distance filter** apart from `surface` targets (none dropped, none withheld), **and** the area has **coverage evidence**: this provider reported at least one *airborne* target there within the last 24 h (**[C6]**).
   - Airborne targets are used because surface vehicles never prove coverage of the air.
-  - The evidence is a Redis marker `positions:coverage:{provider}:{airport code}`, 24 h TTL, refreshed whenever an airborne target is seen.
+  - The evidence is a Redis marker `positions:coverage:{provider}:{airport code}`, 24 h TTL, refreshed whenever an airborne target is seen **in a fresh feed** (data time within 60 s of the fetch).
 - **`quota_exhausted`:** the credit budget is used up or can't be checked (§5). The HTTP status is 200 with this state, and `retry_at` gives when the budget resets.
 - **`unavailable`:** `no_location`, or `provider_disabled` when the licence gate blocks the configured provider or its credentials are incomplete (§6).
 - **Provider failures:** 502 (including `provider_auth_failed`), 503 (local rate cap, with `Retry-After`) and 504, as for METAR (D-006).
@@ -95,15 +95,18 @@ The state is computed at every read, from the cached raw-normalised result and t
 - **Operation deadline** ([r3: critique 3]):
   - A whole fetch shares a **20 s deadline**: token request, query(ies) and the one retry.
   - Each attempt's timeout is the smaller of `PROVIDER_TIMEOUT` and the time left. No new attempt starts with under 2 s left.
+- **Bounded requests:** `requests`' timeout limits each wait for data, not the whole call. Response bodies are therefore streamed, the deadline is checked between chunks, and bodies are capped at 8 MB. The worst case is the deadline plus one socket read timeout (20 + 10 s). The token lock wait is bounded by the deadline too.
 - **Single-flight:**
-  - On a miss, the caller takes `positions:lock:{provider}:{code}` with `SET NX PX 30000` and a random owner token. The lease (30 s) is longer than the deadline (20 s), so it can't expire mid-fetch.
+  - On a miss, the caller takes `positions:v1:{provider}:{code}:lock` with `SET NX PX 40000` and a random owner token. The lease (40 s) is longer than the worst-case fetch (30 s), so it can't expire mid-fetch.
+  - After taking the lock, the caller re-checks the cache, in case another request filled it in between.
+  - If the fetch fails, the fetching request records the failure for 5 s (`…:failed`). Waiting requests re-raise that error at once rather than waiting out the deadline. They also stop waiting as soon as the lock is gone without a result.
   - The lock is released only by its owner, via a compare-and-delete Lua script.
   - Other callers poll the cache every 250 ms for up to 20 s. Then they get `coverage_unknown` / `busy`, and never fetch themselves.
 - **OpenSky credits** ([r3: critique 2, 7]), all in Lua scripts, called through the Redis client directly. Redis errors raise, so they fail closed, and are never treated as a cache miss.
   - **Keys:**
-    - `positions:credits:opensky:{UTC date}`: credits used, expires 48 h after creation;
-    - `positions:credits:opensky:started:{UTC date}`: a sentinel set when that day's counter is first created;
-    - `positions:credits:opensky:slot:{UTC second}`: the per-second slot (plan §3), expires after 2 s.
+    - `budget:opensky:{UTC date}`: credits used, expires 48 h after creation;
+    - `budget:opensky:started:{UTC date}`: a sentinel set when that day's counter is first created;
+    - `budget:opensky:slot:{UTC second}`: the per-second slot (plan §3), expires after 2 s.
   - **Reservation (atomic, one script):**
     - If the slot is taken → `busy`. The caller waits until the next second, within the deadline.
     - If the day counter is missing:
@@ -112,7 +115,10 @@ The state is computed at every read, from the cached raw-normalised result and t
     - If `used + cost > budget` → exhausted.
     - Otherwise increment by `cost`, take the slot, and return.
     - Retries and both antimeridian halves each reserve.
-  - **Budget:** `OPENSKY_DAILY_CREDIT_BUDGET`, default **3,600** when account credentials are configured (90% of 4,000; C2), else 360 (90% of the anonymous 400).
+  - **Budget:** `OPENSKY_DAILY_CREDIT_BUDGET`, default **3,600** when account credentials are configured (90% of 4,000; C2), else 360 (90% of the anonymous 400). A configured value outside 1 to the provider limit disables the provider (`provider_disabled`).
+  - **Order:** the token is obtained **before** the per-second slot is reserved, so the slot covers only the call it was reserved for.
+  - **Reservations** never exceed the budget. The provider's own count, applied by raise-only reconciliation, can, which only makes the counter safer.
+  - **Reconciliation failures** (Redis) are logged and not fatal, since the reservation already counted the call. A Redis failure **during reservation** fails closed (`budget_unavailable`).
   - **Header reconciliation, raise-only:** after a response with a valid integer `x-rate-limit-remaining`, a script sets `used = max(used, provider_limit - remaining)`.
     - It **never lowers** the counter, so concurrent reservations and late or out-of-order headers can't erase spending.
     - A missing or malformed header changes nothing.
@@ -143,7 +149,9 @@ The state is computed at every read, from the cached raw-normalised result and t
     - Token requests cost no credits and are not reserved.
     - The token is cached in memory until 60 s before it expires.
   - **Token failure:** the token endpoint failing, timing out or returning a malformed token → 502 `provider_auth_failed`, and **no states call** is made.
-  - **401 from a states call:** the cached token is cleared, a new token is fetched **once**, and the call is retried **once**, with a fresh reservation. A second 401 → 502 `provider_auth_failed`. At most two token requests and two states calls per operation.
+  - **401 from a states call:** the cached token is cleared, a new token is fetched **once**, and the call is retried **once**, with a fresh reservation. A second 401 → 502 `provider_auth_failed`.
+  - **Call limit:** at most **two states calls per box**, shared between 5xx/timeout retries and the 401 refresh. At most two token requests per operation.
+  - **Token server timeout:** → 504 (`token_timeout`), not `provider_auth_failed`.
   - **Secrecy:** the client id, secret and token are never logged, returned or committed. Errors name only the failure kind.
 
 ## 7. API: `GET /v1/airports/{code}/aircraft`

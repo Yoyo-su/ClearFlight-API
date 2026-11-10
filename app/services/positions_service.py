@@ -1,12 +1,14 @@
 import json
 import logging
 import time
+from datetime import datetime
 
 import redis
 
 from app.core.config import settings
 from app.services import cache
 from app.services.credit_budget import Lock
+from app.services.metar import MetarRateLimited, MetarTimeout, MetarUpstreamError
 from app.services.positions import Area, FeedResult
 from app.services.positions_providers import (
     AdsbLol,
@@ -72,37 +74,91 @@ def get_positions(code: str, area: Area) -> tuple[FeedResult, bool, object]:
     cache_key, lock_key, coverage_key = keys(provider.name, code)
     client = cache.redis_client
     try:
-        cached = client.get(cache_key)
+        cached = read_cached(client, cache_key)
+        lock = Lock(client, lock_key, settings.POSITIONS_LOCK_LEASE_S)
+        acquired = cached is None and lock.acquire()
     except redis.RedisError as e:
         if provider.needs_budget:  # a hard quota: fail closed
             raise QuotaExhausted("budget_unavailable", None) from e
         logger.warning("Redis unavailable; fetching positions without cache: %s", e)
         return provider.fetch(area, deadline()), False, provider
     if cached is not None:
+        return cached, has_evidence(client, coverage_key), provider
+    if not acquired:
         return (
-            FeedResult.from_dict(json.loads(cached)),
+            wait_for(client, cache_key, lock_key),
             has_evidence(client, coverage_key),
             provider,
         )
-
-    lock = Lock(client, lock_key, settings.POSITIONS_LOCK_LEASE_S)
     try:
-        acquired = lock.acquire()
-    except redis.RedisError as e:
-        if provider.needs_budget:
-            raise QuotaExhausted("budget_unavailable", None) from e
-        return provider.fetch(area, deadline()), False, provider
-    if not acquired:
-        return wait_for(client, cache_key), has_evidence(client, coverage_key), provider
-    try:
+        # Another request may have filled the cache between our read and lock.
+        try:
+            cached = read_cached(client, cache_key)
+        except redis.RedisError:
+            cached = None
+        if cached is not None:
+            return cached, has_evidence(client, coverage_key), provider
         result = provider.fetch(area, deadline())
-        store(client, cache_key, coverage_key, result)
+    except redis.RedisError as e:
+        # Redis failed mid-fetch (reserving credits): fail closed (spec §5).
+        failure = QuotaExhausted("budget_unavailable", None)
+        publish_failure(client, cache_key, failure)
+        raise failure from e
+    except FAILURES as e:
+        publish_failure(client, cache_key, e)
+        raise
     finally:
         try:
             lock.release()
         except redis.RedisError:
             pass  # the lease expires by itself
+    store(client, cache_key, coverage_key, result)
     return result, has_evidence(client, coverage_key), provider
+
+
+FAILURES = (QuotaExhausted, MetarTimeout, MetarUpstreamError, MetarRateLimited)
+FAILURE_TTL_MS = 5000
+
+
+def read_cached(client, cache_key: str) -> FeedResult | None:
+    """The cached result; a corrupt entry is treated as a miss."""
+    raw = client.get(cache_key)
+    if raw is None:
+        return None
+    try:
+        return FeedResult.from_dict(json.loads(raw))
+    except (ValueError, KeyError, TypeError) as e:
+        logger.warning(
+            "Ignoring corrupt cached positions %s: %s", cache_key, type(e).__name__
+        )
+        return None
+
+
+def publish_failure(client, cache_key: str, error: Exception) -> None:
+    """Tell waiting requests why the fetch failed, for a few seconds."""
+    record = {"kind": type(error).__name__, "reason": getattr(error, "reason", "")}
+    if isinstance(error, QuotaExhausted) and error.retry_at:
+        record["retry_at"] = error.retry_at.isoformat()
+    if isinstance(error, MetarRateLimited):
+        record["retry_after_s"] = error.retry_after_s
+    try:
+        client.set(f"{cache_key}:failed", json.dumps(record), px=FAILURE_TTL_MS)
+    except redis.RedisError:
+        pass
+
+
+def failure_from(record: dict) -> Exception:
+    kind, reason = record.get("kind"), record.get("reason") or "provider_error"
+    if kind == "QuotaExhausted":
+        retry_at = record.get("retry_at")
+        return QuotaExhausted(
+            reason, datetime.fromisoformat(retry_at) if retry_at else None
+        )
+    if kind == "MetarRateLimited":
+        return MetarRateLimited(float(record.get("retry_after_s") or 5))
+    if kind == "MetarTimeout":
+        return MetarTimeout(reason)
+    return MetarUpstreamError(reason)
 
 
 def deadline() -> float:
@@ -114,7 +170,9 @@ def store(client, cache_key: str, coverage_key: str, result: FeedResult) -> None
         client.set(
             cache_key, json.dumps(result.to_dict()), ex=settings.POSITIONS_CACHE_TTL
         )
-        if result.airborne:
+        # Only a fresh feed is evidence of coverage (C6).
+        lag = abs((result.fetched_at - result.observed_at).total_seconds())
+        if result.airborne and lag <= settings.POSITIONS_MAX_AGE_S:
             client.set(coverage_key, 1, ex=settings.POSITIONS_COVERAGE_TTL)
     except redis.RedisError as e:
         logger.warning("Couldn't cache positions: %s", e)
@@ -127,15 +185,24 @@ def has_evidence(client, coverage_key: str) -> bool:
         return False  # no evidence: never claim "no aircraft"
 
 
-def wait_for(client, cache_key: str) -> FeedResult:
-    """Wait for another request's fetch, up to the operation deadline."""
+def wait_for(client, cache_key: str, lock_key: str) -> FeedResult:
+    """Wait for another request's fetch, up to the operation deadline.
+
+    Re-raises the fetching request's failure when it publishes one, and stops
+    waiting as soon as its lock is gone without a result.
+    """
     end = time.monotonic() + settings.POSITIONS_DEADLINE_S
     while time.monotonic() < end:
         time.sleep(WAIT_POLL_S)
         try:
-            cached = client.get(cache_key)
-        except redis.RedisError:
+            cached = read_cached(client, cache_key)
+            if cached is not None:
+                return cached
+            failed = client.get(f"{cache_key}:failed")
+            if failed is not None:
+                raise failure_from(json.loads(failed))
+            if not client.exists(lock_key):
+                break  # the fetch ended without a result
+        except (redis.RedisError, ValueError):
             break
-        if cached is not None:
-            return FeedResult.from_dict(json.loads(cached))
     raise Busy()
