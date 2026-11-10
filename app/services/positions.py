@@ -97,6 +97,32 @@ class FeedResult:
             target["position_at"] = target["position_at"].isoformat()
         return data
 
+    def validate(self) -> "FeedResult":
+        """Raise ValueError unless every field has its expected type."""
+        times = [self.observed_at, self.fetched_at] + [
+            t.position_at for t in self.targets
+        ]
+        if not all(
+            isinstance(t, datetime) and t.utcoffset() is not None for t in times
+        ):
+            raise ValueError("naive or missing timestamp")
+        counts = (self.withheld, self.excluded, self.dropped, self.airborne)
+        if not all(
+            isinstance(n, int) and not isinstance(n, bool) and n >= 0 for n in counts
+        ):
+            raise ValueError("bad count")
+        for t in self.targets:
+            if not (
+                isinstance(t.id, str)
+                and finite(t.latitude, -90, 90) is not None
+                and finite(t.longitude, -180, 180) is not None
+                and isinstance(t.on_ground, bool)
+                and t.kind in ("aircraft", "unclassified")
+                and finite(t.distance_nm, 0, 1000) is not None
+            ):
+                raise ValueError("bad target")
+        return self
+
     @classmethod
     def from_dict(cls, data: dict) -> "FeedResult":
         targets = [

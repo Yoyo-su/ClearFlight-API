@@ -464,11 +464,16 @@ class FakeResponse:
             self.chunks = [json.dumps(body).encode()] if body is not None else []
         self.closed = False
 
-    def iter_content(self, size):
-        yield from self.chunks
+        self.raw = self  # requests' raw urllib3 response
+
+    def read1(self, amt=None, decode_content=None):
+        if not hasattr(self, "_iter"):
+            self._iter = iter(self.chunks)
+        return next(self._iter, b"")
 
     def close(self):
         self.closed = True
+        self.__dict__.pop("_iter", None)  # the same fake may answer again
 
 
 @pytest.fixture
@@ -1165,3 +1170,126 @@ class TestReviewRound1:
         with mock.patch.object(provider, "fetch", return_value=result):
             positions_service.get_positions("RJBB", area("rjbb"))
         assert not fake_redis.exists("positions:coverage:adsblol:RJBB")
+
+
+@pytest.mark.describe("Review round 2 fixes")
+class TestReviewRound2:
+    def deadline(self):
+        return time.monotonic() + 20
+
+    @pytest.mark.it("cuts off a provider that trickles bytes, at the deadline")
+    def test_trickle(self):
+        from app.services import positions_providers
+        from app.services.positions_providers import get
+
+        def trickle():
+            while True:
+                time.sleep(0.01)  # each read returns quickly, so no socket timeout
+                yield b" "
+
+        reply = FakeResponse(chunks=trickle())
+        begin = time.monotonic()
+        with mock.patch("requests.get", return_value=reply), mock.patch.object(
+            positions_providers, "MIN_ATTEMPT_S", 0.05
+        ):
+            with pytest.raises(MetarTimeout):
+                get("https://example.invalid", time.monotonic() + 0.2)
+        assert time.monotonic() - begin < 0.4
+
+    @pytest.mark.it("caches the result before releasing the lock")
+    def test_store_before_release(self, fake_redis, adsblol_settings):
+        recorded = datetime.fromtimestamp(1794271841, UTC)
+        result = AdsbLol.parse(adsblol("rjbb"), area("rjbb"), recorded)
+        provider = positions_service.get_provider()
+        seen = []
+        real_release = Lock.release
+
+        def release(lock):
+            seen.append(fake_redis.exists("positions:v1:adsblol:RJBB"))
+            return real_release(lock)
+
+        with mock.patch.object(Lock, "release", release), mock.patch.object(
+            provider, "fetch", return_value=result
+        ):
+            positions_service.get_positions("RJBB", area("rjbb"))
+        assert seen == [1]
+
+    @pytest.mark.it("ignores a failure record from an earlier fetch")
+    def test_old_failure(self, fake_redis, adsblol_settings):
+        recorded = datetime.fromtimestamp(1794271841, UTC)
+        result = AdsbLol.parse(adsblol("rjbb"), area("rjbb"), recorded)
+        fake_redis.set(
+            "positions:v1:adsblol:RJBB:failed",
+            json.dumps(
+                {
+                    "kind": "MetarUpstreamError",
+                    "reason": "http_502",
+                    "owner": "old-owner",
+                }
+            ),
+            px=5000,
+        )
+        fake_redis.set("positions:v1:adsblol:RJBB:lock", "new-owner", px=30000)
+
+        def finish():
+            time.sleep(0.2)
+            fake_redis.set(
+                "positions:v1:adsblol:RJBB", json.dumps(result.to_dict()), ex=30
+            )
+            fake_redis.delete("positions:v1:adsblol:RJBB:lock")
+
+        worker = threading.Thread(target=finish)
+        worker.start()
+        with mock.patch.object(positions_service, "WAIT_POLL_S", 0.05):
+            got, _, _ = positions_service.get_positions("RJBB", area("rjbb"))
+        worker.join()
+        assert got == result
+
+    @pytest.mark.it("treats a cache entry with naive timestamps or bad types as a miss")
+    @pytest.mark.parametrize(
+        "change",
+        [
+            lambda d: d.update(observed_at="2026-11-10T00:50:05"),
+            lambda d: d.update(withheld="3"),
+            lambda d: d["targets"][0].update(position_at="2026-11-10T00:50:00"),
+            lambda d: d["targets"][0].update(kind="surface"),
+        ],
+    )
+    def test_invalid_cache_values(self, fake_redis, adsblol_settings, change):
+        recorded = datetime.fromtimestamp(1794271841, UTC)
+        result = AdsbLol.parse(adsblol("rjbb"), area("rjbb"), recorded)
+        data = result.to_dict()
+        change(data)
+        fake_redis.set("positions:v1:adsblol:RJBB", json.dumps(data), ex=30)
+        provider = positions_service.get_provider()
+        with mock.patch.object(provider, "fetch", return_value=result) as fetch:
+            assert positions_service.get_positions("RJBB", area("rjbb"))[0] == result
+        assert fetch.called
+
+    @pytest.mark.it("rejects an OpenSky answer without a states field")
+    def test_missing_states(self, fake_redis, opensky_settings):
+        clock = itertools.count(1794268800)
+        adapter = OpenSky(fake_redis, clock=lambda: next(clock))
+        token = FakeResponse(body={"access_token": "tok", "expires_in": 1800})
+        with mock.patch("requests.post", return_value=token), mock.patch(
+            "requests.get", return_value=FakeResponse(body={"time": 1794271833})
+        ):
+            with pytest.raises(MetarUpstreamError) as e:
+                adapter.fetch(area("rjbb"), self.deadline())
+        assert e.value.reason == "invalid_response"
+
+    @pytest.mark.it(
+        "requests at most two tokens per operation, across antimeridian halves"
+    )
+    def test_token_limit_across_halves(self, fake_redis, opensky_settings):
+        clock = itertools.count(1794268800)
+        adapter = OpenSky(fake_redis, clock=lambda: next(clock))
+        token = FakeResponse(body={"access_token": "tok", "expires_in": 1800})
+        ok = FakeResponse(body={"time": 1794271833, "states": None})
+        replies = [FakeResponse(401), ok, FakeResponse(401), ok]
+        with mock.patch("requests.post", return_value=token) as post, mock.patch(
+            "requests.get", side_effect=replies
+        ):
+            with pytest.raises(MetarUpstreamError) as e:
+                adapter.fetch(Area(51.0, 179.9, 25), self.deadline())
+        assert e.value.reason == "provider_auth_failed" and post.call_count == 2

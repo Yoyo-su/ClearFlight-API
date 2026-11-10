@@ -99,20 +99,20 @@ def get_positions(code: str, area: Area) -> tuple[FeedResult, bool, object]:
         if cached is not None:
             return cached, has_evidence(client, coverage_key), provider
         result = provider.fetch(area, deadline())
+        store(client, cache_key, coverage_key, result)  # before releasing the lock
     except redis.RedisError as e:
         # Redis failed mid-fetch (reserving credits): fail closed (spec §5).
         failure = QuotaExhausted("budget_unavailable", None)
-        publish_failure(client, cache_key, failure)
+        publish_failure(client, cache_key, failure, lock.token)
         raise failure from e
     except FAILURES as e:
-        publish_failure(client, cache_key, e)
+        publish_failure(client, cache_key, e, lock.token)
         raise
     finally:
         try:
             lock.release()
         except redis.RedisError:
             pass  # the lease expires by itself
-    store(client, cache_key, coverage_key, result)
     return result, has_evidence(client, coverage_key), provider
 
 
@@ -126,17 +126,24 @@ def read_cached(client, cache_key: str) -> FeedResult | None:
     if raw is None:
         return None
     try:
-        return FeedResult.from_dict(json.loads(raw))
-    except (ValueError, KeyError, TypeError) as e:
+        return FeedResult.from_dict(json.loads(raw)).validate()
+    except (ValueError, KeyError, TypeError, AttributeError) as e:
         logger.warning(
             "Ignoring corrupt cached positions %s: %s", cache_key, type(e).__name__
         )
         return None
 
 
-def publish_failure(client, cache_key: str, error: Exception) -> None:
-    """Tell waiting requests why the fetch failed, for a few seconds."""
-    record = {"kind": type(error).__name__, "reason": getattr(error, "reason", "")}
+def publish_failure(client, cache_key: str, error: Exception, owner: str) -> None:
+    """Tell this fetch's waiting requests why it failed, for a few seconds.
+
+    The record names the lock owner, so waiters of a later fetch ignore it.
+    """
+    record = {
+        "kind": type(error).__name__,
+        "reason": getattr(error, "reason", ""),
+        "owner": owner,
+    }
     if isinstance(error, QuotaExhausted) and error.retry_at:
         record["retry_at"] = error.retry_at.isoformat()
     if isinstance(error, MetarRateLimited):
@@ -188,10 +195,14 @@ def has_evidence(client, coverage_key: str) -> bool:
 def wait_for(client, cache_key: str, lock_key: str) -> FeedResult:
     """Wait for another request's fetch, up to the operation deadline.
 
-    Re-raises the fetching request's failure when it publishes one, and stops
-    waiting as soon as its lock is gone without a result.
+    Re-raises that fetch's failure when it publishes one, and stops waiting as
+    soon as its lock is gone without a result.
     """
     end = time.monotonic() + settings.POSITIONS_DEADLINE_S
+    try:
+        owner = client.get(lock_key)  # the fetch we are waiting for
+    except redis.RedisError:
+        raise Busy()
     while time.monotonic() < end:
         time.sleep(WAIT_POLL_S)
         try:
@@ -199,10 +210,15 @@ def wait_for(client, cache_key: str, lock_key: str) -> FeedResult:
             if cached is not None:
                 return cached
             failed = client.get(f"{cache_key}:failed")
-            if failed is not None:
-                raise failure_from(json.loads(failed))
-            if not client.exists(lock_key):
-                break  # the fetch ended without a result
+            record = json.loads(failed) if failed is not None else None
+            if (
+                record is not None
+                and owner is not None
+                and record.get("owner") == owner
+            ):
+                raise failure_from(record)
+            if client.get(lock_key) != owner:
+                break  # that fetch ended without a result for us
         except (redis.RedisError, ValueError):
             break
     raise Busy()

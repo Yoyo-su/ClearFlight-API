@@ -95,11 +95,14 @@ The state is computed at every read, from the cached raw-normalised result and t
 - **Operation deadline** ([r3: critique 3]):
   - A whole fetch shares a **20 s deadline**: token request, query(ies) and the one retry.
   - Each attempt's timeout is the smaller of `PROVIDER_TIMEOUT` and the time left. No new attempt starts with under 2 s left.
-- **Bounded requests:** `requests`' timeout limits each wait for data, not the whole call. Response bodies are therefore streamed, the deadline is checked between chunks, and bodies are capped at 8 MB. The worst case is the deadline plus one socket read timeout (20 + 10 s). The token lock wait is bounded by the deadline too.
+- **Bounded requests:** `requests`' timeout limits each wait for data, not the whole call. Response bodies are therefore streamed with urllib3's `read1` (at most one socket read per call, so a provider trickling bytes can't hide behind buffering), the deadline is checked after every read, and bodies are capped at 8 MB. The worst case is the deadline plus one socket read timeout (20 + 10 s). The token lock wait is bounded by the deadline too.
 - **Single-flight:**
   - On a miss, the caller takes `positions:v1:{provider}:{code}:lock` with `SET NX PX 40000` and a random owner token. The lease (40 s) is longer than the worst-case fetch (30 s), so it can't expire mid-fetch.
-  - After taking the lock, the caller re-checks the cache, in case another request filled it in between.
-  - If the fetch fails, the fetching request records the failure for 5 s (`…:failed`). Waiting requests re-raise that error at once rather than waiting out the deadline. They also stop waiting as soon as the lock is gone without a result.
+  - After taking the lock, the caller re-checks the cache, in case another request filled it in between. It caches its result **before** releasing the lock.
+  - If the fetch fails, the fetching request records the failure for 5 s (`…:failed`), tagged with its lock-owner token.
+    - Waiting requests re-raise that error at once rather than waiting out the deadline, but only for the fetch they were waiting on: a record from an earlier fetch is ignored.
+    - They also stop waiting as soon as that lock is gone without a result.
+  - A cached entry is used only if it parses **and** validates (timestamps with a timezone, counts and coordinates of the right type). Otherwise it's a miss.
   - The lock is released only by its owner, via a compare-and-delete Lua script.
   - Other callers poll the cache every 250 ms for up to 20 s. Then they get `coverage_unknown` / `busy`, and never fetch themselves.
 - **OpenSky credits** ([r3: critique 2, 7]), all in Lua scripts, called through the Redis client directly. Redis errors raise, so they fail closed, and are never treated as a cache miss.
@@ -150,7 +153,8 @@ The state is computed at every read, from the cached raw-normalised result and t
     - The token is cached in memory until 60 s before it expires.
   - **Token failure:** the token endpoint failing, timing out or returning a malformed token → 502 `provider_auth_failed`, and **no states call** is made.
   - **401 from a states call:** the cached token is cleared, a new token is fetched **once**, and the call is retried **once**, with a fresh reservation. A second 401 → 502 `provider_auth_failed`.
-  - **Call limit:** at most **two states calls per box**, shared between 5xx/timeout retries and the 401 refresh. At most two token requests per operation.
+  - **Call limit:** at most **two states calls per box**, shared between 5xx/timeout retries and the 401 refresh. At most **one token refresh per operation**, including both antimeridian halves, so at most two token requests.
+  - **States field:** an OpenSky 200 must contain `states`. `null` means an empty area; a missing field is `invalid_response` (502), never an empty result.
   - **Token server timeout:** → 504 (`token_timeout`), not `provider_auth_failed`.
   - **Secrecy:** the client id, secret and token are never logged, returned or committed. Errors name only the failure kind.
 

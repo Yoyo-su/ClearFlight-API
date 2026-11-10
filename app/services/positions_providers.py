@@ -107,7 +107,13 @@ def send(method: str, url: str, deadline: float, **kwargs) -> Reply:
         response = call(url, timeout=timeout, headers=headers, stream=True, **kwargs)
         try:
             chunks, size = [], 0
-            for chunk in response.iter_content(65536):
+            while True:
+                # read1 returns after at most one socket read (each bounded by
+                # the socket timeout), so the deadline is checked after every
+                # read; iter_content would buffer many reads per chunk.
+                chunk = response.raw.read1(65536, decode_content=True)
+                if not chunk:
+                    break
                 if remaining(deadline) <= 0:
                     raise MetarTimeout("deadline")
                 size += len(chunk)
@@ -363,7 +369,8 @@ class OpenSky:
     # -- Fetch -----------------------------------------------------------------
     def fetch(self, area: Area, deadline: float) -> FeedResult:
         fetched_at = utc(time.time())
-        bodies = [self.query(box, deadline) for box in area.boxes()]
+        operation = {"refreshed": False}  # one token refresh per operation
+        bodies = [self.query(box, deadline, operation) for box in area.boxes()]
         times = [finite(b.get("time"), 0, 4102444800) for b in bodies]
         if any(t is None for t in times):
             raise MetarUpstreamError("invalid_response", "no data time")
@@ -380,13 +387,13 @@ class OpenSky:
                 collector.add(row)
         return collector.result(self.name, self.access, fetched_at)
 
-    def query(self, box, deadline: float) -> dict:
+    def query(self, box, deadline: float, operation: dict) -> dict:
         lamin, lomin, lamax, lomax = box
         params = {
             "lamin": round(lamin, 4), "lomin": round(lomin, 4),
             "lamax": round(lamax, 4), "lomax": round(lomax, 4), "extended": 1,
         }  # fmt: skip
-        calls, refreshed = 0, False
+        calls = 0
         while True:
             # The token first, so the per-second slot is used only by the call
             # it was reserved for (design r3 §5).
@@ -408,11 +415,11 @@ class OpenSky:
             self.reconcile(response)
             status = response.status_code
             if status == 401:
-                if self.credentials is None or refreshed or last:
+                if self.credentials is None or operation["refreshed"] or last:
                     raise MetarUpstreamError(
                         "provider_auth_failed", "states call rejected"
                     )
-                refreshed = True  # one token refresh, then one more call
+                operation["refreshed"] = True  # one refresh, then one more call
                 self.bearer(deadline, refresh=True)
                 continue
             if status == 429:
@@ -427,8 +434,10 @@ class OpenSky:
             if status != 200:
                 raise MetarUpstreamError(f"http_{status}")
             body = json_body(response)
-            states = body.get("states") if isinstance(body, dict) else "invalid"
-            if not isinstance(states, (list, type(None))):
+            # "states" must be present: null means empty, absent is invalid.
+            if not isinstance(body, dict) or "states" not in body:
+                raise MetarUpstreamError("invalid_response", "no states field")
+            if not isinstance(body["states"], (list, type(None))):
                 raise MetarUpstreamError("invalid_response", "bad states")
             return body
 
