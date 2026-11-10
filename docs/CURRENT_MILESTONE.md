@@ -1,23 +1,29 @@
-# Current milestone: CF-008 Forecast outlook (Phase 2 begins)
+# Current milestone: CF-009 Flight positions
 
-**Status:** Implemented and reviewed on `feat/cf-008-forecast-outlook`; PR open for owner merge (design approved 2026-11-09, D-011)
-**Source of truth:** [docs/development-plan.md](development-plan.md) v1.1 (§2 feature 3, §4, §5, §7); decision D-010
-**Last updated:** 2026-11-09
+**Status:** Implemented on `feat/cf-009-flight-positions`; in review (design approved 2026-11-10, D-012)
+**Source of truth:** [docs/development-plan.md](development-plan.md) v1.1 (§2 feature 2, §3, §4, §5, §8); decisions D-010, D-012
+**Last updated:** 2026-11-10
 
 ## Goal
-Show each airport's official forecast (TAF) for the next hours, with the conditions index applied per forecast period, clearly labelled as a forecast.
+Show the live aircraft positions reported near each airport, honestly labelled ("no aircraft" vs "coverage unknown"), from free sources behind one adapter, within provider budgets and the data-licence gate.
 
 ## Next task
-Owner review and merge of the CF-008 PR; then CF-009 live aircraft positions (OpenSky, dev/educational use only). Design: [cf-008-design.md](cf-008-design.md).
-- **Reviews:**
-  - quality-reviewer: Low findings only, fixed;
-  - Codex 3 rounds (the cap): r1 2H/2M, r2 2H, r3 1M/1L, all fixed with tests; no open High.
-- **Done:** the TAF adapter and parser (live AWC probe, recorded fixtures), the hourly outlook and index, `GET /v1/airports/{code}/forecast`, and the frontend forecast section with ageing, contract fixtures, unit tests and e2e/axe tests.
+Finish CF-009 reviews (quality-reviewer and Codex), verify the OpenSky token endpoint live once the owner adds account credentials, then open the PR. Design: [cf-009-design.md](cf-009-design.md).
+- **Done:**
+  - adsb.lol (default) and OpenSky adapters behind one interface;
+  - the area, classification, privacy and per-position expiry;
+  - the state rules;
+  - the OpenSky credit budget (Lua reservation, per-second slot, raise-only reconciliation, counter-loss sentinel, fail closed);
+  - single-flight;
+  - the licence gate;
+  - `GET /v1/airports/{code}/aircraft`.
+- **Live exit check (2026-11-10):** aircraft at EGLL, KJFK and RJBB through the finished adapters (adsb.lol, and OpenSky anonymous with the gate flag).
 
 ## Phase 2 order (plan v1.1)
 CF-008 forecast → CF-009 positions → CF-010 map → CF-011 movements → CF-012 disruption signals → CF-013 flight lookup. Then CF-006 public deployment (with the data-licence gate) and CF-007 validation.
 
 ## Completed since CF-005
+- CF-008 forecast outlook: PR #24 merged 2026-11-10 (`429d1ca`). Spec: [cf-008-design.md](cf-008-design.md); decision D-011.
 - Cleanup PRs #20 (housekeeping), #21 (search ranking, visibility, zone names) and #22 (README rewrite; docs/API.md, docs/DEVELOPMENT.md), merged 2026-11-06/08.
 - RQ-002 free flight-data research (closed, follow-up), and plan v1.1 with its design critique.
 

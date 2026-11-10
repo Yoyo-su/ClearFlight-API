@@ -8,3 +8,7 @@ pip==26.2.1
 setuptools==84.1.0
 # Starlette's TestClient prefers httpx2 (httpx support is deprecated)
 httpx2==2.16.0
+# In-memory Redis with Lua for the CF-009 credit budget and lock tests
+fakeredis[lua]==2.40.0
+lupa==2.8
+sortedcontainers==2.4.0

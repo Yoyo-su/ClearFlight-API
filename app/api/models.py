@@ -138,6 +138,67 @@ class ForecastResponse(BaseModel):
     disclaimer: str
 
 
+class AircraftArea(BaseModel):
+    latitude: float
+    longitude: float
+    radius_nm: float
+
+
+class AircraftSource(BaseModel):
+    provider: Literal["adsblol", "opensky"]
+    name: str
+    attribution_url: str
+    access: Literal["keyless", "anonymous", "account"]
+    privacy_filter: Literal["applied", "unavailable"]
+
+
+class AircraftPosition(BaseModel):
+    id: str
+    callsign: str | None
+    latitude: float
+    longitude: float
+    altitude_ft: int | None
+    on_ground: bool
+    ground_speed_kt: int | None
+    track_deg: int | None
+    vertical_rate_fpm: int | None
+    category: str | None
+    kind: Literal["aircraft", "unclassified"]
+    position_at: datetime
+    expires_at: datetime  # never shown after this (C4)
+    distance_nm: float
+
+
+class AircraftResponse(BaseModel):
+    airport: ConditionsAirport
+    area: AircraftArea
+    source: AircraftSource | None  # null when the provider is disabled
+    observed_at: datetime | None
+    fetched_at: datetime | None
+    aircraft: list[AircraftPosition]
+    withheld: int  # privacy (LADD/PIA)
+    excluded: int  # surface vehicles and towers
+    dropped: int  # invalid or expired positions
+    data_status: Literal[
+        "available", "no_aircraft", "coverage_unknown", "quota_exhausted", "unavailable"
+    ]
+    unavailable_reason: (
+        Literal[
+            "no_location",
+            "provider_disabled",
+            "no_coverage_evidence",
+            "stale_feed",
+            "busy",
+            "unusable_data",
+            "daily_budget",
+            "budget_unavailable",
+        ]
+        | None
+    )
+    retry_at: datetime | None
+    disclaimer: str
+
+
 class ErrorResponse(BaseModel):
     detail: str
     reason: str

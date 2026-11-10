@@ -3,10 +3,12 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 from app.api.airport import airport_query
+from app.api.aircraft import aircraft_query
 from app.api.airport_search import search_query
 from app.api.conditions import ConditionsError, conditions_query
 from app.api.forecast import forecast_query
 from app.api.models import (
+    AircraftResponse,
     AirportSearchResponse,
     ConditionsResponse,
     ErrorResponse,
@@ -75,6 +77,16 @@ def get_airport_conditions(code: str):
 def get_airport_forecast(code: str):
     """Forecast outlook for an airport from its TAF (next 12 hours)."""
     return forecast_query(code)
+
+
+@app.get(
+    "/v1/airports/{code}/aircraft",
+    response_model=AircraftResponse,
+    responses=ERROR_RESPONSES,
+)
+def get_airport_aircraft(code: str):
+    """Live aircraft positions within 25 nm of an airport (CF-009)."""
+    return aircraft_query(code)
 
 
 # Legacy prototype route, replaced by /v1/airports/{code}/conditions;

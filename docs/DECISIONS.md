@@ -17,6 +17,37 @@ Locked pilot decisions live in [development-plan.md §1](development-plan.md) an
 
 ## Entries
 
+### D-012: CF-009 live positions rules (2026-11-10)
+- **Decision:** Live positions follow [cf-009-design.md](cf-009-design.md) r3, with the owner's choices C1–C6:
+  - C1: adsb.lol is the default, with OpenSky behind the same interface;
+  - C2: register an OpenSky account (OAuth2 client credentials; anonymous is the fallback);
+  - C3: a 25 nm radius;
+  - C4: positions are never shown more than 60 s old;
+  - C5: LADD/PIA-flagged aircraft are withheld, and registration, owner and type are never exposed;
+  - C6: "no aircraft" only with coverage evidence (an airborne target seen in the last 24 h).
+
+  **Implementation rules:**
+  - Surface vehicles and towers are excluded before any state or coverage decision.
+  - Expiry is per position, checked at every read.
+  - The OpenSky credit budget uses atomic Lua reservation with a per-second slot, raise-only reconciliation from `x-rate-limit-remaining`, and a day sentinel for counter loss, and fails closed without Redis.
+  - Single-flight uses an owner-token lease longer than a 20 s operation deadline.
+  - Redis keys use the canonical airport code.
+  - OpenSky runs only with `OPENSKY_EDUCATIONAL_USE=true` (licence gate).
+  - `fakeredis[lua]` is a dev-only dependency, so the Lua scripts are tested for real.
+- **Why:**
+  - honest traffic claims (plan §4);
+  - provider budgets (plan §3);
+  - the licence gate (plan §8, P4);
+  - privacy.
+- **Alternatives considered:**
+  - OpenSky as the default;
+  - anonymous OpenSky only;
+  - 15 or 40 nm;
+  - treating any fresh empty answer as "no aircraft";
+  - no privacy filtering.
+- **Source:** cf-009-design.md §8 and §11 (Codex design critique: 5 High and 3 Medium, all fixed in r3); branch `feat/cf-009-flight-positions`.
+- **Status:** accepted
+
 ### D-011: CF-008 forecast outlook rules (2026-11-09)
 - **Decision:** The forecast outlook follows [cf-008-design.md](cf-008-design.md) r3. The owner chose F1–F5, all as recommended:
   - F1: an hourly outlook with the prevailing score, plus "up to N" for TEMPO/PROB;
