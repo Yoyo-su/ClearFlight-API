@@ -998,6 +998,10 @@ class TestReviewRound1:
         ):
             with pytest.raises(MetarTimeout):
                 get("https://example.invalid", time.monotonic() + 0.2)
+        # The request's own thread closes the response once its read ends.
+        end = time.monotonic() + 2
+        while not reply.closed and time.monotonic() < end:
+            time.sleep(0.01)
         assert reply.closed
         big = FakeResponse(chunks=[b"x" * 5_000_000, b"x" * 5_000_000])
         with mock.patch("requests.get", return_value=big):
@@ -1522,3 +1526,85 @@ class TestRealServer:
         finally:
             server.close()
         assert e.value.reason == "invalid_response"
+
+
+@pytest.mark.describe("Round 5: the whole request is bounded (real HTTP server)")
+class TestWholeRequestBounded:
+    @pytest.fixture
+    def short(self):
+        from app.services import positions_providers
+
+        with mock.patch.object(
+            positions_providers, "MIN_ATTEMPT_S", 0.05
+        ), mock.patch.multiple(settings, PROVIDER_TIMEOUT=1.0):
+            yield
+
+    def trickle(self, head: bytes, drip: bytes):
+        def script(conn, stop):
+            conn.sendall(head)
+            while not stop.is_set():
+                conn.sendall(drip)
+                time.sleep(0.05)  # well under the 1 s socket timeout
+
+        return script
+
+    @pytest.mark.it("cuts off trickled headers at the deadline")
+    def test_trickled_headers(self, short):
+        from app.services.positions_providers import get
+
+        server = LocalServer(self.trickle(b"HTTP/1.1 200 OK\r\nX-Slow: ", b"a"))
+        begin = time.monotonic()
+        try:
+            with pytest.raises(MetarTimeout):
+                get(server.url, time.monotonic() + 0.5)
+        finally:
+            server.close()
+        assert time.monotonic() - begin < 1.0
+
+    @pytest.mark.it("times out without blocking on a Connection: close response")
+    def test_connection_close(self, short):
+        from app.services.positions_providers import get
+
+        head = b"HTTP/1.1 200 OK\r\nConnection: close\r\nTransfer-Encoding: chunked\r\n\r\n1"
+        server = LocalServer(self.trickle(head, b";"))
+        begin = time.monotonic()
+        try:
+            with pytest.raises(MetarTimeout):
+                get(server.url, time.monotonic() + 0.5)
+            assert time.monotonic() - begin < 1.0  # the caller never waited on close
+        finally:
+            server.close()
+
+    @pytest.mark.it("doesn't follow redirects (each would be another provider call)")
+    def test_no_redirect(self, short):
+        from app.services.positions_providers import get
+
+        redirect = LocalServer(
+            lambda conn, stop: conn.sendall(
+                b"HTTP/1.1 302 Found\r\nLocation: http://127.0.0.1:9/x\r\n"
+                b"Content-Length: 0\r\n\r\n"
+            )
+        )
+        try:
+            reply = get(redirect.url, time.monotonic() + 5)
+        finally:
+            redirect.close()
+        assert reply.status_code == 302  # returned, not followed
+
+    @pytest.mark.it(
+        "fails fast without contacting the provider when every request slot is busy"
+    )
+    def test_saturated(self, short):
+        from app.services import positions_providers
+        from app.services.positions_providers import get
+
+        full = threading.BoundedSemaphore(1)
+        full.acquire()
+        with mock.patch.object(positions_providers, "IN_FLIGHT", full), mock.patch(
+            "requests.get"
+        ) as call:
+            begin = time.monotonic()
+            with pytest.raises(MetarTimeout) as e:
+                get("https://example.invalid", time.monotonic() + 0.3)
+        assert e.value.reason == "requests_busy" and not call.called
+        assert time.monotonic() - begin < 0.5

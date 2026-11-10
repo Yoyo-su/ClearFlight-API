@@ -95,13 +95,15 @@ The state is computed at every read, from the cached raw-normalised result and t
 - **Operation deadline** ([r3: critique 3]):
   - A whole fetch shares a **20 s deadline**: token request, query(ies) and the one retry.
   - Each attempt's timeout is the smaller of `PROVIDER_TIMEOUT` and the time left. No new attempt starts with under 2 s left.
-- **Bounded requests** (review rounds 1–4): `requests`' timeout limits each wait for data, not the whole call, and any read can be kept alive by a provider that trickles bytes, including the chunk framing inside `http.client`. So:
-  - The body is read in a **reader thread**, and the request waits for it only until the operation deadline.
-  - On overrun the socket is shut down, the request fails with a timeout, and its lock is released. An abandoned reader makes no further provider calls, so no fetch outlives the deadline.
-  - Compression is declined (`Accept-Encoding: identity`). gzip/deflate sent anyway is decoded incrementally, including multi-member gzip, with the **decoded** size capped at 8 MB and the stream end verified (a truncated body is `invalid_response`). Other encodings are rejected.
-  - Raw read errors map to the typed errors (a timeout gives 504, others 502).
-  - The worst case is the deadline, inside the 40 s lease.
-  - Real-server tests on 127.0.0.1 cover trickled chunk framing, chunked bodies, multi-member gzip and truncation.
+- **Bounded requests** (review rounds 1–5): any blocking read can be kept alive by a peer that trickles bytes: connect, status line, headers, chunk framing or body. `requests`' timeout only limits each wait. So:
+  - **The whole request runs in its own thread**, and the caller waits only until the operation deadline.
+  - The connect timeout is at most the time left, so a request is sent before the deadline or not at all.
+  - Redirects aren't followed, since each would be another provider call.
+  - **On overrun** the caller only shuts the socket down, which never blocks (it looks for the socket on the connection and, with `Connection: close`, on the response's reader). It then fails with a timeout and releases its lock. The request's own thread closes the response and makes no further provider calls.
+  - **At most 8 requests are in flight**, abandoned ones included. When all are busy, the call fails fast (`requests_busy`, a timeout) without contacting the provider, so nothing queues without bound.
+  - Compression is declined (`Accept-Encoding: identity`). gzip/deflate sent anyway is decoded incrementally (including multi-member gzip), with the **decoded** size capped at 8 MB and the stream end verified. Other encodings are rejected.
+  - Read errors map to the typed errors (a timeout gives 504, others 502).
+  - Real-server tests on 127.0.0.1 cover trickled headers and chunk framing, `Connection: close`, redirects, saturation, chunked bodies, multi-member gzip and truncation.
 - **Single-flight:**
   - On a miss, the caller takes `positions:v1:{provider}:{code}:lock` with `SET NX PX 40000` and a random owner token. The lease (40 s) is longer than the worst-case fetch (30 s), so it can't expire mid-fetch.
   - After taking the lock, the caller re-checks the cache, in case another request filled it in between. It caches its result **before** releasing the lock.

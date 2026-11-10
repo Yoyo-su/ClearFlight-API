@@ -6,8 +6,6 @@ import socket
 import threading
 import time
 import zlib
-from concurrent.futures import ThreadPoolExecutor
-from concurrent.futures import TimeoutError as FutureTimeout
 from datetime import datetime, timedelta, timezone
 
 import redis
@@ -141,11 +139,12 @@ def decoder(encoding: str | None) -> Decoder | None:
     raise MetarUpstreamError("unsupported_encoding")
 
 
-READERS = ThreadPoolExecutor(max_workers=8, thread_name_prefix="positions-read")
+MAX_IN_FLIGHT = 8  # provider requests running at once, abandoned ones included
+IN_FLIGHT = threading.BoundedSemaphore(MAX_IN_FLIGHT)
 
 
 def read_body(response, deadline: float) -> bytes:
-    """Read and decode a streamed body (runs in a reader thread)."""
+    """Read and decode a streamed body (runs in the request's thread)."""
     decode = decoder(response.headers.get("Content-Encoding"))
     chunks, size = [], 0
     while True:
@@ -165,30 +164,57 @@ def read_body(response, deadline: float) -> bytes:
     return b"".join(chunks)
 
 
+def response_socket(response):
+    """The response's socket, wherever http.client/urllib3 keep it."""
+    raw = getattr(response, "raw", None)
+    sock = getattr(getattr(raw, "connection", None), "sock", None)
+    if sock is None:  # Connection: close detaches it from the connection
+        buffered = getattr(getattr(raw, "_fp", None), "fp", None)
+        sock = getattr(getattr(buffered, "raw", None), "_sock", None)
+    return sock
+
+
 def abort(response) -> None:
-    """Unblock a stuck read by shutting its socket down (best effort)."""
+    """Unblock a stuck read without blocking: shut the socket down only.
+
+    Closing is left to the request's own thread, since close() can wait for a
+    lock the blocked reader holds.
+    """
+    sock = response_socket(response) if response is not None else None
+    if sock is None:
+        return
     try:
-        sock = getattr(getattr(response.raw, "connection", None), "sock", None)
-        if sock is not None:
-            sock.shutdown(socket.SHUT_RDWR)
+        sock.shutdown(socket.SHUT_RDWR)
     except OSError:
         pass
-    try:
-        response.close()
-    except Exception:  # noqa: BLE001 - closing a broken response may fail any way
-        pass
+
+
+def typed(error: BaseException) -> Exception:
+    """A provider error as one of the typed errors (D-006)."""
+    if isinstance(error, (MetarTimeout, MetarUpstreamError, MetarRateLimited)):
+        return error
+    if isinstance(
+        error, (requests.Timeout, urllib3.exceptions.TimeoutError, socket.timeout)
+    ):
+        return MetarTimeout("timeout")
+    return MetarUpstreamError("connection_error", type(error).__name__)
 
 
 def send(method: str, url: str, deadline: float, **kwargs) -> Reply:
     """One HTTP request whose whole duration is bounded by the deadline.
 
-    requests' timeout only limits each wait for data, and any read (including
-    chunk framing inside http.client) can be kept alive by a provider that
-    trickles bytes. So the body is read in a reader thread and this call
-    waits only until the deadline (design r3 §5). On overrun the socket is
-    shut down and the call fails; an abandoned reader makes no further
-    provider calls. Compression is declined; gzip/deflate sent anyway is
-    decoded incrementally with the decoded size capped.
+    Any blocking read (connect, status line, headers, chunk framing, body)
+    can be kept alive by a peer that trickles bytes, and requests' timeout only
+    limits each wait. So the whole request runs in its own thread and this call
+    waits for it only until the deadline (design r3 §5):
+    - the connect timeout is at most the time left, so a request is either
+      sent before the deadline or not at all; redirects aren't followed;
+    - on overrun the socket is shut down (never a blocking close) and the call
+      fails; the abandoned thread makes no further provider calls;
+    - at most MAX_IN_FLIGHT requests run at once, abandoned ones included;
+      when all are busy the call fails fast without contacting the provider.
+    Compression is declined; gzip/deflate sent anyway is decoded incrementally
+    with the decoded size capped and the stream end verified.
     """
     left = remaining(deadline)
     if left < MIN_ATTEMPT_S:
@@ -199,32 +225,44 @@ def send(method: str, url: str, deadline: float, **kwargs) -> Reply:
         "Accept-Encoding": "identity",
         **kwargs.pop("headers", {}),
     }
-    try:
-        call = requests.post if method == "POST" else requests.get
-        response = call(url, timeout=timeout, headers=headers, stream=True, **kwargs)
-    except requests.Timeout:
-        raise MetarTimeout("timeout")
-    except requests.RequestException as e:
-        raise MetarUpstreamError("connection_error", type(e).__name__)
-    future = READERS.submit(read_body, response, deadline)
-    try:
-        content = future.result(timeout=max(0.0, remaining(deadline)))
-    except FutureTimeout:
-        abort(response)
+    if not IN_FLIGHT.acquire(timeout=max(0.0, remaining(deadline) - MIN_ATTEMPT_S)):
+        raise MetarTimeout("requests_busy")
+    holder: dict = {}
+    finished = threading.Event()
+
+    def work():
+        try:
+            call = requests.post if method == "POST" else requests.get
+            response = call(
+                url,
+                timeout=timeout,
+                headers=headers,
+                stream=True,
+                allow_redirects=False,
+                **kwargs,
+            )
+            holder["response"] = response
+            try:
+                holder["reply"] = Reply(
+                    response.status_code,
+                    response.headers,
+                    read_body(response, deadline),
+                )
+            finally:
+                response.close()
+        except BaseException as e:  # noqa: BLE001 - handed to the caller
+            holder["error"] = e
+        finally:
+            IN_FLIGHT.release()
+            finished.set()
+
+    threading.Thread(target=work, name="positions-request", daemon=True).start()
+    if not finished.wait(timeout=max(0.0, remaining(deadline))):
+        abort(holder.get("response"))
         raise MetarTimeout("deadline")
-    except (requests.Timeout, urllib3.exceptions.TimeoutError, socket.timeout):
-        raise MetarTimeout("timeout")
-    except (
-        requests.RequestException,
-        urllib3.exceptions.HTTPError,
-        zlib.error,
-        OSError,
-    ) as e:
-        raise MetarUpstreamError("connection_error", type(e).__name__)
-    finally:
-        if future.done():
-            response.close()
-    return Reply(response.status_code, response.headers, content)
+    if "error" in holder:
+        raise typed(holder["error"])
+    return holder["reply"]
 
 
 def get(url: str, deadline: float, **kwargs) -> Reply:
