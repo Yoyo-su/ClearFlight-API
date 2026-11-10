@@ -95,10 +95,13 @@ The state is computed at every read, from the cached raw-normalised result and t
 - **Operation deadline** ([r3: critique 3]):
   - A whole fetch shares a **20 s deadline**: token request, query(ies) and the one retry.
   - Each attempt's timeout is the smaller of `PROVIDER_TIMEOUT` and the time left. No new attempt starts with under 2 s left.
-- **Bounded requests:** `requests`' timeout limits each wait for data, not the whole call. Response bodies are therefore read **raw** with urllib3's `read1`, which does at most one socket read per call and no decoding inside it. A provider trickling bytes can't hide behind buffering or decompression.
-  - The deadline is checked after every read.
-  - Compression is declined (`Accept-Encoding: identity`). A gzip/deflate body sent anyway is decoded step by step under the same deadline, with the **decoded** size capped at 8 MB. Other encodings are rejected.
-  - Raw urllib3 read errors map to the typed errors: a timeout gives 504, others 502. The worst case is the deadline plus one socket read timeout (20 + 10 s). The token lock wait is bounded by the deadline too.
+- **Bounded requests** (review rounds 1–4): `requests`' timeout limits each wait for data, not the whole call, and any read can be kept alive by a provider that trickles bytes, including the chunk framing inside `http.client`. So:
+  - The body is read in a **reader thread**, and the request waits for it only until the operation deadline.
+  - On overrun the socket is shut down, the request fails with a timeout, and its lock is released. An abandoned reader makes no further provider calls, so no fetch outlives the deadline.
+  - Compression is declined (`Accept-Encoding: identity`). gzip/deflate sent anyway is decoded incrementally, including multi-member gzip, with the **decoded** size capped at 8 MB and the stream end verified (a truncated body is `invalid_response`). Other encodings are rejected.
+  - Raw read errors map to the typed errors (a timeout gives 504, others 502).
+  - The worst case is the deadline, inside the 40 s lease.
+  - Real-server tests on 127.0.0.1 cover trickled chunk framing, chunked bodies, multi-member gzip and truncation.
 - **Single-flight:**
   - On a miss, the caller takes `positions:v1:{provider}:{code}:lock` with `SET NX PX 40000` and a random owner token. The lease (40 s) is longer than the worst-case fetch (30 s), so it can't expire mid-fetch.
   - After taking the lock, the caller re-checks the cache, in case another request filled it in between. It caches its result **before** releasing the lock.

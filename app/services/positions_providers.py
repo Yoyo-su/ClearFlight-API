@@ -2,9 +2,12 @@ import json
 import logging
 import math
 import random
+import socket
 import threading
 import time
 import zlib
+from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import TimeoutError as FutureTimeout
 from datetime import datetime, timedelta, timezone
 
 import redis
@@ -92,27 +95,100 @@ class Reply:
         return json.loads(self.content)
 
 
-def decoder(encoding: str):
-    """An incremental decoder for the response's Content-Encoding."""
+class Decoder:
+    """Incremental gzip/deflate decoding with a cap on the decoded size.
+
+    Handles several concatenated gzip members, and checks that the stream
+    really ended (a truncated body is an error, not a shorter answer).
+    """
+
+    def __init__(self, encoding: str):
+        self.gzip = encoding in ("gzip", "x-gzip")
+        self.obj = self.new()
+
+    def new(self):
+        return zlib.decompressobj(16 + zlib.MAX_WBITS if self.gzip else zlib.MAX_WBITS)
+
+    def decode(self, data: bytes, room: int) -> bytes:
+        out = []
+        while data:
+            piece = self.obj.decompress(data, room + 1)
+            if self.obj.unconsumed_tail:
+                raise MetarUpstreamError("response_too_large")
+            out.append(piece)
+            room -= len(piece)
+            if room < 0:
+                raise MetarUpstreamError("response_too_large")
+            data = self.obj.unused_data if self.obj.eof else b""
+            if data and self.gzip:
+                self.obj = self.new()  # the next gzip member
+            elif data:
+                raise MetarUpstreamError("invalid_response", "data after stream end")
+        return b"".join(out)
+
+    def finish(self) -> None:
+        if not self.obj.eof:
+            raise MetarUpstreamError("invalid_response", "truncated compressed body")
+
+
+def decoder(encoding: str | None) -> Decoder | None:
+    """A decoder for the response's Content-Encoding (None for identity)."""
     encoding = (encoding or "identity").strip().lower()
     if encoding in ("", "identity"):
         return None
-    if encoding in ("gzip", "x-gzip"):
-        return zlib.decompressobj(16 + zlib.MAX_WBITS)
-    if encoding == "deflate":
-        return zlib.decompressobj()
+    if encoding in ("gzip", "x-gzip", "deflate"):
+        return Decoder(encoding)
     raise MetarUpstreamError("unsupported_encoding")
+
+
+READERS = ThreadPoolExecutor(max_workers=8, thread_name_prefix="positions-read")
+
+
+def read_body(response, deadline: float) -> bytes:
+    """Read and decode a streamed body (runs in a reader thread)."""
+    decode = decoder(response.headers.get("Content-Encoding"))
+    chunks, size = [], 0
+    while True:
+        raw = response.raw.read1(65536, decode_content=False)
+        if remaining(deadline) <= 0:
+            raise MetarTimeout("deadline")
+        if not raw:
+            break
+        if decode is not None:
+            raw = decode.decode(raw, MAX_BODY_BYTES - size)
+        size += len(raw)
+        if size > MAX_BODY_BYTES:
+            raise MetarUpstreamError("response_too_large")
+        chunks.append(raw)
+    if decode is not None:
+        decode.finish()
+    return b"".join(chunks)
+
+
+def abort(response) -> None:
+    """Unblock a stuck read by shutting its socket down (best effort)."""
+    try:
+        sock = getattr(getattr(response.raw, "connection", None), "sock", None)
+        if sock is not None:
+            sock.shutdown(socket.SHUT_RDWR)
+    except OSError:
+        pass
+    try:
+        response.close()
+    except Exception:  # noqa: BLE001 - closing a broken response may fail any way
+        pass
 
 
 def send(method: str, url: str, deadline: float, **kwargs) -> Reply:
     """One HTTP request whose whole duration is bounded by the deadline.
 
-    requests' timeout only limits each wait for data, so the body is read raw
-    with urllib3's read1 (one socket read per call, no decoding inside it) and
-    the deadline is checked after every read (design r3 §5). Compression is
-    declined; if a server compresses anyway, it is decoded here, step by step,
-    under the same deadline and a cap on the decoded size. The worst case is
-    the deadline plus one socket read timeout, inside the lock lease.
+    requests' timeout only limits each wait for data, and any read (including
+    chunk framing inside http.client) can be kept alive by a provider that
+    trickles bytes. So the body is read in a reader thread and this call
+    waits only until the deadline (design r3 §5). On overrun the socket is
+    shut down and the call fails; an abandoned reader makes no further
+    provider calls. Compression is declined; gzip/deflate sent anyway is
+    decoded incrementally with the decoded size capped.
     """
     left = remaining(deadline)
     if left < MIN_ATTEMPT_S:
@@ -126,33 +202,29 @@ def send(method: str, url: str, deadline: float, **kwargs) -> Reply:
     try:
         call = requests.post if method == "POST" else requests.get
         response = call(url, timeout=timeout, headers=headers, stream=True, **kwargs)
-        try:
-            decode = decoder(response.headers.get("Content-Encoding"))
-            chunks, size = [], 0
-            while True:
-                raw = response.raw.read1(65536, decode_content=False)
-                if remaining(deadline) <= 0:
-                    raise MetarTimeout("deadline")
-                if not raw:
-                    if decode is not None:
-                        chunks.append(decode.flush())
-                    break
-                if decode is not None:
-                    # Bounded per step, so a small input can't expand unchecked.
-                    raw = decode.decompress(raw, MAX_BODY_BYTES - size + 1)
-                    if decode.unconsumed_tail:
-                        raise MetarUpstreamError("response_too_large")
-                size += len(raw)
-                if size > MAX_BODY_BYTES:
-                    raise MetarUpstreamError("response_too_large")
-                chunks.append(raw)
-            return Reply(response.status_code, response.headers, b"".join(chunks))
-        finally:
-            response.close()
-    except (requests.Timeout, urllib3.exceptions.TimeoutError):
+    except requests.Timeout:
         raise MetarTimeout("timeout")
-    except (requests.RequestException, urllib3.exceptions.HTTPError, zlib.error) as e:
+    except requests.RequestException as e:
         raise MetarUpstreamError("connection_error", type(e).__name__)
+    future = READERS.submit(read_body, response, deadline)
+    try:
+        content = future.result(timeout=max(0.0, remaining(deadline)))
+    except FutureTimeout:
+        abort(response)
+        raise MetarTimeout("deadline")
+    except (requests.Timeout, urllib3.exceptions.TimeoutError, socket.timeout):
+        raise MetarTimeout("timeout")
+    except (
+        requests.RequestException,
+        urllib3.exceptions.HTTPError,
+        zlib.error,
+        OSError,
+    ) as e:
+        raise MetarUpstreamError("connection_error", type(e).__name__)
+    finally:
+        if future.done():
+            response.close()
+    return Reply(response.status_code, response.headers, content)
 
 
 def get(url: str, deadline: float, **kwargs) -> Reply:

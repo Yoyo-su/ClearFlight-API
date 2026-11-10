@@ -1398,3 +1398,127 @@ class TestReviewRound3:
         with mock.patch.object(provider, "fetch", return_value=result) as fetch:
             assert positions_service.get_positions("RJBB", area("rjbb"))[0] == result
         assert fetch.called
+
+
+class LocalServer:
+    """A raw HTTP server on 127.0.0.1 that sends scripted bytes (no network)."""
+
+    def __init__(self, script):
+        import socket as socketlib
+
+        self.script = script
+        self.sock = socketlib.socket()
+        self.sock.bind(("127.0.0.1", 0))
+        self.sock.listen(1)
+        self.url = f"http://127.0.0.1:{self.sock.getsockname()[1]}/"
+        self.stop = threading.Event()
+        self.thread = threading.Thread(target=self.serve, daemon=True)
+        self.thread.start()
+
+    def serve(self):
+        conn, _ = self.sock.accept()
+        try:
+            conn.recv(65536)  # the request
+            self.script(conn, self.stop)
+        except OSError:
+            pass
+        finally:
+            conn.close()
+
+    def close(self):
+        self.stop.set()
+        self.sock.close()
+
+
+def respond(body: bytes, headers: dict):
+    def script(conn, stop):
+        head = (
+            "HTTP/1.1 200 OK\r\n"
+            + "".join(f"{k}: {v}\r\n" for k, v in headers.items())
+            + "\r\n"
+        )
+        conn.sendall(head.encode() + body)
+
+    return script
+
+
+@pytest.mark.describe("Round 4: the deadline against a real HTTP server")
+class TestRealServer:
+    @pytest.fixture
+    def short(self):
+        from app.services import positions_providers
+
+        with mock.patch.object(
+            positions_providers, "MIN_ATTEMPT_S", 0.05
+        ), mock.patch.multiple(settings, PROVIDER_TIMEOUT=1.0):
+            yield
+
+    @pytest.mark.it("cuts off trickled chunk framing at the deadline")
+    def test_trickled_framing(self, short):
+        from app.services.positions_providers import get
+
+        def trickle(conn, stop):
+            conn.sendall(b"HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\n\r\n1")
+            while not stop.is_set():
+                conn.sendall(b";")  # a chunk extension that never ends
+                time.sleep(0.05)  # well under the 1 s socket timeout
+
+        server = LocalServer(trickle)
+        begin = time.monotonic()
+        try:
+            with pytest.raises(MetarTimeout):
+                get(server.url, time.monotonic() + 0.5)
+        finally:
+            server.close()
+        assert time.monotonic() - begin < 1.0
+
+    @pytest.mark.it("reads a normal chunked body")
+    def test_chunked(self, short):
+        from app.services.positions_providers import get
+
+        body = b'{"now": 1}'
+        chunked = f"{len(body):x}\r\n".encode() + body + b"\r\n0\r\n\r\n"
+        server = LocalServer(respond(chunked, {"Transfer-Encoding": "chunked"}))
+        try:
+            assert get(server.url, time.monotonic() + 5).json() == {"now": 1}
+        finally:
+            server.close()
+
+    @pytest.mark.it("decodes every member of a multi-member gzip body")
+    def test_multi_member_gzip(self, short):
+        import gzip
+
+        from app.services.positions_providers import get
+
+        body = gzip.compress(b'{"a":') + gzip.compress(b"1}")
+        server = LocalServer(
+            respond(body, {"Content-Encoding": "gzip", "Content-Length": len(body)})
+        )
+        try:
+            assert get(server.url, time.monotonic() + 5).json() == {"a": 1}
+        finally:
+            server.close()
+
+    @pytest.mark.it("rejects a truncated compressed body")
+    @pytest.mark.parametrize("encoding", ["gzip", "deflate"])
+    def test_truncated(self, short, encoding):
+        import gzip
+        import zlib
+
+        from app.services.positions_providers import get
+
+        full = (
+            gzip.compress(b'{"a": 1}')
+            if encoding == "gzip"
+            else zlib.compress(b'{"a": 1}')
+        )
+        body = full[:-4]  # drop the trailer (checksum)
+        server = LocalServer(
+            respond(body, {"Content-Encoding": encoding, "Content-Length": len(body)})
+        )
+        try:
+            with pytest.raises(MetarUpstreamError) as e:
+                get(server.url, time.monotonic() + 5)
+        finally:
+            server.close()
+        assert e.value.reason == "invalid_response"
