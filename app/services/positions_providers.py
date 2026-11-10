@@ -253,7 +253,11 @@ class OpenSky:
             body = response.json() if response.status_code == 200 else None
         except MetarTimeout:
             raise MetarTimeout("token_timeout")  # a slow server isn't bad credentials
-        except (MetarUpstreamError, ValueError):
+        except MetarUpstreamError as e:
+            if e.reason in ("requests_busy", "connection_error"):
+                raise  # not a credentials problem: keep the real reason
+            body = None
+        except ValueError:
             body = None
         token = body.get("access_token") if isinstance(body, dict) else None
         expires = (

@@ -135,11 +135,21 @@ class Loop:
             if self.client is not None:
                 await self.client.aclose()
 
-        try:
-            asyncio.run_coroutine_threadsafe(close(), self.loop).result(timeout=2)
-        except (concurrent.futures.TimeoutError, RuntimeError):
-            pass
+        async def cancel_rest():
+            tasks = [t for t in asyncio.all_tasks() if t is not asyncio.current_task()]
+            for task in tasks:
+                task.cancel()  # their callers get MetarTimeout at once
+            await asyncio.gather(*tasks, return_exceptions=True)
+
+        for step in (cancel_rest, close):
+            try:
+                asyncio.run_coroutine_threadsafe(step(), self.loop).result(timeout=2)
+            except (concurrent.futures.TimeoutError, RuntimeError):
+                pass
         self.loop.call_soon_threadsafe(self.loop.stop)
+        self.thread.join(timeout=2)
+        if not self.loop.is_running():
+            self.loop.close()
 
 
 _lock = threading.Lock()
@@ -215,6 +225,8 @@ def send(method: str, url: str, deadline: float, **kwargs) -> Reply:
     except concurrent.futures.TimeoutError:
         future.cancel()
         raise MetarTimeout("deadline")
+    except concurrent.futures.CancelledError:  # the loop was replaced (tests)
+        raise MetarTimeout("cancelled")
 
 
 async def _run(loop: Loop, method: str, url: str, deadline: float, **kwargs) -> Reply:

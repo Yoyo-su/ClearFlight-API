@@ -101,7 +101,8 @@ The state is computed at every read, from the cached raw-normalised result and t
   - Redirects aren't followed, since each would be another provider call.
   - **At most 8 connections** are open at once. When all are busy, the request fails within 0.5 s with `requests_busy` (502, not retried) instead of queueing.
   - Compression is declined (`Accept-Encoding: identity`). gzip/deflate sent anyway is decoded incrementally, covering multi-member gzip, zlib-wrapped or raw deflate, and trailing zero padding. The **decoded** size is capped at 8 MB and the stream end is verified (a truncated body is `invalid_response`). Other encodings are rejected.
-  - Errors map to the typed errors (a timeout gives 504, others 502).
+  - Errors map to the typed errors (a timeout gives 504, others 502). A busy pool or connection error during the OpenSky token request keeps its own reason, not `provider_auth_failed`.
+  - **For CF-006:** the client ignores proxy and CA environment settings (`trust_env=False`, certifi's CAs). A deployment behind a proxy or a private CA needs this revisited.
   - Tests on 127.0.0.1 use a real server:
     - the peer sees the connection closed at the deadline while headers trickle;
     - slow DNS leads to **no connection** after the deadline (a control with fast DNS connects);

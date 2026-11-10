@@ -632,7 +632,6 @@ class TestOpenSky:
             ),
             FakeResponse(200, body={"token_type": "bearer"}),
             FakeResponse(200, body=ValueError("not json")),
-            httpx.ConnectError("down"),
         ],
     )
     def test_token_failure(self, fake_redis, opensky_settings, token, caplog):
@@ -1667,7 +1666,9 @@ class TestWholeRequestBounded:
             server.close()
         assert time.monotonic() - begin < 1.0
 
-    @pytest.mark.it("times out without blocking on a Connection: close response")
+    @pytest.mark.it(
+        "times out on trickled chunk framing with a Connection: close header"
+    )
     def test_connection_close(self, short):
         from app.services.positions_providers import get
 
@@ -1701,6 +1702,11 @@ class TestWholeRequestBounded:
     def test_saturated(self, short):
         from app.services.positions_providers import get
 
+        # Holders keep their connections for up to 3 s (read timeout 3 s), so
+        # the 9th request's 0.5 s pool wait ends well before any is freed.
+        holding = mock.patch.multiple(settings, PROVIDER_TIMEOUT=3.0)
+        holding.start()
+
         server = HoldingServer()
         results = []
 
@@ -1725,6 +1731,7 @@ class TestWholeRequestBounded:
             [t.join() for t in holders]
         finally:
             server.close()
+            holding.stop()
         assert all(isinstance(r, MetarTimeout) for r in results)
         assert not retryable_busy()
 
@@ -1740,6 +1747,36 @@ class TestWholeRequestBounded:
         finally:
             server.close()
         assert server.accepted == 1
+
+    @pytest.mark.it("connects when the same patched DNS answers in time (control)")
+    def test_dns_control(self, short):
+        import socket as socketlib
+
+        from app.services.positions_providers import get
+
+        server = HoldingServer()
+        real = socketlib.getaddrinfo
+        hits = []
+
+        def quick_lookup(host, *args, **kwargs):
+            if host in ("slow.invalid", b"slow.invalid"):
+                hits.append(host)
+                time.sleep(0.1)
+                host = "127.0.0.1"
+            return real(host, *args, **kwargs)
+
+        try:
+            with mock.patch("socket.getaddrinfo", quick_lookup):
+                with pytest.raises(MetarTimeout):  # the server holds the request
+                    get(
+                        server.url.replace("127.0.0.1", "slow.invalid"),
+                        time.monotonic() + 0.8,
+                    )
+        finally:
+            server.close()
+        assert (
+            hits and server.accepted == 1
+        )  # the patch applies and a timely answer connects
 
     @pytest.mark.it("sends nothing after the deadline when DNS is slow")
     def test_slow_dns(self, short):
@@ -1817,3 +1854,17 @@ class TestDecoder:
         from app.services.positions_http import decoder
 
         decoder("gzip").finish(0)  # an error response with no body keeps its status
+
+
+@pytest.mark.describe("Token request errors keep their real reason")
+class TestTokenReasons:
+    @pytest.mark.it("reports a busy pool or connection error, not provider_auth_failed")
+    @pytest.mark.parametrize(
+        "error, reason", [(httpx.ConnectError("down"), "connection_error")]
+    )
+    def test_reasons(self, fake_redis, opensky_settings, error, reason):
+        adapter = OpenSky(fake_redis)
+        with patch_http("POST", side_effect=error), patch_http("GET") as get:
+            with pytest.raises(MetarUpstreamError) as e:
+                adapter.fetch(area("rjbb"), time.monotonic() + 20)
+        assert e.value.reason == reason and not get.called
