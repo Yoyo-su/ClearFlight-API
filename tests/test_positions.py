@@ -1293,3 +1293,108 @@ class TestReviewRound2:
             with pytest.raises(MetarUpstreamError) as e:
                 adapter.fetch(Area(51.0, 179.9, 25), self.deadline())
         assert e.value.reason == "provider_auth_failed" and post.call_count == 2
+
+
+@pytest.mark.describe("Review round 3 fixes")
+class TestReviewRound3:
+    def deadline(self):
+        return time.monotonic() + 20
+
+    def body(self):
+        return json.dumps(adsblol("rjbb")).encode()
+
+    @pytest.mark.it("asks for uncompressed responses and reads raw bytes")
+    def test_identity(self):
+        from app.services.positions_providers import get
+
+        reply = FakeResponse(chunks=[self.body()])
+        with mock.patch("requests.get", return_value=reply) as call:
+            assert (
+                get("https://example.invalid", self.deadline()).json()["now"]
+                == 1794271840001
+            )
+        assert call.call_args.kwargs["headers"]["Accept-Encoding"] == "identity"
+
+    @pytest.mark.it(
+        "decodes gzip or deflate itself, step by step, when a server compresses anyway"
+    )
+    @pytest.mark.parametrize("encoding", ["gzip", "deflate"])
+    def test_decodes(self, encoding):
+        import zlib
+
+        from app.services.positions_providers import get
+
+        compressor = zlib.compressobj(wbits=31 if encoding == "gzip" else 15)
+        data = compressor.compress(self.body()) + compressor.flush()
+        pieces = [
+            bytes(piece) for piece in itertools.batched(data, 7)
+        ]  # many small reads
+        reply = FakeResponse(chunks=pieces, headers={"Content-Encoding": encoding})
+        with mock.patch("requests.get", return_value=reply):
+            assert (
+                get("https://example.invalid", self.deadline()).json()["now"]
+                == 1794271840001
+            )
+
+    @pytest.mark.it("rejects unknown encodings and caps a decompression bomb")
+    def test_encoding_limits(self):
+        import zlib
+
+        from app.services.positions_providers import get
+
+        brotli = FakeResponse(chunks=[b"x"], headers={"Content-Encoding": "br"})
+        with mock.patch("requests.get", return_value=brotli):
+            with pytest.raises(MetarUpstreamError) as e:
+                get("https://example.invalid", self.deadline())
+        assert e.value.reason == "unsupported_encoding"
+        bomb = zlib.compress(b"\0" * 20_000_000)  # about 20 kB in, 20 MB out
+        reply = FakeResponse(chunks=[bomb], headers={"Content-Encoding": "deflate"})
+        with mock.patch("requests.get", return_value=reply):
+            with pytest.raises(MetarUpstreamError) as e:
+                get("https://example.invalid", self.deadline())
+        assert e.value.reason == "response_too_large"
+
+    @pytest.mark.it("maps raw urllib3 read errors to typed errors")
+    @pytest.mark.parametrize(
+        "error, kind", [("timeout", MetarTimeout), ("protocol", MetarUpstreamError)]
+    )
+    def test_urllib3_errors(self, error, kind):
+        import urllib3
+
+        from app.services.positions_providers import get
+
+        raised = (
+            urllib3.exceptions.ReadTimeoutError(
+                None, "https://example.invalid", "read timed out"
+            )
+            if error == "timeout"
+            else urllib3.exceptions.ProtocolError("truncated")
+        )
+        reply = FakeResponse(chunks=[])
+        reply.read1 = mock.Mock(side_effect=raised)
+        with mock.patch("requests.get", return_value=reply):
+            with pytest.raises(kind):
+                get("https://example.invalid", self.deadline())
+        assert reply.closed
+
+    @pytest.mark.it("treats a cached target with a bad optional field as a miss")
+    @pytest.mark.parametrize(
+        "field, value",
+        [
+            ("altitude_ft", "invalid"),
+            ("ground_speed_kt", 1.5),
+            ("callsign", 7),
+            ("category", ["A3"]),
+            ("id", "zz"),
+        ],
+    )
+    def test_cached_target_fields(self, fake_redis, adsblol_settings, field, value):
+        recorded = datetime.fromtimestamp(1794271841, UTC)
+        result = AdsbLol.parse(adsblol("rjbb"), area("rjbb"), recorded)
+        data = result.to_dict()
+        data["targets"][0][field] = value
+        fake_redis.set("positions:v1:adsblol:RJBB", json.dumps(data), ex=30)
+        provider = positions_service.get_provider()
+        with mock.patch.object(provider, "fetch", return_value=result) as fetch:
+            assert positions_service.get_positions("RJBB", area("rjbb"))[0] == result
+        assert fetch.called

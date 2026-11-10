@@ -112,15 +112,30 @@ class FeedResult:
         ):
             raise ValueError("bad count")
         for t in self.targets:
+            optional_ints = (
+                t.altitude_ft,
+                t.ground_speed_kt,
+                t.track_deg,
+                t.vertical_rate_fpm,
+            )
             if not (
                 isinstance(t.id, str)
+                and ID_PATTERN.fullmatch(t.id)
+                and (t.callsign is None or isinstance(t.callsign, str))
+                and (t.category is None or isinstance(t.category, str))
                 and finite(t.latitude, -90, 90) is not None
                 and finite(t.longitude, -180, 180) is not None
                 and isinstance(t.on_ground, bool)
                 and t.kind in ("aircraft", "unclassified")
                 and finite(t.distance_nm, 0, 1000) is not None
+                and all(
+                    n is None or (isinstance(n, int) and not isinstance(n, bool))
+                    for n in optional_ints
+                )
             ):
                 raise ValueError("bad target")
+        if not (isinstance(self.provider, str) and isinstance(self.access, str)):
+            raise ValueError("bad source")
         return self
 
     @classmethod

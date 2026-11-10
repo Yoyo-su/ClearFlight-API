@@ -4,10 +4,12 @@ import math
 import random
 import threading
 import time
+import zlib
 from datetime import datetime, timedelta, timezone
 
 import redis
 import requests
+import urllib3
 
 from app.core.config import settings
 from app.services.credit_budget import BudgetExhausted, DailyBudget, SlotBusy
@@ -90,42 +92,66 @@ class Reply:
         return json.loads(self.content)
 
 
+def decoder(encoding: str):
+    """An incremental decoder for the response's Content-Encoding."""
+    encoding = (encoding or "identity").strip().lower()
+    if encoding in ("", "identity"):
+        return None
+    if encoding in ("gzip", "x-gzip"):
+        return zlib.decompressobj(16 + zlib.MAX_WBITS)
+    if encoding == "deflate":
+        return zlib.decompressobj()
+    raise MetarUpstreamError("unsupported_encoding")
+
+
 def send(method: str, url: str, deadline: float, **kwargs) -> Reply:
     """One HTTP request whose whole duration is bounded by the deadline.
 
-    requests' timeout only limits each wait for data, so the body is streamed
-    and the deadline is checked between chunks (design r3 §5). The worst case
-    is the deadline plus one socket read timeout, inside the lock lease.
+    requests' timeout only limits each wait for data, so the body is read raw
+    with urllib3's read1 (one socket read per call, no decoding inside it) and
+    the deadline is checked after every read (design r3 §5). Compression is
+    declined; if a server compresses anyway, it is decoded here, step by step,
+    under the same deadline and a cap on the decoded size. The worst case is
+    the deadline plus one socket read timeout, inside the lock lease.
     """
     left = remaining(deadline)
     if left < MIN_ATTEMPT_S:
         raise MetarTimeout("deadline")
     timeout = min(settings.PROVIDER_TIMEOUT, left)
-    headers = {"User-Agent": settings.METAR_USER_AGENT, **kwargs.pop("headers", {})}
+    headers = {
+        "User-Agent": settings.METAR_USER_AGENT,
+        "Accept-Encoding": "identity",
+        **kwargs.pop("headers", {}),
+    }
     try:
         call = requests.post if method == "POST" else requests.get
         response = call(url, timeout=timeout, headers=headers, stream=True, **kwargs)
         try:
+            decode = decoder(response.headers.get("Content-Encoding"))
             chunks, size = [], 0
             while True:
-                # read1 returns after at most one socket read (each bounded by
-                # the socket timeout), so the deadline is checked after every
-                # read; iter_content would buffer many reads per chunk.
-                chunk = response.raw.read1(65536, decode_content=True)
-                if not chunk:
-                    break
+                raw = response.raw.read1(65536, decode_content=False)
                 if remaining(deadline) <= 0:
                     raise MetarTimeout("deadline")
-                size += len(chunk)
+                if not raw:
+                    if decode is not None:
+                        chunks.append(decode.flush())
+                    break
+                if decode is not None:
+                    # Bounded per step, so a small input can't expand unchecked.
+                    raw = decode.decompress(raw, MAX_BODY_BYTES - size + 1)
+                    if decode.unconsumed_tail:
+                        raise MetarUpstreamError("response_too_large")
+                size += len(raw)
                 if size > MAX_BODY_BYTES:
                     raise MetarUpstreamError("response_too_large")
-                chunks.append(chunk)
+                chunks.append(raw)
             return Reply(response.status_code, response.headers, b"".join(chunks))
         finally:
             response.close()
-    except requests.Timeout:
+    except (requests.Timeout, urllib3.exceptions.TimeoutError):
         raise MetarTimeout("timeout")
-    except requests.RequestException as e:
+    except (requests.RequestException, urllib3.exceptions.HTTPError, zlib.error) as e:
         raise MetarUpstreamError("connection_error", type(e).__name__)
 
 
