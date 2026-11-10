@@ -1,16 +1,11 @@
-import json
 import logging
 import math
 import random
-import socket
 import threading
 import time
-import zlib
 from datetime import datetime, timedelta, timezone
 
 import redis
-import requests
-import urllib3
 
 from app.core.config import settings
 from app.services.credit_budget import BudgetExhausted, DailyBudget, SlotBusy
@@ -20,6 +15,7 @@ from app.services.metar import (
     MetarUpstreamError,
     RateLimiter,
 )
+from app.services.positions_http import MIN_ATTEMPT_S, Reply, get, post
 from app.services.positions import (
     FEET_PER_METRE,
     FPM_PER_MPS,
@@ -45,7 +41,6 @@ weather adapter's typed errors, so the API maps them the same way (D-006).
 
 logger = logging.getLogger(__name__)
 
-MIN_ATTEMPT_S = 2.0  # no new attempt starts with less time left
 MAX_STATES_CALLS = 2  # per box, retries and 401 refreshes together
 BACKOFF_S = 0.5
 
@@ -76,197 +71,6 @@ def remaining(deadline: float) -> float:
 
 def utc(seconds: float) -> datetime:
     return datetime.fromtimestamp(seconds, timezone.utc)
-
-
-MAX_BODY_BYTES = 8_000_000
-
-
-class Reply:
-    """A fully read response: status, headers and body."""
-
-    def __init__(self, status_code: int, headers, content: bytes):
-        self.status_code = status_code
-        self.headers = headers
-        self.content = content
-
-    def json(self):
-        return json.loads(self.content)
-
-
-class Decoder:
-    """Incremental gzip/deflate decoding with a cap on the decoded size.
-
-    Handles several concatenated gzip members, and checks that the stream
-    really ended (a truncated body is an error, not a shorter answer).
-    """
-
-    def __init__(self, encoding: str):
-        self.gzip = encoding in ("gzip", "x-gzip")
-        self.obj = self.new()
-
-    def new(self):
-        return zlib.decompressobj(16 + zlib.MAX_WBITS if self.gzip else zlib.MAX_WBITS)
-
-    def decode(self, data: bytes, room: int) -> bytes:
-        out = []
-        while data:
-            piece = self.obj.decompress(data, room + 1)
-            if self.obj.unconsumed_tail:
-                raise MetarUpstreamError("response_too_large")
-            out.append(piece)
-            room -= len(piece)
-            if room < 0:
-                raise MetarUpstreamError("response_too_large")
-            data = self.obj.unused_data if self.obj.eof else b""
-            if data and self.gzip:
-                self.obj = self.new()  # the next gzip member
-            elif data:
-                raise MetarUpstreamError("invalid_response", "data after stream end")
-        return b"".join(out)
-
-    def finish(self) -> None:
-        if not self.obj.eof:
-            raise MetarUpstreamError("invalid_response", "truncated compressed body")
-
-
-def decoder(encoding: str | None) -> Decoder | None:
-    """A decoder for the response's Content-Encoding (None for identity)."""
-    encoding = (encoding or "identity").strip().lower()
-    if encoding in ("", "identity"):
-        return None
-    if encoding in ("gzip", "x-gzip", "deflate"):
-        return Decoder(encoding)
-    raise MetarUpstreamError("unsupported_encoding")
-
-
-MAX_IN_FLIGHT = 8  # provider requests running at once, abandoned ones included
-IN_FLIGHT = threading.BoundedSemaphore(MAX_IN_FLIGHT)
-
-
-def read_body(response, deadline: float) -> bytes:
-    """Read and decode a streamed body (runs in the request's thread)."""
-    decode = decoder(response.headers.get("Content-Encoding"))
-    chunks, size = [], 0
-    while True:
-        raw = response.raw.read1(65536, decode_content=False)
-        if remaining(deadline) <= 0:
-            raise MetarTimeout("deadline")
-        if not raw:
-            break
-        if decode is not None:
-            raw = decode.decode(raw, MAX_BODY_BYTES - size)
-        size += len(raw)
-        if size > MAX_BODY_BYTES:
-            raise MetarUpstreamError("response_too_large")
-        chunks.append(raw)
-    if decode is not None:
-        decode.finish()
-    return b"".join(chunks)
-
-
-def response_socket(response):
-    """The response's socket, wherever http.client/urllib3 keep it."""
-    raw = getattr(response, "raw", None)
-    sock = getattr(getattr(raw, "connection", None), "sock", None)
-    if sock is None:  # Connection: close detaches it from the connection
-        buffered = getattr(getattr(raw, "_fp", None), "fp", None)
-        sock = getattr(getattr(buffered, "raw", None), "_sock", None)
-    return sock
-
-
-def abort(response) -> None:
-    """Unblock a stuck read without blocking: shut the socket down only.
-
-    Closing is left to the request's own thread, since close() can wait for a
-    lock the blocked reader holds.
-    """
-    sock = response_socket(response) if response is not None else None
-    if sock is None:
-        return
-    try:
-        sock.shutdown(socket.SHUT_RDWR)
-    except OSError:
-        pass
-
-
-def typed(error: BaseException) -> Exception:
-    """A provider error as one of the typed errors (D-006)."""
-    if isinstance(error, (MetarTimeout, MetarUpstreamError, MetarRateLimited)):
-        return error
-    if isinstance(
-        error, (requests.Timeout, urllib3.exceptions.TimeoutError, socket.timeout)
-    ):
-        return MetarTimeout("timeout")
-    return MetarUpstreamError("connection_error", type(error).__name__)
-
-
-def send(method: str, url: str, deadline: float, **kwargs) -> Reply:
-    """One HTTP request whose whole duration is bounded by the deadline.
-
-    Any blocking read (connect, status line, headers, chunk framing, body)
-    can be kept alive by a peer that trickles bytes, and requests' timeout only
-    limits each wait. So the whole request runs in its own thread and this call
-    waits for it only until the deadline (design r3 §5):
-    - the connect timeout is at most the time left, so a request is either
-      sent before the deadline or not at all; redirects aren't followed;
-    - on overrun the socket is shut down (never a blocking close) and the call
-      fails; the abandoned thread makes no further provider calls;
-    - at most MAX_IN_FLIGHT requests run at once, abandoned ones included;
-      when all are busy the call fails fast without contacting the provider.
-    Compression is declined; gzip/deflate sent anyway is decoded incrementally
-    with the decoded size capped and the stream end verified.
-    """
-    left = remaining(deadline)
-    if left < MIN_ATTEMPT_S:
-        raise MetarTimeout("deadline")
-    timeout = min(settings.PROVIDER_TIMEOUT, left)
-    headers = {
-        "User-Agent": settings.METAR_USER_AGENT,
-        "Accept-Encoding": "identity",
-        **kwargs.pop("headers", {}),
-    }
-    if not IN_FLIGHT.acquire(timeout=max(0.0, remaining(deadline) - MIN_ATTEMPT_S)):
-        raise MetarTimeout("requests_busy")
-    holder: dict = {}
-    finished = threading.Event()
-
-    def work():
-        try:
-            call = requests.post if method == "POST" else requests.get
-            response = call(
-                url,
-                timeout=timeout,
-                headers=headers,
-                stream=True,
-                allow_redirects=False,
-                **kwargs,
-            )
-            holder["response"] = response
-            try:
-                holder["reply"] = Reply(
-                    response.status_code,
-                    response.headers,
-                    read_body(response, deadline),
-                )
-            finally:
-                response.close()
-        except BaseException as e:  # noqa: BLE001 - handed to the caller
-            holder["error"] = e
-        finally:
-            IN_FLIGHT.release()
-            finished.set()
-
-    threading.Thread(target=work, name="positions-request", daemon=True).start()
-    if not finished.wait(timeout=max(0.0, remaining(deadline))):
-        abort(holder.get("response"))
-        raise MetarTimeout("deadline")
-    if "error" in holder:
-        raise typed(holder["error"])
-    return holder["reply"]
-
-
-def get(url: str, deadline: float, **kwargs) -> Reply:
-    return send("GET", url, deadline, **kwargs)
 
 
 def json_body(response: Reply):
@@ -437,8 +241,7 @@ class OpenSky:
     def request_token(self, deadline: float) -> tuple[str, float]:
         client_id, secret = self.credentials
         try:
-            response = send(
-                "POST",
+            response = post(
                 settings.OPENSKY_TOKEN_URL,
                 deadline,
                 data={

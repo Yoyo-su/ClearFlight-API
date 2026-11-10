@@ -1,22 +1,24 @@
+import asyncio
 import itertools
 import json
 import logging
 import threading
 import time
+from contextlib import contextmanager
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from unittest import mock
 
 import fakeredis
 import pytest
+import httpx
 import redis
-import requests
 from fastapi.testclient import TestClient
 from pydantic import SecretStr
 
 from app.core.config import settings
 from app.main import app
-from app.services import cache, positions_service
+from app.services import cache, positions_http, positions_service
 from app.services.credit_budget import BudgetExhausted, DailyBudget, Lock, SlotBusy
 from app.services.metar import MetarTimeout, MetarUpstreamError
 from app.services.positions import (
@@ -451,7 +453,12 @@ class TestBudget:
 
 
 class FakeResponse:
-    """A streamed requests response; an Exception body gives invalid JSON."""
+    """A scripted HTTP response, streamed asynchronously.
+
+    chunks: bytes items are sent; a number means "pause this many seconds"
+    (asyncio.sleep, so the deadline can cancel it like a real slow peer).
+    An Exception body gives invalid JSON.
+    """
 
     def __init__(self, status=200, body=None, headers=None, chunks=None):
         self.status_code = status
@@ -462,18 +469,69 @@ class FakeResponse:
             self.chunks = [b"not json"]
         else:
             self.chunks = [json.dumps(body).encode()] if body is not None else []
-        self.closed = False
 
-        self.raw = self  # requests' raw urllib3 response
+    def to_httpx(self) -> httpx.Response:
+        chunks = self.chunks
+        if isinstance(chunks, list):
+            chunks = list(chunks)  # the same fake may answer again
 
-    def read1(self, amt=None, decode_content=None):
-        if not hasattr(self, "_iter"):
-            self._iter = iter(self.chunks)
-        return next(self._iter, b"")
+        class Stream(httpx.AsyncByteStream):
+            async def __aiter__(self):
+                for chunk in chunks:
+                    if isinstance(chunk, (int, float)):
+                        await asyncio.sleep(chunk)
+                    else:
+                        yield chunk
 
-    def close(self):
-        self.closed = True
-        self.__dict__.pop("_iter", None)  # the same fake may answer again
+        return httpx.Response(self.status_code, headers=self.headers, stream=Stream())
+
+
+HTTP: dict = {}
+
+
+@contextmanager
+def patch_http(method, return_value=None, side_effect=None):
+    """Script one HTTP method on the shared client (like mock.patch).
+
+    The mock is called as (url, headers=, params=, timeout=, content=).
+    """
+    fake = mock.Mock(return_value=return_value, side_effect=side_effect)
+    previous = HTTP.get(method)
+    HTTP[method] = fake
+    try:
+        yield fake
+    finally:
+        HTTP[method] = previous
+
+
+async def fake_handler(request: httpx.Request) -> httpx.Response:
+    fake = HTTP.get(request.method)
+    if fake is None:
+        raise httpx.ConnectError("no network in tests")
+    reply = fake(
+        str(request.url),
+        headers=request.headers,
+        params=dict(request.url.params),
+        timeout=request.extensions["timeout"]["read"],
+        content=request.content,
+    )
+    return reply.to_httpx()
+
+
+@pytest.fixture(autouse=True)
+def fake_network():
+    """No real network: every provider request goes to patch_http fakes."""
+    HTTP.clear()
+    positions_http.use_transport(httpx.MockTransport(fake_handler))
+    yield
+    positions_http.use_transport(None)
+
+
+@pytest.fixture
+def real_network():
+    """Real sockets, for the local-server tests (127.0.0.1 only)."""
+    positions_http.use_transport(None)
+    yield
 
 
 @pytest.fixture
@@ -509,8 +567,8 @@ class TestOpenSky:
         states = FakeResponse(
             body=states_body(), headers={"x-rate-limit-remaining": "3990"}
         )
-        with mock.patch("requests.post", return_value=token) as post, mock.patch(
-            "requests.get", return_value=states
+        with patch_http("POST", return_value=token) as post, patch_http(
+            "GET", return_value=states
         ) as get:
             result = adapter.fetch(area("rjbb"), self.deadline())
             adapter.fetch(area("rjbb"), self.deadline())
@@ -526,8 +584,8 @@ class TestOpenSky:
     def test_retry_charged(self, fake_redis, opensky_settings):
         adapter = self.adapter(fake_redis)
         token = FakeResponse(body={"access_token": "tok", "expires_in": 1800})
-        with mock.patch("requests.post", return_value=token), mock.patch(
-            "requests.get", return_value=FakeResponse(503)
+        with patch_http("POST", return_value=token), patch_http(
+            "GET", return_value=FakeResponse(503)
         ) as get, mock.patch("time.sleep"):
             with pytest.raises(MetarUpstreamError, match="http_503"):
                 adapter.fetch(area("rjbb"), self.deadline())
@@ -538,8 +596,8 @@ class TestOpenSky:
         adapter = self.adapter(fake_redis)
         token = FakeResponse(body={"access_token": "tok", "expires_in": 1800})
         limited = FakeResponse(429, headers={"x-rate-limit-retry-after-seconds": "120"})
-        with mock.patch("requests.post", return_value=token), mock.patch(
-            "requests.get", return_value=limited
+        with patch_http("POST", return_value=token), patch_http(
+            "GET", return_value=limited
         ) as get:
             with pytest.raises(QuotaExhausted) as e:
                 adapter.fetch(area("rjbb"), self.deadline())
@@ -554,8 +612,8 @@ class TestOpenSky:
     def test_401(self, fake_redis, opensky_settings):
         adapter = self.adapter(fake_redis)
         token = FakeResponse(body={"access_token": "tok", "expires_in": 1800})
-        with mock.patch("requests.post", return_value=token) as post, mock.patch(
-            "requests.get", return_value=FakeResponse(401)
+        with patch_http("POST", return_value=token) as post, patch_http(
+            "GET", return_value=FakeResponse(401)
         ) as get:
             with pytest.raises(MetarUpstreamError) as e:
                 adapter.fetch(area("rjbb"), self.deadline())
@@ -574,17 +632,17 @@ class TestOpenSky:
             ),
             FakeResponse(200, body={"token_type": "bearer"}),
             FakeResponse(200, body=ValueError("not json")),
-            requests.ConnectionError("down"),
+            httpx.ConnectError("down"),
         ],
     )
     def test_token_failure(self, fake_redis, opensky_settings, token, caplog):
         adapter = self.adapter(fake_redis)
-        post = (
-            mock.Mock(side_effect=token)
-            if isinstance(token, Exception)
-            else mock.Mock(return_value=token)
-        )
-        with mock.patch("requests.post", post), mock.patch("requests.get") as get:
+        failing = isinstance(token, Exception)
+        with patch_http(
+            "POST",
+            return_value=None if failing else token,
+            side_effect=token if failing else None,
+        ), patch_http("GET") as get:
             with caplog.at_level(logging.DEBUG), pytest.raises(MetarUpstreamError) as e:
                 adapter.fetch(area("rjbb"), self.deadline())
         assert e.value.reason == "provider_auth_failed"
@@ -623,8 +681,8 @@ class TestOpenSky:
         adapter = self.adapter(fake_redis)
         token = FakeResponse(body={"access_token": "tok", "expires_in": 1800})
         empty = FakeResponse(body={"time": 1794271833, "states": None})
-        with mock.patch("requests.post", return_value=token), mock.patch(
-            "requests.get", return_value=empty
+        with patch_http("POST", return_value=token), patch_http(
+            "GET", return_value=empty
         ) as get:
             adapter.fetch(Area(51.0, 179.9, 25), self.deadline())
         assert get.call_count == 2 and adapter.budget.used() == 2
@@ -715,9 +773,7 @@ class TestService:
     def test_redis_down(self, opensky_settings):
         broken = mock.Mock()
         broken.get.side_effect = redis.ConnectionError("down")
-        with mock.patch.object(cache, "redis_client", broken), mock.patch(
-            "requests.get"
-        ) as get:
+        with mock.patch.object(cache, "redis_client", broken), patch_http("GET") as get:
             with pytest.raises(QuotaExhausted) as e:
                 positions_service.get_positions("RJBB", area("rjbb"))
         assert e.value.reason == "budget_unavailable" and not get.called
@@ -866,9 +922,7 @@ class TestAdsbLolFetch:
 
     @pytest.mark.it("queries the point endpoint with the radius and parses the answer")
     def test_fetch(self):
-        with mock.patch(
-            "requests.get", return_value=FakeResponse(body=adsblol("rjbb"))
-        ) as get:
+        with patch_http("GET", return_value=FakeResponse(body=adsblol("rjbb"))) as get:
             result = AdsbLol().fetch(area("rjbb"), self.deadline())
         assert (
             get.call_args.args[0] == "https://api.adsb.lol/v2/point/34.4273/135.2440/25"
@@ -880,26 +934,27 @@ class TestAdsbLolFetch:
     @pytest.mark.parametrize(
         "replies, error",
         [
-            ([requests.Timeout(), requests.Timeout()], MetarTimeout),
+            (
+                [httpx.ReadTimeout("timeout"), httpx.ReadTimeout("timeout")],
+                MetarTimeout,
+            ),
             ([FakeResponse(502), FakeResponse(502)], MetarUpstreamError),
             (
-                [requests.ConnectionError(), requests.ConnectionError()],
+                [httpx.ConnectError("down"), httpx.ConnectError("down")],
                 MetarUpstreamError,
             ),
         ],
     )
     def test_retry_then_fail(self, replies, error):
-        with mock.patch("requests.get", side_effect=replies) as get, mock.patch(
-            "time.sleep"
-        ):
+        with patch_http("GET", side_effect=replies) as get, mock.patch("time.sleep"):
             with pytest.raises(error):
                 AdsbLol().fetch(area("rjbb"), self.deadline())
         assert get.call_count == 2
 
     @pytest.mark.it("recovers when the retry succeeds")
     def test_retry_succeeds(self):
-        replies = [requests.Timeout(), FakeResponse(body=adsblol("rjbb"))]
-        with mock.patch("requests.get", side_effect=replies), mock.patch("time.sleep"):
+        replies = [httpx.ReadTimeout("timeout"), FakeResponse(body=adsblol("rjbb"))]
+        with patch_http("GET", side_effect=replies), mock.patch("time.sleep"):
             assert len(AdsbLol().fetch(area("rjbb"), self.deadline()).targets) == 23
 
     @pytest.mark.it("doesn't retry a 429 or a bad body")
@@ -908,7 +963,7 @@ class TestAdsbLolFetch:
         [FakeResponse(429), FakeResponse(body=ValueError("x")), FakeResponse(404)],
     )
     def test_no_retry(self, reply):
-        with mock.patch("requests.get", return_value=reply) as get:
+        with patch_http("GET", return_value=reply) as get:
             with pytest.raises(MetarUpstreamError):
                 AdsbLol().fetch(area("rjbb"), self.deadline())
         assert get.call_count == 1
@@ -917,9 +972,7 @@ class TestAdsbLolFetch:
     def test_cap(self):
         with mock.patch.multiple(settings, ADSBLOL_RATE_LIMIT_PER_MINUTE=1):
             adapter = AdsbLol()
-        with mock.patch(
-            "requests.get", return_value=FakeResponse(body=adsblol("rjbb"))
-        ) as get:
+        with patch_http("GET", return_value=FakeResponse(body=adsblol("rjbb"))) as get:
             adapter.fetch(area("rjbb"), self.deadline())
             with pytest.raises(Exception) as e:
                 adapter.fetch(area("rjbb"), self.deadline())
@@ -927,7 +980,7 @@ class TestAdsbLolFetch:
 
     @pytest.mark.it("doesn't start an attempt with under 2 s left")
     def test_deadline(self):
-        with mock.patch("requests.get") as get:
+        with patch_http("GET") as get:
             with pytest.raises(MetarTimeout):
                 AdsbLol().fetch(area("rjbb"), time.monotonic() + 1)
         assert not get.called
@@ -984,27 +1037,18 @@ class TestReviewRound1:
         "stops reading a body that outlives the deadline, and caps its size"
     )
     def test_bounded_read(self):
-        def slow():
-            yield b'{"ac": ['
-            time.sleep(0.3)
-            yield b"]}"
-
-        from app.services import positions_providers
         from app.services.positions_providers import get
 
-        reply = FakeResponse(chunks=slow())
-        with mock.patch("requests.get", return_value=reply), mock.patch.object(
-            positions_providers, "MIN_ATTEMPT_S", 0.05
+        reply = FakeResponse(chunks=[b'{"ac": [', 0.3, b"]}"])
+        with patch_http("GET", return_value=reply), mock.patch.object(
+            positions_http, "MIN_ATTEMPT_S", 0.05
         ):
+            begin = time.monotonic()
             with pytest.raises(MetarTimeout):
                 get("https://example.invalid", time.monotonic() + 0.2)
-        # The request's own thread closes the response once its read ends.
-        end = time.monotonic() + 2
-        while not reply.closed and time.monotonic() < end:
-            time.sleep(0.01)
-        assert reply.closed
+        assert time.monotonic() - begin < 0.35
         big = FakeResponse(chunks=[b"x" * 5_000_000, b"x" * 5_000_000])
-        with mock.patch("requests.get", return_value=big):
+        with patch_http("GET", return_value=big):
             with pytest.raises(MetarUpstreamError, match="response_too_large"):
                 get("https://example.invalid", self.deadline())
 
@@ -1025,8 +1069,8 @@ class TestReviewRound1:
             order.append("reserve")
             return real_reserve(cost)
 
-        with mock.patch("requests.post", side_effect=post), mock.patch(
-            "requests.get", return_value=states
+        with patch_http("POST", side_effect=post), patch_http(
+            "GET", return_value=states
         ), mock.patch.object(adapter.budget, "reserve", side_effect=reserve):
             adapter.fetch(area("rjbb"), self.deadline())
         assert order == ["token", "reserve"]
@@ -1037,15 +1081,19 @@ class TestReviewRound1:
         [
             [FakeResponse(500), FakeResponse(401), FakeResponse(body=states_body())],
             [FakeResponse(401), FakeResponse(500), FakeResponse(body=states_body())],
-            [requests.Timeout(), FakeResponse(401), FakeResponse(body=states_body())],
+            [
+                httpx.ReadTimeout("timeout"),
+                FakeResponse(401),
+                FakeResponse(body=states_body()),
+            ],
         ],
     )
     def test_call_limit(self, fake_redis, opensky_settings, replies):
         clock = itertools.count(1794268800)
         adapter = OpenSky(fake_redis, clock=lambda: next(clock))
         token = FakeResponse(body={"access_token": "tok", "expires_in": 1800})
-        with mock.patch("requests.post", return_value=token), mock.patch(
-            "requests.get", side_effect=replies
+        with patch_http("POST", return_value=token), patch_http(
+            "GET", side_effect=replies
         ) as get, mock.patch("time.sleep"):
             with pytest.raises((MetarUpstreamError, MetarTimeout)):
                 adapter.fetch(area("rjbb"), self.deadline())
@@ -1056,8 +1104,8 @@ class TestReviewRound1:
     )
     def test_token_timeout(self, fake_redis, opensky_settings, client):
         adapter = OpenSky(fake_redis)
-        with mock.patch("requests.post", side_effect=requests.Timeout()), mock.patch(
-            "requests.get"
+        with patch_http("POST", side_effect=httpx.ReadTimeout("timeout")), patch_http(
+            "GET"
         ) as get:
             with pytest.raises(MetarTimeout):
                 adapter.fetch(area("rjbb"), self.deadline())
@@ -1078,8 +1126,8 @@ class TestReviewRound1:
         states = FakeResponse(
             body=states_body(), headers={"x-rate-limit-remaining": "3990"}
         )
-        with mock.patch("requests.post", return_value=token), mock.patch(
-            "requests.get", return_value=states
+        with patch_http("POST", return_value=token), patch_http(
+            "GET", return_value=states
         ), mock.patch.object(
             adapter.budget, "raise_to", side_effect=redis.ConnectionError("down")
         ):
@@ -1092,11 +1140,11 @@ class TestReviewRound1:
         provider = positions_service.get_provider()
         with mock.patch.object(
             provider.budget, "reserve", side_effect=redis.ConnectionError("down")
-        ), mock.patch(
-            "requests.post",
+        ), patch_http(
+            "POST",
             return_value=FakeResponse(body={"access_token": "tok", "expires_in": 1800}),
-        ), mock.patch(
-            "requests.get"
+        ), patch_http(
+            "GET"
         ) as get:
             response = client.get("/v1/airports/KIX/aircraft")
         body = response.json()
@@ -1183,18 +1231,17 @@ class TestReviewRound2:
 
     @pytest.mark.it("cuts off a provider that trickles bytes, at the deadline")
     def test_trickle(self):
-        from app.services import positions_providers
         from app.services.positions_providers import get
 
         def trickle():
             while True:
-                time.sleep(0.01)  # each read returns quickly, so no socket timeout
+                yield 0.01  # each read returns quickly, so no socket timeout
                 yield b" "
 
         reply = FakeResponse(chunks=trickle())
         begin = time.monotonic()
-        with mock.patch("requests.get", return_value=reply), mock.patch.object(
-            positions_providers, "MIN_ATTEMPT_S", 0.05
+        with patch_http("GET", return_value=reply), mock.patch.object(
+            positions_http, "MIN_ATTEMPT_S", 0.05
         ):
             with pytest.raises(MetarTimeout):
                 get("https://example.invalid", time.monotonic() + 0.2)
@@ -1275,8 +1322,8 @@ class TestReviewRound2:
         clock = itertools.count(1794268800)
         adapter = OpenSky(fake_redis, clock=lambda: next(clock))
         token = FakeResponse(body={"access_token": "tok", "expires_in": 1800})
-        with mock.patch("requests.post", return_value=token), mock.patch(
-            "requests.get", return_value=FakeResponse(body={"time": 1794271833})
+        with patch_http("POST", return_value=token), patch_http(
+            "GET", return_value=FakeResponse(body={"time": 1794271833})
         ):
             with pytest.raises(MetarUpstreamError) as e:
                 adapter.fetch(area("rjbb"), self.deadline())
@@ -1291,8 +1338,8 @@ class TestReviewRound2:
         token = FakeResponse(body={"access_token": "tok", "expires_in": 1800})
         ok = FakeResponse(body={"time": 1794271833, "states": None})
         replies = [FakeResponse(401), ok, FakeResponse(401), ok]
-        with mock.patch("requests.post", return_value=token) as post, mock.patch(
-            "requests.get", side_effect=replies
+        with patch_http("POST", return_value=token) as post, patch_http(
+            "GET", side_effect=replies
         ):
             with pytest.raises(MetarUpstreamError) as e:
                 adapter.fetch(Area(51.0, 179.9, 25), self.deadline())
@@ -1312,7 +1359,7 @@ class TestReviewRound3:
         from app.services.positions_providers import get
 
         reply = FakeResponse(chunks=[self.body()])
-        with mock.patch("requests.get", return_value=reply) as call:
+        with patch_http("GET", return_value=reply) as call:
             assert (
                 get("https://example.invalid", self.deadline()).json()["now"]
                 == 1794271840001
@@ -1334,7 +1381,7 @@ class TestReviewRound3:
             bytes(piece) for piece in itertools.batched(data, 7)
         ]  # many small reads
         reply = FakeResponse(chunks=pieces, headers={"Content-Encoding": encoding})
-        with mock.patch("requests.get", return_value=reply):
+        with patch_http("GET", return_value=reply):
             assert (
                 get("https://example.invalid", self.deadline()).json()["now"]
                 == 1794271840001
@@ -1347,39 +1394,33 @@ class TestReviewRound3:
         from app.services.positions_providers import get
 
         brotli = FakeResponse(chunks=[b"x"], headers={"Content-Encoding": "br"})
-        with mock.patch("requests.get", return_value=brotli):
+        with patch_http("GET", return_value=brotli):
             with pytest.raises(MetarUpstreamError) as e:
                 get("https://example.invalid", self.deadline())
         assert e.value.reason == "unsupported_encoding"
         bomb = zlib.compress(b"\0" * 20_000_000)  # about 20 kB in, 20 MB out
         reply = FakeResponse(chunks=[bomb], headers={"Content-Encoding": "deflate"})
-        with mock.patch("requests.get", return_value=reply):
+        with patch_http("GET", return_value=reply):
             with pytest.raises(MetarUpstreamError) as e:
                 get("https://example.invalid", self.deadline())
         assert e.value.reason == "response_too_large"
 
-    @pytest.mark.it("maps raw urllib3 read errors to typed errors")
+    @pytest.mark.it("maps transport errors to typed errors")
     @pytest.mark.parametrize(
-        "error, kind", [("timeout", MetarTimeout), ("protocol", MetarUpstreamError)]
+        "error, kind",
+        [
+            (httpx.ReadTimeout("read timed out"), MetarTimeout),
+            (httpx.ConnectTimeout("connect timed out"), MetarTimeout),
+            (httpx.RemoteProtocolError("truncated"), MetarUpstreamError),
+            (httpx.ConnectError("refused"), MetarUpstreamError),
+        ],
     )
-    def test_urllib3_errors(self, error, kind):
-        import urllib3
-
+    def test_transport_errors(self, error, kind):
         from app.services.positions_providers import get
 
-        raised = (
-            urllib3.exceptions.ReadTimeoutError(
-                None, "https://example.invalid", "read timed out"
-            )
-            if error == "timeout"
-            else urllib3.exceptions.ProtocolError("truncated")
-        )
-        reply = FakeResponse(chunks=[])
-        reply.read1 = mock.Mock(side_effect=raised)
-        with mock.patch("requests.get", return_value=reply):
+        with patch_http("GET", side_effect=error):
             with pytest.raises(kind):
                 get("https://example.invalid", self.deadline())
-        assert reply.closed
 
     @pytest.mark.it("treats a cached target with a bad optional field as a miss")
     @pytest.mark.parametrize(
@@ -1446,14 +1487,81 @@ def respond(body: bytes, headers: dict):
     return script
 
 
+class HoldingServer:
+    """A 127.0.0.1 server that accepts connections, optionally trickles bytes
+    on each, counts them, and records when each peer closes."""
+
+    def __init__(self, drip: bytes | None = None):
+        import socket as socketlib
+
+        self.sock = socketlib.socket()
+        self.sock.bind(("127.0.0.1", 0))
+        self.sock.listen(32)
+        self.sock.settimeout(0.05)
+        self.url = f"http://127.0.0.1:{self.sock.getsockname()[1]}/"
+        self.drip = drip
+        self.accepted = 0
+        self.closed = 0
+        self.stop = threading.Event()
+        threading.Thread(target=self.serve, daemon=True).start()
+
+    def serve(self):
+        while not self.stop.is_set():
+            try:
+                conn, _ = self.sock.accept()
+            except OSError:
+                continue
+            self.accepted += 1
+            threading.Thread(target=self.handle, args=(conn,), daemon=True).start()
+
+    def handle(self, conn):
+        try:
+            if self.drip:
+                conn.sendall(self.drip)
+            conn.settimeout(0.05)
+            while not self.stop.is_set():
+                if self.drip:
+                    conn.sendall(b"a")
+                try:
+                    if conn.recv(4096) == b"":
+                        break  # the peer closed
+                except TimeoutError:
+                    pass
+        except OSError:
+            pass  # the peer reset or closed
+        finally:
+            self.closed += 1
+            conn.close()
+
+    def wait_for(self, n, within=3.0):
+        end = time.monotonic() + within
+        while self.accepted < n and time.monotonic() < end:
+            time.sleep(0.01)
+        assert self.accepted >= n
+
+    def wait_closed(self, n, within=1.0):
+        end = time.monotonic() + within
+        while self.closed < n and time.monotonic() < end:
+            time.sleep(0.01)
+        assert self.closed >= n
+
+    def close(self):
+        self.stop.set()
+        self.sock.close()
+
+
+def retryable_busy() -> bool:
+    from app.services.positions_providers import retryable
+
+    return retryable(MetarUpstreamError("requests_busy"))
+
+
 @pytest.mark.describe("Round 4: the deadline against a real HTTP server")
 class TestRealServer:
     @pytest.fixture
-    def short(self):
-        from app.services import positions_providers
-
+    def short(self, real_network):
         with mock.patch.object(
-            positions_providers, "MIN_ATTEMPT_S", 0.05
+            positions_http, "MIN_ATTEMPT_S", 0.05
         ), mock.patch.multiple(settings, PROVIDER_TIMEOUT=1.0):
             yield
 
@@ -1531,11 +1639,9 @@ class TestRealServer:
 @pytest.mark.describe("Round 5: the whole request is bounded (real HTTP server)")
 class TestWholeRequestBounded:
     @pytest.fixture
-    def short(self):
-        from app.services import positions_providers
-
+    def short(self, real_network):
         with mock.patch.object(
-            positions_providers, "MIN_ATTEMPT_S", 0.05
+            positions_http, "MIN_ATTEMPT_S", 0.05
         ), mock.patch.multiple(settings, PROVIDER_TIMEOUT=1.0):
             yield
 
@@ -1591,20 +1697,123 @@ class TestWholeRequestBounded:
             redirect.close()
         assert reply.status_code == 302  # returned, not followed
 
-    @pytest.mark.it(
-        "fails fast without contacting the provider when every request slot is busy"
-    )
+    @pytest.mark.it("fails fast when every connection is busy, without queueing")
     def test_saturated(self, short):
-        from app.services import positions_providers
         from app.services.positions_providers import get
 
-        full = threading.BoundedSemaphore(1)
-        full.acquire()
-        with mock.patch.object(positions_providers, "IN_FLIGHT", full), mock.patch(
-            "requests.get"
-        ) as call:
+        server = HoldingServer()
+        results = []
+
+        def hold():
+            try:
+                get(server.url, time.monotonic() + 3)
+            except Exception as e:
+                results.append(e)
+
+        holders = [
+            threading.Thread(target=hold) for _ in range(positions_http.MAX_CONNECTIONS)
+        ]
+        try:
+            [t.start() for t in holders]
+            server.wait_for(positions_http.MAX_CONNECTIONS)
             begin = time.monotonic()
-            with pytest.raises(MetarTimeout) as e:
-                get("https://example.invalid", time.monotonic() + 0.3)
-        assert e.value.reason == "requests_busy" and not call.called
-        assert time.monotonic() - begin < 0.5
+            with pytest.raises(MetarUpstreamError) as e:
+                get(server.url, time.monotonic() + 3)
+            assert e.value.reason == "requests_busy"
+            assert time.monotonic() - begin < 1.0
+            assert server.accepted == positions_http.MAX_CONNECTIONS  # no extra request
+            [t.join() for t in holders]
+        finally:
+            server.close()
+        assert all(isinstance(r, MetarTimeout) for r in results)
+        assert not retryable_busy()
+
+    @pytest.mark.it("closes the connection at the deadline while headers trickle")
+    def test_peer_sees_close(self, short):
+        from app.services.positions_providers import get
+
+        server = HoldingServer(drip=b"HTTP/1.1 200 OK\r\nX-Slow: ")
+        try:
+            with pytest.raises(MetarTimeout):
+                get(server.url, time.monotonic() + 0.5)
+            server.wait_closed(1, within=1.0)  # the peer saw the socket close
+        finally:
+            server.close()
+        assert server.accepted == 1
+
+    @pytest.mark.it("sends nothing after the deadline when DNS is slow")
+    def test_slow_dns(self, short):
+        import socket as socketlib
+
+        from app.services.positions_providers import get
+
+        server = HoldingServer()
+        real = socketlib.getaddrinfo
+
+        def slow_lookup(host, *args, **kwargs):
+            if host in ("slow.invalid", b"slow.invalid"):  # anyio may pass IDNA bytes
+                time.sleep(1.0)
+                host = "127.0.0.1"
+            return real(host, *args, **kwargs)
+
+        try:
+            with mock.patch("socket.getaddrinfo", slow_lookup):
+                begin = time.monotonic()
+                with pytest.raises(MetarTimeout):
+                    get(
+                        server.url.replace("127.0.0.1", "slow.invalid"),
+                        time.monotonic() + 0.5,
+                    )
+                assert time.monotonic() - begin < 0.8
+                time.sleep(
+                    1.2
+                )  # the lookup finishes; the cancelled task must not connect
+        finally:
+            server.close()
+        assert server.accepted == 0
+
+
+@pytest.mark.describe("Decoder edge cases")
+class TestDecoder:
+    def run(self, encoding, data, cap=1000):
+        from app.services.positions_http import decoder
+
+        d = decoder(encoding)
+        out = d.decode(data, cap)
+        d.finish(len(data))
+        return out
+
+    @pytest.mark.it("accepts raw deflate as well as zlib-wrapped deflate")
+    def test_raw_deflate(self):
+        import zlib
+
+        raw = zlib.compressobj(wbits=-15)
+        data = raw.compress(b'{"a": 1}') + raw.flush()
+        assert self.run("deflate", data) == b'{"a": 1}'
+        assert self.run("deflate", zlib.compress(b'{"a": 1}')) == b'{"a": 1}'
+
+    @pytest.mark.it("ignores zero padding after the last gzip member")
+    def test_padding(self):
+        import gzip
+
+        assert self.run("gzip", gzip.compress(b"ok") + b"\0\0\0\0") == b"ok"
+
+    @pytest.mark.it(
+        "reports corrupt data and data after the stream as invalid_response"
+    )
+    @pytest.mark.parametrize(
+        "encoding, data",
+        [("gzip", b"\x1f\x8bnot gzip"), ("deflate", b"\x78\x9cgarbage")],
+    )
+    def test_corrupt(self, encoding, data):
+        with pytest.raises(MetarUpstreamError) as e:
+            self.run(encoding, data)
+        assert e.value.reason == "invalid_response"
+
+    @pytest.mark.it(
+        "treats an empty body with a Content-Encoding as empty, not truncated"
+    )
+    def test_empty(self):
+        from app.services.positions_http import decoder
+
+        decoder("gzip").finish(0)  # an error response with no body keeps its status

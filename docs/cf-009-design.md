@@ -95,15 +95,18 @@ The state is computed at every read, from the cached raw-normalised result and t
 - **Operation deadline** ([r3: critique 3]):
   - A whole fetch shares a **20 s deadline**: token request, query(ies) and the one retry.
   - Each attempt's timeout is the smaller of `PROVIDER_TIMEOUT` and the time left. No new attempt starts with under 2 s left.
-- **Bounded requests** (review rounds 1–5): any blocking read can be kept alive by a peer that trickles bytes: connect, status line, headers, chunk framing or body. `requests`' timeout only limits each wait. So:
-  - **The whole request runs in its own thread**, and the caller waits only until the operation deadline.
-  - The connect timeout is at most the time left, so a request is sent before the deadline or not at all.
+- **Bounded requests** (review rounds 1–5, then the owner chose an async rewrite, 2026-11-10): synchronous HTTP clients can't be cancelled. A peer that trickles bytes, slow DNS, a multi-address connect or a stalled TLS handshake can hold a blocking call open, and an abandoned thread can even send its request late. So:
+  - Every provider request is an **asyncio task** on one background event loop, using a shared `httpx.AsyncClient`, run under `asyncio.timeout_at(deadline)`.
+  - Cancellation stops DNS waits, connect, TLS, headers and body reads alike, and closes the socket, so **nothing is sent or read after the deadline**. The loop's clock is `time.monotonic`, the same as the callers' deadlines.
   - Redirects aren't followed, since each would be another provider call.
-  - **On overrun** the caller only shuts the socket down, which never blocks (it looks for the socket on the connection and, with `Connection: close`, on the response's reader). It then fails with a timeout and releases its lock. The request's own thread closes the response and makes no further provider calls.
-  - **At most 8 requests are in flight**, abandoned ones included. When all are busy, the call fails fast (`requests_busy`, a timeout) without contacting the provider, so nothing queues without bound.
-  - Compression is declined (`Accept-Encoding: identity`). gzip/deflate sent anyway is decoded incrementally (including multi-member gzip), with the **decoded** size capped at 8 MB and the stream end verified. Other encodings are rejected.
-  - Read errors map to the typed errors (a timeout gives 504, others 502).
-  - Real-server tests on 127.0.0.1 cover trickled headers and chunk framing, `Connection: close`, redirects, saturation, chunked bodies, multi-member gzip and truncation.
+  - **At most 8 connections** are open at once. When all are busy, the request fails within 0.5 s with `requests_busy` (502, not retried) instead of queueing.
+  - Compression is declined (`Accept-Encoding: identity`). gzip/deflate sent anyway is decoded incrementally, covering multi-member gzip, zlib-wrapped or raw deflate, and trailing zero padding. The **decoded** size is capped at 8 MB and the stream end is verified (a truncated body is `invalid_response`). Other encodings are rejected.
+  - Errors map to the typed errors (a timeout gives 504, others 502).
+  - Tests on 127.0.0.1 use a real server:
+    - the peer sees the connection closed at the deadline while headers trickle;
+    - slow DNS leads to **no connection** after the deadline (a control with fast DNS connects);
+    - a saturated pool fails fast with no extra request;
+    - trickled chunk framing, redirects, chunked bodies, multi-member gzip and truncation are all covered.
 - **Single-flight:**
   - On a miss, the caller takes `positions:v1:{provider}:{code}:lock` with `SET NX PX 40000` and a random owner token. The lease (40 s) is longer than the worst-case fetch (30 s), so it can't expire mid-fetch.
   - After taking the lock, the caller re-checks the cache, in case another request filled it in between. It caches its result **before** releasing the lock.

@@ -36,7 +36,7 @@ class Settings(BaseSettings):
     POSITIONS_MAX_AGE_S: int = 60  # C4: older positions are never shown
     POSITIONS_CACHE_TTL: int = 30  # one query per airport per 30 s at most
     POSITIONS_DEADLINE_S: float = 20.0  # a whole fetch, incl. token and retry
-    # Longer than the worst-case fetch: the deadline plus one socket read timeout
+    # Longer than any fetch, which is cancelled at the 20 s deadline
     POSITIONS_LOCK_LEASE_S: int = 40
     POSITIONS_COVERAGE_TTL: int = 86400  # C6: coverage evidence lasts 24 h
     ADSBLOL_RATE_LIMIT_PER_MINUTE: int = 30

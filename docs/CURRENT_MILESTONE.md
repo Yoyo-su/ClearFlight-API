@@ -40,5 +40,4 @@ CF-008 forecast → CF-009 positions → CF-010 map → CF-011 movements → CF-
 - Worst-case lookup latency is about 21 s on provider timeouts; the frontend times out at 25 s.
 
 ## Follow-ups (not scheduled)
-- `httpx==0.28.1` in `requirements.txt` looks unused at runtime (no imports; tests now use `httpx2`); check it and remove it.
 - A deeper visual redesign (D6) and a site-wide "popular airports" list once there's traffic (D5).
