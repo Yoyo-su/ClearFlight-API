@@ -108,6 +108,35 @@ The airport's official forecast (TAF) from the NOAA Aviation Weather Center, as 
 
 **Known limitations:** temperature, icing, turbulence and wind-shear groups aren't used. A TAF whose raw groups don't line up with AWC's decoded periods shows as unknown.
 
+## GET /v1/airports/{code}/aircraft
+Live aircraft positions reported within 25 nm of the airport (CF-009; [design](cf-009-design.md), D-012).
+- **Source:** adsb.lol by default (ODbL 1.0, attribution in `source`). OpenSky is development/educational use only and runs only with `OPENSKY_EDUCATIONAL_USE=true`.
+- **Codes and errors:** as for `/conditions` (400, 404, 502, 503 with `Retry-After`, 504), plus **502 `provider_auth_failed`** when OpenSky authentication fails.
+- **Caching:** results are cached and shared for 30 s per airport, and fetched only while someone asks (no background polling).
+
+**Response:**
+- `airport`;
+- `area`: `latitude`, `longitude`, `radius_nm`;
+- `source`: `provider`, `name`, `attribution_url`, `access`, `privacy_filter`;
+- `observed_at`, `fetched_at`;
+- `aircraft`: `id` (ICAO hex), `callsign`, position, `altitude_ft`, `on_ground`, `ground_speed_kt`, `track_deg`, `vertical_rate_fpm`, `category`, `kind` (`aircraft` or `unclassified`), `position_at`, **`expires_at`** (never show a position after this), `distance_nm`;
+- counts: `withheld` (privacy), `excluded` (surface vehicles and towers), `dropped` (invalid or expired);
+- `data_status` and `unavailable_reason`, `retry_at`, `disclaimer`.
+
+**States:**
+- `available`;
+- `no_aircraft`: only with a fresh feed, nothing dropped or withheld, and airborne traffic seen in the area in the last 24 h;
+- `coverage_unknown`: `no_coverage_evidence`, `stale_feed`, `unusable_data` or `busy`;
+- `quota_exhausted`: `daily_budget` or `budget_unavailable`, with `retry_at`;
+- `unavailable`: `no_location` or `provider_disabled`.
+
+**Privacy:** aircraft flagged LADD/PIA are withheld; registration, owner and type are never returned. OpenSky can't flag them (`privacy_filter: "unavailable"`).
+
+**Known limitations:**
+- Coverage depends on volunteer receivers.
+- OpenSky can't classify surface vehicles, so they appear as `unclassified`.
+- A full Redis wipe can't be told apart from a new day; the first OpenSky response's header then restores the count.
+
 ## GET /v1/airports/search
 Searches the local airport catalogue (OurAirports data, no provider call) by IATA or ICAO code, name or city. Matching ignores case and accents.
 

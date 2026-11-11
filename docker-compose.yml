@@ -20,6 +20,12 @@ services:
       METAR_RATE_LIMIT_PER_MINUTE: "${METAR_RATE_LIMIT_PER_MINUTE:-30}"
       METAR_CURRENT_MAX_MINUTES: "${METAR_CURRENT_MAX_MINUTES:-90}"
       METAR_STALE_MAX_MINUTES: "${METAR_STALE_MAX_MINUTES:-180}"
+      # Live positions (CF-009). OpenSky is development/educational use only:
+      # it runs only with OPENSKY_EDUCATIONAL_USE=true (licence gate, plan §8).
+      POSITIONS_PROVIDER: "${POSITIONS_PROVIDER:-adsblol}"
+      OPENSKY_EDUCATIONAL_USE: "${OPENSKY_EDUCATIONAL_USE:-false}"
+      OPENSKY_CLIENT_ID: ${OPENSKY_CLIENT_ID:-}
+      OPENSKY_CLIENT_SECRET: ${OPENSKY_CLIENT_SECRET:-}
     depends_on:
       - redis
   # Development web app (Vite dev server with live reload). The API is reached

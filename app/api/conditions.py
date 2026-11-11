@@ -55,6 +55,10 @@ def resolve_airport(code: str):
     return airport, airport_data
 
 
+# Upstream failures that keep their own reason in the 502 body.
+OWN_REASONS = {"invalid_forecast", "provider_auth_failed"}
+
+
 def call_provider(fetch, *args):
     """Call a weather-provider function, mapping its errors to HTTP (D-006)."""
     try:
@@ -62,9 +66,7 @@ def call_provider(fetch, *args):
     except MetarTimeout:
         raise ConditionsError(504, "provider_timeout", "The weather provider timed out")
     except MetarUpstreamError as e:
-        reason = (
-            "invalid_forecast" if e.reason == "invalid_forecast" else "provider_error"
-        )
+        reason = e.reason if e.reason in OWN_REASONS else "provider_error"
         raise ConditionsError(502, reason, f"The weather provider failed ({e.reason})")
     except MetarRateLimited as e:
         raise ConditionsError(
