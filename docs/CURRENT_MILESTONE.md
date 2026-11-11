@@ -1,6 +1,6 @@
 # Current milestone: CF-009 Flight positions
 
-**Status:** Implemented on `feat/cf-009-flight-positions`; in review (design approved 2026-11-10, D-012)
+**Status:** Implemented and reviewed on `feat/cf-009-flight-positions`; PR open for owner merge (design approved 2026-11-10, D-012)
 **Source of truth:** [docs/development-plan.md](development-plan.md) v1.1 (§2 feature 2, §3, §4, §5, §8); decisions D-010, D-012
 **Last updated:** 2026-11-10
 
@@ -8,7 +8,12 @@
 Show the live aircraft positions reported near each airport, honestly labelled ("no aircraft" vs "coverage unknown"), from free sources behind one adapter, within provider budgets and the data-licence gate.
 
 ## Next task
-Finish CF-009 reviews (quality-reviewer and Codex), verify the OpenSky token endpoint live once the owner adds account credentials, then open the PR. Design: [cf-009-design.md](cf-009-design.md).
+Owner review and merge of the CF-009 PR; then CF-010 airport map (RQ-003 map tiles first). Design: [cf-009-design.md](cf-009-design.md).
+- **Reviews:**
+  - quality-reviewer (3 passes);
+  - Codex 3 rounds plus 2 owner-approved scoped rounds;
+  - the async HTTP rewrite chosen by the owner; final review found no High or Medium.
+- **OpenSky account (C2), verified live 2026-11-11:** the token endpoint issued a Bearer token (30 min), and authenticated calls returned aircraft at all three pilot airports. The credit counter matched OpenSky's count, and no credentials appear in the logs.
 - **Done:**
   - adsb.lol (default) and OpenSky adapters behind one interface;
   - the area, classification, privacy and per-position expiry;

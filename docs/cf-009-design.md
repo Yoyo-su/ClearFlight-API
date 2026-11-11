@@ -160,7 +160,7 @@ The state is computed at every read, from the cached raw-normalised result and t
     - **Neither set** → anonymous, with the smaller budget.
     - **Only one set** → `unavailable` / `provider_disabled` (misconfiguration; nothing is called).
     - `source.access` says `"anonymous"` or `"account"`.
-  - **Token:** requested from OpenSky's token endpoint (URL in config; verified by a live probe once the owner has added credentials, before the PR) within the operation deadline.
+  - **Token:** requested from OpenSky's token endpoint within the operation deadline. The URL is in config, and was verified live on 2026-11-11: it returns a Bearer token with `expires_in` 1800.
     - Token requests cost no credits and are not reserved.
     - The token is cached in memory until 60 s before it expires.
   - **Token failure:** the token endpoint failing, timing out or returning a malformed token → 502 `provider_auth_failed`, and **no states call** is made.
