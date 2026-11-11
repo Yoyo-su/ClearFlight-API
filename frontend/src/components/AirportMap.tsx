@@ -21,7 +21,9 @@ export const RADAR_REFRESH_MS = 5 * 60_000;
 
 function useOnScreen<T extends Element>(): [React.RefObject<T | null>, boolean] {
   const ref = useRef<T>(null);
-  const [onScreen, setOnScreen] = useState(false);
+  // Without IntersectionObserver, treat the section as on screen (tab
+  // visibility still gates every request).
+  const [onScreen, setOnScreen] = useState(() => typeof IntersectionObserver === "undefined");
   useEffect(() => {
     const el = ref.current;
     if (!el || typeof IntersectionObserver === "undefined") return;
@@ -56,6 +58,10 @@ export function AirportMap({ code, conditions }: { code: string; conditions: Con
   const [radarOn, setRadarOn] = useState(false);
   const [mapFailed, setMapFailed] = useState(false);
   const [selected, setSelected] = useState<string | null>(null);
+  // Once shown, the map stays mounted while scrolling away (no re-download of
+  // the style and tiles); only data requests stop off screen.
+  const [seen, setSeen] = useState(false);
+  if (onScreen && !seen) setSeen(true); // derived state, updated during render
 
   const aircraft = useAirportData(code, fetchAircraft, {
     active: onScreen,
@@ -68,15 +74,14 @@ export function AirportMap({ code, conditions }: { code: string; conditions: Con
   const aircraftData = aircraft.state.data;
   const nearbyData = nearby.state.data;
   const radarData = radar.state.data;
-  const nextExpiry = aircraftData?.aircraft.reduce<number | null>((soonest, a) => {
-    const t = Date.parse(a.expires_at);
-    return soonest === null || t < soonest ? t : soonest;
-  }, null);
+  // Every position's own deadline (C4), not just the earliest one.
+  const expiries = (aircraftData?.aircraft ?? []).map((a) => Date.parse(a.expires_at));
   const now = useNow(onScreen ? 5000 : 60_000, [
-    nextExpiry ?? null,
+    ...expiries,
     aircraftData?.observed_at ? Date.parse(aircraftData.observed_at) + 60_000 : null,
     aircraftData?.retry_at ? Date.parse(aircraftData.retry_at) : null,
     radarData?.frame ? Date.parse(radarData.frame.current_until) : null,
+    ...(nearbyData?.stations ?? []).flatMap((st) => [Date.parse(st.current_until), Date.parse(st.stale_until)]),
     aircraft.state.cooldownUntil || null,
   ]);
 
@@ -87,9 +92,13 @@ export function AirportMap({ code, conditions }: { code: string; conditions: Con
   const area = aircraftData?.area ?? nearbyData?.area ?? null;
 
   const conditionsView = viewAt(conditions, now);
-  const own = conditionsFor(conditions, conditionsView);
+  // The airport's own score only while its report is current (D-008/D11);
+  // stale, too old or missing reports are never scored on the map.
+  const own = conditionsView === "current" ? conditionsFor(conditions, conditionsView) : null;
   const airportLabel =
-    own.score === null ? `${conditions.airport.code}` : `${conditions.airport.code} · ${own.score} ${LEVEL_WORDS[own.level]} (observed)`;
+    own === null || own.score === null
+      ? `${conditions.airport.code}`
+      : `${conditions.airport.code} · ${own.score} ${LEVEL_WORDS[own.level]} (observed)`;
   const selectedAircraft = shown.find((a) => a.id === selected) ?? null;
   const coolingDown = now.getTime() < aircraft.state.cooldownUntil;
 
@@ -97,8 +106,7 @@ export function AirportMap({ code, conditions }: { code: string; conditions: Con
   if (!onScreen && !aircraftData) status = "The map loads when you scroll to it.";
   else if (!view) status = aircraft.state.failure ? "Live positions couldn't be loaded." : "Loading live positions…";
   else if (view.kind === "aircraft") {
-    const age = aircraftData?.fetched_at ? ` · updated ${secondsAgo(aircraftData.fetched_at, now)}` : "";
-    status = `${shown.length} aircraft within ${area?.radius_nm ?? 25} nm · ${aircraftData?.source?.name ?? ""}${age}`;
+    status = `${shown.length} aircraft within ${area?.radius_nm ?? 25} nm · ${aircraftData?.source?.name ?? ""}`;
   } else if (view.kind === "no-aircraft") status = `No aircraft reported within ${area?.radius_nm ?? 25} nm.`;
   else if (view.kind === "coverage-unknown")
     status = `Can't confirm traffic near this airport: ${REASON_TEXT[view.reason ?? ""] ?? "coverage isn't known"}.`;
@@ -110,6 +118,18 @@ export function AirportMap({ code, conditions }: { code: string; conditions: Con
   if (aircraft.state.refreshFailed && view?.kind === "aircraft") status += " (couldn't update just now)";
 
   const hidden = (aircraftData?.withheld ?? 0) + (aircraftData?.excluded ?? 0);
+  // Honest empty states: no stations is a claim; unusable or expired reports aren't.
+  let nearbyMessage = "Not loaded yet.";
+  if (!nearbyData) {
+    if (nearby.state.failure) nearbyMessage = "Nearby weather couldn't be loaded.";
+  } else if (nearbyData.unavailable_reason === "unusable_data") nearbyMessage = "Nearby reports couldn't be used.";
+  else if (nearbyData.unavailable_reason === "reports_too_old" || nearbyData.stations.length > 0)
+    nearbyMessage = "Nearby reports are out of date."; // every one has expired on screen
+  else nearbyMessage = "No nearby reporting stations.";
+  const refreshMap = () => {
+    aircraft.refresh();
+    nearby.refresh();
+  };
   const radarEnabled = radarData?.enabled ?? false;
 
   return (
@@ -123,8 +143,12 @@ export function AirportMap({ code, conditions }: { code: string; conditions: Con
       <a className="skip-link" href="#map-list">
         Skip the map, go to the list
       </a>
-      <p role="status" className="map-status">
-        {status}
+      <p className="map-status">
+        {/* Only state changes are announced; the ticking age isn't. */}
+        <span role="status">{status}</span>
+        {view?.kind === "aircraft" && aircraftData?.fetched_at && (
+          <span className="muted small"> · updated {secondsAgo(aircraftData.fetched_at, now)}</span>
+        )}
       </p>
       <div className="map-controls">
         {radarEnabled && (
@@ -135,14 +159,19 @@ export function AirportMap({ code, conditions }: { code: string; conditions: Con
             {radarOn && !frame && <span className="muted small"> · radar unavailable</span>}
           </label>
         )}
-        <button type="button" className="button button-ghost" onClick={aircraft.refresh} disabled={coolingDown || !onScreen}>
+        <button type="button" className="button button-ghost" onClick={refreshMap} disabled={coolingDown || !onScreen}>
           Refresh map
         </button>
       </div>
       <div className="map-frame">
         {mapFailed ? (
-          <p className="map-failed">The map couldn't load. The list below has the same information.</p>
-        ) : onScreen && area ? (
+          <div className="map-failed">
+            <p>The map couldn't load. The list below has the same information.</p>
+            <button type="button" className="button button-ghost" onClick={() => setMapFailed(false)}>
+              Try the map again
+            </button>
+          </div>
+        ) : seen && area ? (
           <Suspense fallback={<p className="map-failed">Loading map…</p>}>
             <MapView
               center={{ latitude: area.latitude, longitude: area.longitude }}
@@ -160,16 +189,27 @@ export function AirportMap({ code, conditions }: { code: string; conditions: Con
         )}
       </div>
       {selectedAircraft && (
-        <p className="map-selected" role="status">
+        <p className="map-selected">
           <strong>{selectedAircraft.callsign ?? selectedAircraft.id.toUpperCase()}</strong>: {altitude(selectedAircraft)}
           {selectedAircraft.ground_speed_kt !== null && ` · ${selectedAircraft.ground_speed_kt} kt`} · {selectedAircraft.distance_nm} nm away · position{" "}
           {secondsAgo(selectedAircraft.position_at, now)}
         </p>
       )}
       <p className="muted small map-note">
-        Map tiles from OpenFreeMap (© OpenMapTiles © OpenStreetMap contributors); loading the map sends your IP address and
-        the area viewed to that service. {aircraftData?.source && `Positions: ${aircraftData.source.name}.`} Weather: NOAA
-        Aviation Weather Center.{frame && " Radar © RainViewer."}
+        Map tiles from OpenFreeMap (© OpenMapTiles © OpenStreetMap contributors){frame && " and radar tiles from RainViewer"};
+        loading them sends your IP address and the area viewed to {frame ? "those services" : "that service"}.{" "}
+        {aircraftData?.source && (
+          <>
+            Positions: <a href={aircraftData.source.attribution_url}>{aircraftData.source.name}</a>.{" "}
+          </>
+        )}
+        Weather: NOAA Aviation Weather Center.
+        {frame && radarData && (
+          <>
+            {" "}
+            <a href={radarData.attribution_url}>{radarData.attribution}</a>.
+          </>
+        )}
       </p>
 
       {/* Scrollable, so focusable for keyboard scrolling; also the skip target. */}
@@ -223,7 +263,7 @@ export function AirportMap({ code, conditions }: { code: string; conditions: Con
             {stations.length === 0 ? (
               <tr>
                 <td colSpan={4}>
-                  {nearbyData ? "No nearby reporting stations." : nearby.state.failure ? "Nearby weather couldn't be loaded." : "Not loaded yet."}
+                  {nearbyMessage}
                 </td>
               </tr>
             ) : (

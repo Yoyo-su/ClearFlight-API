@@ -220,7 +220,9 @@ class NearbyConditionsResponse(BaseModel):
     dropped: int  # records without a valid station, position or time
     fetched_at: datetime | None
     data_status: Literal["available", "unavailable"]
-    unavailable_reason: Literal["no_stations", "unusable_data"] | None
+    unavailable_reason: (
+        Literal["no_stations", "unusable_data", "reports_too_old"] | None
+    )
     source: str
 
 

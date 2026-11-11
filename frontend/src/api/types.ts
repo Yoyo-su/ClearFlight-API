@@ -227,7 +227,7 @@ export const NearbyConditionsResponseSchema = obj({
   dropped: num,
   fetched_at: nullable(datetime),
   data_status: literal("available", "unavailable"),
-  unavailable_reason: nullable(literal("no_stations", "unusable_data")),
+  unavailable_reason: nullable(literal("no_stations", "unusable_data", "reports_too_old")),
   source: str,
 });
 

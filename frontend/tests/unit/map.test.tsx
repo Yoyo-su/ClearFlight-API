@@ -62,13 +62,15 @@ function setVisibility(state: "visible" | "hidden") {
 type Route = Fixture | "network";
 let layers: { aircraft: () => Route; nearby: () => Route; radar: () => Route };
 
+let conditionsFixture = "conditions-egll-severe";
+
 function makeFetch() {
   return fixtureFetch((url) => {
     if (url.includes("/aircraft")) return layers.aircraft();
     if (url.includes("/nearby-conditions")) return layers.nearby();
     if (url.includes("/map/radar")) return layers.radar();
     if (url.includes("/forecast")) return fixture("forecast-egll-fog");
-    return fixture("conditions-egll-severe");
+    return fixture(conditionsFixture);
   });
 }
 
@@ -98,6 +100,7 @@ beforeEach(() => {
   setVisibility("visible");
   observers = [];
   vi.stubGlobal("IntersectionObserver", FakeObserver);
+  conditionsFixture = "conditions-egll-severe";
   layers = {
     aircraft: () => fixture("aircraft-egll-available"),
     nearby: () => fixture("nearby-egll-available"),
@@ -254,5 +257,81 @@ describe("live map: radar (M4)", () => {
     await settle();
     fireEvent.click(screen.getByRole("checkbox", { name: /Radar/ }));
     expect(screen.getByTestId("map-radar")).toHaveTextContent("none");
+  });
+});
+
+describe("live map: review round 1 fixes (CF-010)", () => {
+  it("keeps the map mounted after scrolling away (no re-download)", async () => {
+    await renderMap();
+    await setOnScreen(true);
+    await settle();
+    expect(screen.getByTestId("map-view")).toBeInTheDocument();
+    await setOnScreen(false);
+    await settle();
+    expect(screen.getByTestId("map-view")).toBeInTheDocument();
+  });
+
+  it("announces state changes only, not the ticking update age", async () => {
+    await renderMap();
+    await setOnScreen(true);
+    await settle(10_000);
+    const live = within(section()).getAllByRole("status");
+    expect(live.some((el) => /updated/.test(el.textContent ?? ""))).toBe(false);
+    expect(within(section()).getByText(/updated \d+ s ago/)).toBeInTheDocument();
+  });
+
+  it("never scores the airport on the map from a report that is too old", async () => {
+    conditionsFixture = "conditions-egll-too-old";
+    await renderMap();
+    await setOnScreen(true);
+    await settle();
+    expect(screen.getByTestId("map-airport")).toHaveTextContent(/^EGLL$/);
+  });
+
+  it("removes each later aircraft exactly at its own expiry", async () => {
+    const body = fixture("aircraft-kjfk-available").body as { aircraft: { expires_at: string }[] };
+    const expiries = [...new Set(body.aircraft.map((a) => Date.parse(a.expires_at)))].sort((x, y) => x - y);
+    const second = expiries[1]!;
+    const replies: Route[] = [fixture("aircraft-kjfk-available")];
+    layers.aircraft = () => replies.shift() ?? "network";
+    await renderMap();
+    await setOnScreen(true);
+    await settle();
+    await settle(second - Date.now() + 1); // just past the second-earliest expiry
+    const left = body.aircraft.filter((a) => Date.parse(a.expires_at) > Date.now()).length;
+    expect(screen.getByTestId("map-aircraft")).toHaveTextContent(String(left));
+  });
+
+  it("says nearby reports are out of date, not that there are no stations", async () => {
+    const replies: Route[] = [fixture("nearby-egll-available")];
+    layers.nearby = () => replies.shift() ?? "network";
+    await renderMap();
+    await setOnScreen(true);
+    await settle();
+    await settle(4 * 60 * 60_000); // every report is past its stale_until
+    const weather = screen.getByRole("table", { name: /Observed weather at nearby airports/ });
+    expect(within(weather).getByText("Nearby reports are out of date.")).toBeInTheDocument();
+    expect(within(weather).queryByText("No nearby reporting stations.")).not.toBeInTheDocument();
+  });
+
+  it("refreshes nearby weather too with Refresh map", async () => {
+    const fetch = await renderMap();
+    await setOnScreen(true);
+    await settle(31_000);
+    const before = calls(fetch, "/nearby-conditions");
+    fireEvent.click(screen.getByRole("button", { name: "Refresh map" }));
+    await settle();
+    expect(calls(fetch, "/nearby-conditions")).toBe(before + 1);
+  });
+
+  it("names RainViewer in the privacy note when radar tiles load", async () => {
+    layers.radar = () => fixture("radar-available");
+    await renderMap();
+    await setOnScreen(true);
+    await settle();
+    expect(within(section()).queryByText(/radar tiles from RainViewer/)).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("checkbox", { name: /Radar/ }));
+    expect(within(section()).getByText(/radar tiles from RainViewer/)).toBeInTheDocument();
+    expect(within(section()).getByRole("link", { name: "Radar © RainViewer" })).toHaveAttribute("href", "https://www.rainviewer.com");
   });
 });

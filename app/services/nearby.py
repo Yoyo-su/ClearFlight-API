@@ -28,10 +28,9 @@ NO_STATIONS_TTL = 300
 STATION_PATTERN = re.compile(r"[A-Z0-9]{4}")
 
 
-def bbox(area: Area) -> str:
-    """AWC bbox parameter: lat0,lon0,lat1,lon1 (one box; split at ±180)."""
-    lamin, lomin, lamax, lomax = area.boxes()[0]
-    return f"{lamin:.4f},{lomin:.4f},{lamax:.4f},{lomax:.4f}"
+def bboxes(area: Area) -> list[str]:
+    """AWC bbox parameters, lat0,lon0,lat1,lon1: two boxes across ±180."""
+    return [f"{a:.4f},{b:.4f},{c:.4f},{d:.4f}" for a, b, c, d in area.boxes()]
 
 
 def get_nearby(code: str, area: Area, exclude: str | None) -> dict:
@@ -52,8 +51,14 @@ def get_nearby(code: str, area: Area, exclude: str | None) -> dict:
         except (ValueError, KeyError, TypeError):
             logger.warning("Ignoring invalid cached nearby result for %s", code)
     fetched_at = datetime.now(timezone.utc)
-    records = fetch_metar_records(code, AWC_METAR_URL, {"bbox": bbox(area)})
+    records = []
+    capped = False
+    for box in bboxes(area):  # one query, or two across the date line
+        part = fetch_metar_records(code, AWC_METAR_URL, {"bbox": box})
+        capped = capped or (isinstance(part, list) and len(part) >= AWC_RESULT_CAP)
+        records += part if isinstance(part, list) else []
     result = parse_nearby(records, area, exclude, fetched_at)
+    result["complete"] = result["complete"] and not capped  # any query at the cap
     cache_response(cache_key, serialise(result), ttl_for(result, fetched_at))
     return result
 

@@ -30,6 +30,7 @@ FAILED_KEY = "radar:v1:failed"
 LOCK_KEY = "radar:v1:lock"
 CACHE_TTL = 300  # seconds
 FAILURE_TTL = 60  # an outage costs at most one fetch a minute per process
+KEPT_REASONS = {"invalid_index", "no_frames"}  # reasons that are 200 states
 MAX_FRAME_AGE = timedelta(hours=3)
 FRAME_VALID_FOR = timedelta(minutes=20)
 ATTRIBUTION = "Radar © RainViewer"
@@ -111,8 +112,12 @@ def get_radar(now: datetime | None = None) -> dict:
 
 
 def cached_index(client):
-    if client.get(FAILED_KEY) is not None:
-        raise MetarUpstreamError("provider_error", "recent radar failure")
+    failed = client.get(FAILED_KEY)
+    if failed is not None:
+        # The same failure, with the same reason, for every caller in the
+        # back-off window (an invalid index stays a 200 state, not a 502).
+        reason = failed if failed in KEPT_REASONS else "provider_error"
+        raise MetarUpstreamError(reason, "recent radar failure")
     raw = client.get(CACHE_KEY)
     if raw is None:
         return None
@@ -134,12 +139,19 @@ def fetch_shared(client):
                 return index
         raise MetarUpstreamError("provider_error", "radar busy")
     try:
+        # Another caller may have finished (or failed) between our miss and lock.
+        index = cached_index(client)
+        if index is not None:
+            return index
         try:
             index = fetch_index()
         except MetarRateLimited:
             raise  # our own cap: RainViewer wasn't contacted
+        except MetarUpstreamError as e:
+            client.set(FAILED_KEY, e.reason, ex=FAILURE_TTL)  # back off a minute
+            raise
         except Exception:
-            client.set(FAILED_KEY, 1, ex=FAILURE_TTL)  # back off for a minute
+            client.set(FAILED_KEY, "provider_error", ex=FAILURE_TTL)
             raise
         client.set(CACHE_KEY, json.dumps(index), ex=CACHE_TTL)
         return index

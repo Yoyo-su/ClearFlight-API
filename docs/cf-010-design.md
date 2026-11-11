@@ -93,7 +93,7 @@ RainViewer's Weather Maps API allows "personal and educational use only", with a
     - `host` must be exactly `https://tilecache.rainviewer.com`;
     - each `radar.past[].path` must match `^/v2/radar/[A-Za-z0-9]+$`;
     - `time` must be a sane epoch within the last 3 h.
-    
+
     Anything else gives `unavailable` / `invalid_index`, so the browser is never pointed at another host.
   - **Response** [r3: critique 2]: `{ enabled: bool, data_status: "available" | "unavailable", unavailable_reason: null | "provider_disabled" | "invalid_index" | "no_frames", frame: { time, tile_url } | null, current_until, attribution }`.
     - **Gate off** → `enabled: false`, `data_status: "unavailable"`, `unavailable_reason: "provider_disabled"`, and nothing is fetched.
@@ -152,7 +152,7 @@ RainViewer's Weather Maps API allows "personal and educational use only", with a
   - the states and texts;
   - the list;
   - contract tests.
-  
+
   MapLibre is mocked in unit tests.
 - **e2e (desktop and mobile, with axe):**
   - the map section with fixtures, and tiles **stubbed by Playwright routing**, so no external requests;

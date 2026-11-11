@@ -45,11 +45,12 @@ def nearby_query(code: str) -> dict:
         )
     reason = None
     if not stations:
-        reason = (
-            "no_stations"
-            if result["records"] == 0 or not result["dropped"]
-            else "unusable_data"
-        )
+        if result["stations"]:
+            reason = "reports_too_old"  # stations exist, but every report expired
+        elif result["dropped"]:
+            reason = "unusable_data"
+        else:
+            reason = "no_stations"
     return {
         "airport": airport_data,
         "area": {

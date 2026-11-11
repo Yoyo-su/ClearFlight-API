@@ -119,7 +119,8 @@ class TestNearbyParse:
 
     @pytest.mark.it("builds the AWC bbox from the area")
     def test_bbox(self):
-        lat0, lon0, lat1, lon1 = map(float, nearby.bbox(EGLL).split(","))
+        (box,) = nearby.bboxes(EGLL)
+        lat0, lon0, lat1, lon1 = map(float, box.split(","))
         assert lat0 < 51.47 < lat1 and lon0 < -0.46 < lon1
         assert lat1 - lat0 == pytest.approx(100 / 60, abs=0.01)
 
@@ -138,7 +139,7 @@ class TestNearbyCache:
     @pytest.mark.it("queries AWC with a bbox once and caches for 10 minutes")
     def test_cache(self, fake_redis):
         result, fetch = self.run(bbox_records(), fake_redis)
-        assert fetch.call_args.args[2] == {"bbox": nearby.bbox(EGLL)}
+        assert fetch.call_args.args[2] == {"bbox": nearby.bboxes(EGLL)[0]}
         assert 590 < fake_redis.ttl("nearby:v1:EGLL") <= 600
         again, fetch = self.run(bbox_records(), fake_redis)
         assert not fetch.called
@@ -199,7 +200,7 @@ class TestNearbyEndpoint:
         assert (gone["stations"], gone["data_status"], gone["unavailable_reason"]) == (
             [],
             "unavailable",
-            "no_stations",
+            "reports_too_old",
         )
 
     @pytest.mark.it("distinguishes no stations from unusable data")
@@ -411,3 +412,90 @@ class TestRadarEndpoint:
     )
     def test_errors(self, client, fake_redis, radar_on, error, status):
         assert self.call(client, error=error).status_code == status
+
+
+@pytest.mark.describe("Review round 1 fixes (CF-010)")
+class TestReviewRound1:
+    @pytest.mark.it("queries both sides of the date line and merges them")
+    def test_date_line(self, fake_redis):
+        labasa = Area(-16.4667, 179.34, 50)  # NFNL; Matei (NFNM) is across ±180
+        east = {
+            "icaoId": "NFNM",
+            "lat": -16.69,
+            "lon": -179.88,
+            "name": "Matei",
+            "obsTime": 1794268800,
+        }
+        west = {
+            "icaoId": "NFNS",
+            "lat": -16.80,
+            "lon": 179.34,
+            "name": "Savusavu",
+            "obsTime": 1794268800,
+        }
+        replies = [[west], [east]]
+        with mock.patch(
+            "app.services.nearby.fetch_metar_records",
+            side_effect=lambda *a: replies.pop(0),
+        ) as fetch:
+            result = nearby.get_nearby("NFNL", labasa, "NFNL")
+        assert fetch.call_count == 2
+        assert {s["station"] for s in result["stations"]} >= {
+            "NFNS"
+        }  # the parsed ones within 50 nm
+        assert len(nearby.bboxes(labasa)) == 2
+
+    @pytest.mark.it(
+        "marks the answer incomplete when either date-line query hits the cap"
+    )
+    def test_date_line_cap(self, fake_redis):
+        labasa = Area(-16.4667, 179.34, 50)
+        capped = [{"icaoId": "XXXX", "lat": 0, "lon": 0, "obsTime": 1}] * 400
+        replies = [capped, []]
+        with mock.patch(
+            "app.services.nearby.fetch_metar_records",
+            side_effect=lambda *a: replies.pop(0),
+        ):
+            assert nearby.get_nearby("NFNL", labasa, "NFNL")["complete"] is False
+
+    @pytest.mark.it(
+        "says reports_too_old, not no_stations, when every report has expired"
+    )
+    def test_reports_too_old(self, client):
+        result = nearby.parse_nearby(bbox_records(), EGLL, "EGLL", fetched_time())
+        body = get_nearby(
+            client, "LHR", result, now=fetched_time() + timedelta(hours=4)
+        ).json()
+        assert (body["data_status"], body["unavailable_reason"]) == (
+            "unavailable",
+            "reports_too_old",
+        )
+
+    @pytest.mark.it("re-checks the radar cache after taking the lock")
+    def test_radar_recheck(self, fake_redis, radar_on):
+        real_acquire = radar.Lock.acquire
+
+        def acquire(lock):
+            fake_redis.set(radar.CACHE_KEY, json.dumps(rainviewer_index()), ex=300)
+            return real_acquire(lock)
+
+        with mock.patch.object(radar.Lock, "acquire", acquire), mock.patch(
+            "app.services.radar.get"
+        ) as get:
+            assert radar.get_radar(NOW)["time"].minute == 30
+        assert not get.called
+
+    @pytest.mark.it(
+        "keeps an invalid index a 200 state for every caller in the back-off"
+    )
+    def test_radar_reason_kept(self, client, fake_redis, radar_on):
+        with mock.patch(
+            "app.services.radar.get", return_value=Reply(body=ValueError("not json"))
+        ), mock.patch("app.api.radar.utc_now", return_value=NOW):
+            first = client.get("/v1/map/radar")
+            second = client.get("/v1/map/radar")
+        assert [r.status_code for r in (first, second)] == [200, 200]
+        assert [r.json()["unavailable_reason"] for r in (first, second)] == [
+            "invalid_index",
+            "invalid_index",
+        ]

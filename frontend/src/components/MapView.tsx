@@ -105,6 +105,7 @@ export default function MapView({
   const mapRef = useRef<MapLibreMap | null>(null);
   const readyRef = useRef(false);
   const markersRef = useRef<maplibregl.Marker[]>([]);
+  const drawnRef = useRef("");
   const latest = useRef({ aircraft, stations, airportLabel, radarTileUrl, onSelectAircraft, onError });
   latest.current = { aircraft, stations, airportLabel, radarTileUrl, onSelectAircraft, onError };
 
@@ -128,9 +129,10 @@ export default function MapView({
     mapRef.current = map;
     map.addControl(new maplibregl.NavigationControl({ showCompass: false }), "top-right");
     map.on("error", (event) => {
-      // A failed style or tile; radar tile errors alone don't break the map.
-      const source = (event as { sourceId?: string }).sourceId;
-      if (source !== "radar") latest.current.onError();
+      // Only a failure before the first load (style, WebGL) is fatal. A failed
+      // tile later (a blip, or a radar tile) just leaves that tile blank.
+      if (!readyRef.current) latest.current.onError();
+      else console.warn("Map tile error", (event as { error?: unknown }).error);
     });
     map.on("load", () => {
       const dLat = radiusNm / NM_PER_DEGREE;
@@ -171,6 +173,7 @@ export default function MapView({
       map.on("mouseenter", "aircraft", () => (map.getCanvas().style.cursor = "pointer"));
       map.on("mouseleave", "aircraft", () => (map.getCanvas().style.cursor = ""));
       readyRef.current = true;
+      drawnRef.current = "";
       draw();
     });
     return () => {
@@ -188,6 +191,16 @@ export default function MapView({
     const map = mapRef.current;
     if (!map || !readyRef.current) return;
     const data = latest.current;
+    // Redraw only when something visible changed (the parent re-renders on
+    // every clock tick).
+    const key = JSON.stringify([
+      data.aircraft.map((a) => [a.id, a.latitude, a.longitude, a.track_deg, a.on_ground, a.kind]),
+      data.stations.map((st) => [st.station, st.view, st.conditions.score]),
+      data.airportLabel,
+      data.radarTileUrl,
+    ]);
+    if (key === drawnRef.current) return;
+    drawnRef.current = key;
     (map.getSource("aircraft") as GeoJSONSource | undefined)?.setData(aircraftCollection(data.aircraft));
 
     markersRef.current.forEach((m) => m.remove());
@@ -201,7 +214,8 @@ export default function MapView({
     };
     if (data.airportLabel) label(data.airportLabel, "map-label map-label-airport", center.longitude, center.latitude);
     for (const s of data.stations) {
-      const score = s.view === "stale" || s.conditions.score === null ? "old report" : `${s.conditions.score} ${LEVEL_WORDS[s.conditions.level]}`;
+      const score =
+        s.view === "stale" ? "old report" : s.conditions.score === null ? "unknown" : `${s.conditions.score} ${LEVEL_WORDS[s.conditions.level]}`;
       label(`${s.station} · ${score}`, `map-label map-label-${s.view === "stale" ? "stale" : s.conditions.level}`, s.longitude, s.latitude);
     }
 
