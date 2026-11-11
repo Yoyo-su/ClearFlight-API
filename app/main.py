@@ -7,12 +7,16 @@ from app.api.aircraft import aircraft_query
 from app.api.airport_search import search_query
 from app.api.conditions import ConditionsError, conditions_query
 from app.api.forecast import forecast_query
+from app.api.nearby import nearby_query
+from app.api.radar import radar_query
 from app.api.models import (
     AircraftResponse,
     AirportSearchResponse,
     ConditionsResponse,
     ErrorResponse,
     ForecastResponse,
+    NearbyConditionsResponse,
+    RadarResponse,
 )
 from app.services.airport_catalogue import get_catalogue
 
@@ -87,6 +91,26 @@ def get_airport_forecast(code: str):
 def get_airport_aircraft(code: str):
     """Live aircraft positions within 25 nm of an airport (CF-009)."""
     return aircraft_query(code)
+
+
+@app.get(
+    "/v1/airports/{code}/nearby-conditions",
+    response_model=NearbyConditionsResponse,
+    responses=ERROR_RESPONSES,
+)
+def get_nearby_conditions(code: str):
+    """Observed conditions at reporting stations within 50 nm (CF-010)."""
+    return nearby_query(code)
+
+
+@app.get(
+    "/v1/map/radar",
+    response_model=RadarResponse,
+    responses={status: {"model": ErrorResponse} for status in (502, 503, 504)},
+)
+def get_map_radar():
+    """The latest radar frame for the map, when enabled (CF-010)."""
+    return radar_query()
 
 
 # Legacy prototype route, replaced by /v1/airports/{code}/conditions;

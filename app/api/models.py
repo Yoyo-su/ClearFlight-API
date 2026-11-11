@@ -199,6 +199,48 @@ class AircraftResponse(BaseModel):
     disclaimer: str
 
 
+class NearbyStation(BaseModel):
+    station: str
+    name: str | None
+    latitude: float
+    longitude: float
+    distance_nm: float
+    observed_at: datetime
+    current_until: datetime
+    stale_until: datetime
+    data_status: Literal["current", "stale"]
+    conditions: Conditions
+
+
+class NearbyConditionsResponse(BaseModel):
+    airport: ConditionsAirport
+    area: AircraftArea
+    stations: list[NearbyStation]  # sorted by distance; the airport itself excluded
+    complete: bool  # false when AWC's 400-record cap was reached
+    dropped: int  # records without a valid station, position or time
+    fetched_at: datetime | None
+    data_status: Literal["available", "unavailable"]
+    unavailable_reason: Literal["no_stations", "unusable_data"] | None
+    source: str
+
+
+class RadarFrame(BaseModel):
+    time: datetime
+    tile_url: str  # {z}/{x}/{y} template on tilecache.rainviewer.com only
+    current_until: datetime  # hide the frame after this
+
+
+class RadarResponse(BaseModel):
+    enabled: bool
+    data_status: Literal["available", "unavailable"]
+    unavailable_reason: (
+        Literal["provider_disabled", "invalid_index", "no_frames"] | None
+    )
+    frame: RadarFrame | None
+    attribution: str
+    attribution_url: str
+
+
 class ErrorResponse(BaseModel):
     detail: str
     reason: str
