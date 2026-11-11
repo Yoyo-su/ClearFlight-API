@@ -285,7 +285,7 @@ describe("live map: review round 1 fixes (CF-010)", () => {
     await renderMap();
     await setOnScreen(true);
     await settle();
-    expect(screen.getByTestId("map-airport")).toHaveTextContent(/^EGLL$/);
+    expect(screen.getByTestId("map-airport")).toHaveTextContent(/^EGLL · old report$/); // no score, and why
   });
 
   it("removes each later aircraft exactly at its own expiry", async () => {
@@ -333,5 +333,31 @@ describe("live map: review round 1 fixes (CF-010)", () => {
     fireEvent.click(screen.getByRole("checkbox", { name: /Radar/ }));
     expect(within(section()).getByText(/radar tiles from RainViewer/)).toBeInTheDocument();
     expect(within(section()).getByRole("link", { name: "Radar © RainViewer" })).toHaveAttribute("href", "https://www.rainviewer.com");
+  });
+});
+
+describe("live map: review round 2 fixes (CF-010)", () => {
+  it("says in text whether each target is an aircraft or unclassified", async () => {
+    layers.aircraft = () => fixture("aircraft-kjfk-available");
+    await renderMap();
+    await setOnScreen(true);
+    await settle();
+    const table = screen.getByRole("table", { name: /Aircraft within 25 nm/ });
+    expect(within(table).getByRole("columnheader", { name: "Type" })).toBeInTheDocument();
+    expect(within(table).getAllByText("Aircraft").length).toBeGreaterThan(0);
+    expect(within(table).getAllByText("Unclassified target").length).toBeGreaterThan(0);
+  });
+
+  it("refreshes nearby weather on every permitted Refresh map click", async () => {
+    const fetch = await renderMap();
+    await setOnScreen(true);
+    await settle(31_000);
+    const button = screen.getByRole("button", { name: "Refresh map" });
+    fireEvent.click(button);
+    await settle(31_000); // past the 30 s cooldown, before the 60 s default
+    const before = calls(fetch, "/nearby-conditions");
+    fireEvent.click(button);
+    await settle();
+    expect(calls(fetch, "/nearby-conditions")).toBe(before + 1);
   });
 });

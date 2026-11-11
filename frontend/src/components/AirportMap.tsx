@@ -58,6 +58,7 @@ export function AirportMap({ code, conditions }: { code: string; conditions: Con
   const [radarOn, setRadarOn] = useState(false);
   const [mapFailed, setMapFailed] = useState(false);
   const [selected, setSelected] = useState<string | null>(null);
+  const [selectedStation, setSelectedStation] = useState<string | null>(null);
   // Once shown, the map stays mounted while scrolling away (no re-download of
   // the style and tiles); only data requests stop off screen.
   const [seen, setSeen] = useState(false);
@@ -68,7 +69,11 @@ export function AirportMap({ code, conditions }: { code: string; conditions: Con
     refreshMs: AIRCRAFT_REFRESH_MS,
     cooldownMs: AIRCRAFT_REFRESH_MS,
   });
-  const nearby = useAirportData(code, fetchNearby, { active: onScreen, refreshMs: NEARBY_REFRESH_MS });
+  const nearby = useAirportData(code, fetchNearby, {
+    active: onScreen,
+    refreshMs: NEARBY_REFRESH_MS,
+    cooldownMs: AIRCRAFT_REFRESH_MS, // the same as the shared Refresh map button
+  });
   const radar = useAirportData(code, fetchRadar, { active: onScreen, refreshMs: RADAR_REFRESH_MS });
 
   const aircraftData = aircraft.state.data;
@@ -82,6 +87,8 @@ export function AirportMap({ code, conditions }: { code: string; conditions: Con
     aircraftData?.retry_at ? Date.parse(aircraftData.retry_at) : null,
     radarData?.frame ? Date.parse(radarData.frame.current_until) : null,
     ...(nearbyData?.stations ?? []).flatMap((st) => [Date.parse(st.current_until), Date.parse(st.stale_until)]),
+    conditions.current_until ? Date.parse(conditions.current_until) : null,
+    conditions.stale_until ? Date.parse(conditions.stale_until) : null,
     aircraft.state.cooldownUntil || null,
   ]);
 
@@ -95,10 +102,12 @@ export function AirportMap({ code, conditions }: { code: string; conditions: Con
   // The airport's own score only while its report is current (D-008/D11);
   // stale, too old or missing reports are never scored on the map.
   const own = conditionsView === "current" ? conditionsFor(conditions, conditionsView) : null;
-  const airportLabel =
-    own === null || own.score === null
-      ? `${conditions.airport.code}`
-      : `${conditions.airport.code} · ${own.score} ${LEVEL_WORDS[own.level]} (observed)`;
+  let ownText: string;
+  if (own && own.score !== null) ownText = `${own.score} ${LEVEL_WORDS[own.level]} (observed)`;
+  else if (own) ownText = "unknown (observed)";
+  else if (conditionsView === "stale" || conditionsView === "too-old") ownText = "old report";
+  else ownText = "no current report";
+  const airportLabel = `${conditions.airport.code} · ${ownText}`;
   const selectedAircraft = shown.find((a) => a.id === selected) ?? null;
   const coolingDown = now.getTime() < aircraft.state.cooldownUntil;
 
@@ -181,6 +190,7 @@ export function AirportMap({ code, conditions }: { code: string; conditions: Con
               airportLabel={airportLabel}
               radarTileUrl={frame?.tile_url ?? null}
               onSelectAircraft={setSelected}
+              onSelectStation={setSelectedStation}
               onError={() => setMapFailed(true)}
             />
           </Suspense>
@@ -195,6 +205,18 @@ export function AirportMap({ code, conditions }: { code: string; conditions: Con
           {secondsAgo(selectedAircraft.position_at, now)}
         </p>
       )}
+      {(() => {
+        const st = stations.find((x) => x.station === selectedStation);
+        if (!st) return null;
+        const index =
+          st.view === "stale" ? "not scored (old report)" : st.conditions.score === null ? "unknown" : `${st.conditions.score} / 10 ${LEVEL_WORDS[st.conditions.level]}`;
+        return (
+          <p className="map-selected">
+            <strong>{st.station}</strong>
+            {st.name && ` ${st.name}`}: observed conditions index {index} · observed {formatUtcTime(st.observed_at)} · {st.distance_nm} nm away
+          </p>
+        );
+      })()}
       <p className="muted small map-note">
         Map tiles from OpenFreeMap (© OpenMapTiles © OpenStreetMap contributors){frame && " and radar tiles from RainViewer"};
         loading them sends your IP address and the area viewed to {frame ? "those services" : "that service"}.{" "}
@@ -222,6 +244,7 @@ export function AirportMap({ code, conditions }: { code: string; conditions: Con
           <thead>
             <tr>
               <th scope="col">Callsign</th>
+              <th scope="col">Type</th>
               <th scope="col">Altitude</th>
               <th scope="col">Speed</th>
               <th scope="col">Distance</th>
@@ -231,12 +254,13 @@ export function AirportMap({ code, conditions }: { code: string; conditions: Con
           <tbody>
             {shown.length === 0 ? (
               <tr>
-                <td colSpan={5}>{status}</td>
+                <td colSpan={6}>{status}</td>
               </tr>
             ) : (
               shown.map((a) => (
                 <tr key={a.id}>
                   <th scope="row">{a.callsign ?? `${a.id.toUpperCase()} (no callsign)`}</th>
+                  <td>{a.kind === "aircraft" ? "Aircraft" : "Unclassified target"}</td>
                   <td>{altitude(a)}</td>
                   <td>{a.ground_speed_kt === null ? "Unknown" : `${a.ground_speed_kt} kt`}</td>
                   <td>{a.distance_nm} nm</td>

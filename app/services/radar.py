@@ -102,7 +102,7 @@ def get_radar(now: datetime | None = None) -> dict:
     try:
         index = cached_index(client)
         if index is None:
-            index = fetch_shared(client)
+            index = fetch_shared(client, now)
     except redis.RedisError as e:
         logger.warning(
             "Redis unavailable for radar; fetching uncached: %s", type(e).__name__
@@ -127,7 +127,7 @@ def cached_index(client):
         return None
 
 
-def fetch_shared(client):
+def fetch_shared(client, now: datetime):
     """Fetch the index once for all concurrent callers (CF-009 lock)."""
     lock = Lock(client, LOCK_KEY, int(DEADLINE_S) + 10)
     if not lock.acquire():
@@ -152,6 +152,12 @@ def fetch_shared(client):
             raise
         except Exception:
             client.set(FAILED_KEY, "provider_error", ex=FAILURE_TTL)
+            raise
+        try:
+            latest_frame(index, now)  # validate before caching (spec §5)
+        except MetarUpstreamError as e:
+            # A bad index takes the 60 s failure path, not the 5 min cache.
+            client.set(FAILED_KEY, e.reason, ex=FAILURE_TTL)
             raise
         client.set(CACHE_KEY, json.dumps(index), ex=CACHE_TTL)
         return index

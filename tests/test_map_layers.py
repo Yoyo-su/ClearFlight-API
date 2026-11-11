@@ -499,3 +499,28 @@ class TestReviewRound1:
             "invalid_index",
             "invalid_index",
         ]
+
+
+@pytest.mark.describe("Review round 2 fixes (CF-010)")
+class TestReviewRound2:
+    @pytest.mark.it(
+        "puts an invalid index on the 60 s failure path, not the 5 min cache"
+    )
+    @pytest.mark.parametrize(
+        "index, reason",
+        [
+            (rainviewer_index(host="https://evil.example"), "invalid_index"),
+            (rainviewer_index(radar={"past": []}), "no_frames"),
+        ],
+    )
+    def test_invalid_not_cached(self, fake_redis, radar_on, index, reason):
+        with mock.patch(
+            "app.services.radar.get", return_value=Reply(body=index)
+        ) as get:
+            for _ in range(2):
+                with pytest.raises(MetarUpstreamError) as e:
+                    radar.get_radar(NOW)
+                assert e.value.reason == reason
+        assert get.call_count == 1
+        assert not fake_redis.exists(radar.CACHE_KEY)
+        assert 0 < fake_redis.ttl(radar.FAILED_KEY) <= 60

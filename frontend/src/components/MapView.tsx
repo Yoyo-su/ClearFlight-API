@@ -30,6 +30,7 @@ export interface MapViewProps {
   airportLabel: string | null; // e.g. "EGLL · 8 Severe (observed)"
   radarTileUrl: string | null;
   onSelectAircraft: (id: string) => void;
+  onSelectStation: (station: string) => void;
   onError: () => void;
 }
 
@@ -60,8 +61,12 @@ function aircraftCollection(aircraft: AircraftPosition[]): FeatureCollection {
   };
 }
 
-/** A plane silhouette as an SDF icon (tinted by the layer). */
-function planeIcon(size = 32): ImageData | null {
+/**
+ * A plane silhouette as an SDF icon (tinted by the layer): filled when
+ * airborne, outlined on the ground, dashed outline when unclassified (the
+ * target may not be an aircraft) — shape, not only colour, tells them apart.
+ */
+function planeIcon(style: "filled" | "outline" | "dashed", size = 64): ImageData | null {
   const canvas = document.createElement("canvas");
   canvas.width = canvas.height = size;
   const ctx = canvas.getContext("2d");
@@ -87,7 +92,13 @@ function planeIcon(size = 32): ImageData | null {
   ctx.lineTo(3 * s, 18 * s);
   ctx.lineTo(14 * s, 12 * s);
   ctx.closePath();
-  ctx.fill();
+  if (style === "filled") ctx.fill();
+  else {
+    ctx.lineWidth = 3 * s; // thick enough to survive SDF rendering
+    ctx.lineJoin = "round";
+    ctx.setLineDash(style === "dashed" ? [4 * s, 3 * s] : []);
+    ctx.stroke();
+  }
   return ctx.getImageData(0, 0, size, size);
 }
 
@@ -99,6 +110,7 @@ export default function MapView({
   airportLabel,
   radarTileUrl,
   onSelectAircraft,
+  onSelectStation,
   onError,
 }: MapViewProps) {
   const container = useRef<HTMLDivElement>(null);
@@ -106,8 +118,8 @@ export default function MapView({
   const readyRef = useRef(false);
   const markersRef = useRef<maplibregl.Marker[]>([]);
   const drawnRef = useRef("");
-  const latest = useRef({ aircraft, stations, airportLabel, radarTileUrl, onSelectAircraft, onError });
-  latest.current = { aircraft, stations, airportLabel, radarTileUrl, onSelectAircraft, onError };
+  const latest = useRef({ aircraft, stations, airportLabel, radarTileUrl, onSelectAircraft, onSelectStation, onError });
+  latest.current = { aircraft, stations, airportLabel, radarTileUrl, onSelectAircraft, onSelectStation, onError };
 
   // Create the map once per airport.
   useEffect(() => {
@@ -129,10 +141,12 @@ export default function MapView({
     mapRef.current = map;
     map.addControl(new maplibregl.NavigationControl({ showCompass: false }), "top-right");
     map.on("error", (event) => {
-      // Only a failure before the first load (style, WebGL) is fatal. A failed
-      // tile later (a blip, or a radar tile) just leaves that tile blank.
-      if (!readyRef.current) latest.current.onError();
-      else console.warn("Map tile error", (event as { error?: unknown }).error);
+      // Only a failure not tied to a tile or source, before the first load
+      // (the style, WebGL), is fatal. A failed tile, at any time (a blip, or
+      // a radar tile), just leaves that tile blank.
+      const e = event as { sourceId?: string; tile?: unknown; error?: unknown };
+      if (!readyRef.current && !e.sourceId && !e.tile) latest.current.onError();
+      else console.warn("Map tile error", e.error);
     });
     map.on("load", () => {
       const dLat = radiusNm / NM_PER_DEGREE;
@@ -146,15 +160,21 @@ export default function MapView({
       );
       map.addSource("area", { type: "geojson", data: circle(center.latitude, center.longitude, radiusNm) });
       map.addLayer({ id: "area", type: "line", source: "area", paint: { "line-color": "#1f5fbf", "line-opacity": 0.35, "line-width": 1.5 } });
-      const icon = planeIcon();
-      if (icon) map.addImage("plane", icon, { sdf: true });
+      for (const [name, style] of [
+        ["plane-air", "filled"],
+        ["plane-ground", "outline"],
+        ["plane-unclassified", "dashed"],
+      ] as const) {
+        const icon = planeIcon(style);
+        if (icon) map.addImage(name, icon, { sdf: true, pixelRatio: 2 }); // drawn at 2x for crisp edges
+      }
       map.addSource("aircraft", { type: "geojson", data: aircraftCollection([]) });
       map.addLayer({
         id: "aircraft",
         type: "symbol",
         source: "aircraft",
         layout: {
-          "icon-image": "plane",
+          "icon-image": ["match", ["get", "state"], "air", "plane-air", "ground", "plane-ground", "plane-unclassified"],
           "icon-size": ["match", ["get", "state"], "ground", 0.55, 0.75],
           "icon-rotate": ["get", "track"],
           "icon-rotation-alignment": "map",
@@ -205,18 +225,24 @@ export default function MapView({
 
     markersRef.current.forEach((m) => m.remove());
     markersRef.current = [];
-    const label = (text: string, className: string, lon: number, lat: number) => {
+    const label = (text: string, className: string, lon: number, lat: number, station?: string, above = false) => {
       const el = document.createElement("div");
       el.className = className;
       el.textContent = text;
       el.setAttribute("aria-hidden", "true"); // the list below carries the same data
-      markersRef.current.push(new maplibregl.Marker({ element: el }).setLngLat([lon, lat]).addTo(map));
+      if (station) {
+        el.style.cursor = "pointer";
+        el.addEventListener("click", () => latest.current.onSelectStation(station));
+      }
+      // The airport label sits above its point, so it doesn't cover the field.
+      const options = above ? { element: el, anchor: "bottom" as const, offset: [0, -18] as [number, number] } : { element: el };
+      markersRef.current.push(new maplibregl.Marker(options).setLngLat([lon, lat]).addTo(map));
     };
-    if (data.airportLabel) label(data.airportLabel, "map-label map-label-airport", center.longitude, center.latitude);
+    if (data.airportLabel) label(data.airportLabel, "map-label map-label-airport", center.longitude, center.latitude, undefined, true);
     for (const s of data.stations) {
       const score =
         s.view === "stale" ? "old report" : s.conditions.score === null ? "unknown" : `${s.conditions.score} ${LEVEL_WORDS[s.conditions.level]}`;
-      label(`${s.station} · ${score}`, `map-label map-label-${s.view === "stale" ? "stale" : s.conditions.level}`, s.longitude, s.latitude);
+      label(`${s.station} · ${score}`, `map-label map-label-${s.view === "stale" ? "stale" : s.conditions.level}`, s.longitude, s.latitude, s.station);
     }
 
     const radar = map.getSource("radar");
