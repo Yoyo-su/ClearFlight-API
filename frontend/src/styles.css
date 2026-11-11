@@ -845,3 +845,122 @@ h2 {
     grid-column: 2;
   }
 }
+
+/* Live map (CF-010). Markers carry the number and level word; colour is
+   never the only signal (D2). */
+.map-section .skip-link {
+  position: absolute;
+  left: -9999px;
+}
+.map-section .skip-link:focus {
+  position: static;
+}
+.map-status {
+  margin: 0;
+  font-size: 15px;
+}
+.map-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.radar-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+}
+.map-frame {
+  position: relative;
+  height: 420px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+  background: var(--ground);
+}
+.map-canvas,
+.map-placeholder {
+  width: 100%;
+  height: 100%;
+}
+.map-failed {
+  margin: 0;
+  padding: 24px;
+  color: var(--muted);
+}
+.map-label {
+  padding: 2px 6px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+  background: var(--card);
+  border: 1px solid var(--border-strong);
+  color: var(--ink);
+}
+.map-label-airport {
+  font-size: 13px;
+  border-width: 2px;
+}
+.map-label-moderate {
+  color: var(--moderate-fg);
+  background: var(--moderate-bg);
+}
+.map-label-high {
+  color: var(--high-fg);
+  background: var(--high-bg);
+}
+.map-label-severe {
+  color: var(--severe-fg);
+  background: var(--severe-bg);
+}
+.map-label-stale,
+.map-label-unknown {
+  color: var(--unknown-fg);
+  background: var(--unknown-bg);
+  font-weight: 400;
+}
+.map-selected,
+.map-note {
+  margin: 0;
+}
+.map-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  max-height: 480px;
+  overflow: auto;
+}
+.map-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+.map-table caption {
+  text-align: left;
+  font-weight: 600;
+  padding-bottom: 6px;
+}
+.map-table th,
+.map-table td {
+  text-align: left;
+  padding: 6px 8px;
+  border-top: 1px solid #e6eaf0;
+  vertical-align: top;
+}
+.map-table thead th {
+  color: var(--muted);
+  font-weight: 500;
+  border-top: none;
+}
+
+@media (max-width: 600px) {
+  .map-frame {
+    height: 320px;
+  }
+  .map-table {
+    font-size: 13px;
+  }
+}

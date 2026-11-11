@@ -46,6 +46,10 @@ class Settings(BaseSettings):
     OPENSKY_CLIENT_ID: SecretStr | None = None  # C2: both or neither
     OPENSKY_CLIENT_SECRET: SecretStr | None = None
     OPENSKY_DAILY_CREDIT_BUDGET: int | None = None  # default: 90% of the limit
+    # RainViewer radar is for personal/educational use only (CF-010 M4); the
+    # radar layer exists only when this is true. CF-006 checks it is false
+    # unless a licence or another source exists.
+    RAINVIEWER_EDUCATIONAL_USE: bool = False
     OPENSKY_TOKEN_URL: str = (
         "https://auth.opensky-network.org/auth/realms/opensky-network"
         "/protocol/openid-connect/token"

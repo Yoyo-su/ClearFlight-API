@@ -11,8 +11,8 @@ Under active development and **not publicly deployed**: public deployment waits 
 
 | | |
 |---|---|
-| Done | Airport catalogue and search (CF-002) · METAR weather adapter (CF-003) · conditions API and index v0.1 (CF-004) · web app (CF-005) · forecast outlook from TAFs (CF-008) · live aircraft positions API (CF-009) |
-| Next | Rest of Phase 2 ([plan v1.1](docs/development-plan.md)): airport map, observed movements, disruption signals, flight lookup |
+| Done | Airport catalogue and search (CF-002) · METAR weather adapter (CF-003) · conditions API and index v0.1 (CF-004) · web app (CF-005) · forecast outlook from TAFs (CF-008) · live aircraft positions API (CF-009) · airport live map (CF-010) |
+| Next | Rest of Phase 2 ([plan v1.1](docs/development-plan.md)): observed movements, disruption signals, flight lookup |
 | Deferred | Public deployment (CF-006) and traveller validation (CF-007), until that phase is built |
 
 **Known limitations:**
@@ -87,6 +87,8 @@ Three routes, documented in full in [docs/API.md](docs/API.md):
 | `GET /v1/airports/{code}/conditions` | Airport, latest observation, conditions index, freshness and eligibility times |
 | `GET /v1/airports/{code}/forecast` | Airport, TAF summary and a 12-hour forecast outlook (labelled forecast) |
 | `GET /v1/airports/{code}/aircraft` | Live aircraft positions within 25 nm (adsb.lol, ODbL; source, privacy filter, per-position expiry) |
+| `GET /v1/airports/{code}/nearby-conditions` | Observed conditions at reporting stations within 50 nm |
+| `GET /v1/map/radar` | Latest RainViewer radar frame, only when `RAINVIEWER_EDUCATIONAL_USE=true` |
 | `GET /health` | `{"status": "ok"}` |
 
 ## Development

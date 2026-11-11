@@ -143,7 +143,116 @@ export const ForecastResponseSchema = refine(forecastResponseFields, (r) => {
   return null;
 });
 
+// CF-009/CF-010 map layers (docs/cf-009-design.md §7, cf-010-design.md §3-§5).
+const AreaSchema = obj({ latitude: num, longitude: num, radius_nm: num });
+
+export const AircraftPositionSchema = obj({
+  id: str,
+  callsign: nullable(str),
+  latitude: num,
+  longitude: num,
+  altitude_ft: nullable(num),
+  on_ground: bool,
+  ground_speed_kt: nullable(num),
+  track_deg: nullable(num),
+  vertical_rate_fpm: nullable(num),
+  category: nullable(str),
+  kind: literal("aircraft", "unclassified"),
+  position_at: datetime,
+  expires_at: datetime,
+  distance_nm: num,
+});
+
+const aircraftResponseFields = obj({
+  airport: AirportSchema,
+  area: AreaSchema,
+  source: nullable(
+    obj({
+      provider: literal("adsblol", "opensky"),
+      name: str,
+      attribution_url: str,
+      access: literal("keyless", "anonymous", "account"),
+      privacy_filter: literal("applied", "unavailable"),
+    }),
+  ),
+  observed_at: nullable(datetime),
+  fetched_at: nullable(datetime),
+  aircraft: arr(AircraftPositionSchema),
+  withheld: num,
+  excluded: num,
+  dropped: num,
+  data_status: literal("available", "no_aircraft", "coverage_unknown", "quota_exhausted", "unavailable"),
+  unavailable_reason: nullable(
+    literal(
+      "no_location",
+      "provider_disabled",
+      "no_coverage_evidence",
+      "stale_feed",
+      "busy",
+      "unusable_data",
+      "daily_budget",
+      "budget_unavailable",
+    ),
+  ),
+  retry_at: nullable(datetime),
+  disclaimer: str,
+});
+
+// The expiry rules depend on these: a feed answer carries its data time.
+export const AircraftResponseSchema = refine(aircraftResponseFields, (r) => {
+  const fed = r.data_status === "available" || r.data_status === "no_aircraft";
+  if (fed && (r.observed_at === null || r.source === null)) return `${r.data_status} response lacks observed_at/source`;
+  if (r.data_status === "no_aircraft" && r.aircraft.length > 0) return "no_aircraft response has aircraft";
+  return null;
+});
+
+export const NearbyStationSchema = obj({
+  station: str,
+  name: nullable(str),
+  latitude: num,
+  longitude: num,
+  distance_nm: num,
+  observed_at: datetime,
+  current_until: datetime,
+  stale_until: datetime,
+  data_status: literal("current", "stale"),
+  conditions: ConditionsSchema,
+});
+
+export const NearbyConditionsResponseSchema = obj({
+  airport: AirportSchema,
+  area: AreaSchema,
+  stations: arr(NearbyStationSchema),
+  complete: bool,
+  dropped: num,
+  fetched_at: nullable(datetime),
+  data_status: literal("available", "unavailable"),
+  unavailable_reason: nullable(literal("no_stations", "unusable_data", "reports_too_old")),
+  source: str,
+});
+
+export const RadarResponseSchema = refine(
+  obj({
+    enabled: bool,
+    data_status: literal("available", "unavailable"),
+    unavailable_reason: nullable(literal("provider_disabled", "invalid_index", "no_frames")),
+    frame: nullable(obj({ time: datetime, tile_url: str, current_until: datetime })),
+    attribution: str,
+    attribution_url: str,
+  }),
+  (r) => {
+    if (r.frame && !r.frame.tile_url.startsWith("https://tilecache.rainviewer.com/")) return "unexpected radar tile host";
+    if (r.data_status === "available" && r.frame === null) return "available radar has no frame";
+    return null;
+  },
+);
+
 export type Airport = Infer<typeof AirportSchema>;
+export type AircraftPosition = Infer<typeof AircraftPositionSchema>;
+export type AircraftResponse = Infer<typeof AircraftResponseSchema>;
+export type NearbyStation = Infer<typeof NearbyStationSchema>;
+export type NearbyConditionsResponse = Infer<typeof NearbyConditionsResponseSchema>;
+export type RadarResponse = Infer<typeof RadarResponseSchema>;
 export type AirportResult = Infer<typeof AirportResultSchema>;
 export type AirportSearchResponse = Infer<typeof AirportSearchResponseSchema>;
 export type SkyCondition = Infer<typeof SkyConditionSchema>;

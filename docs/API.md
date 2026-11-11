@@ -137,6 +137,35 @@ Live aircraft positions reported within 25 nm of the airport (CF-009; [design](c
 - OpenSky can't classify surface vehicles, so they appear as `unclassified`.
 - A full Redis wipe can't be told apart from a new day; the first OpenSky response's header then restores the count.
 
+## GET /v1/airports/{code}/nearby-conditions
+Observed conditions at reporting stations within **50 nm** of the airport (CF-010; [design](cf-010-design.md) §4, D-013). The airport itself is excluded; its own conditions come from `/conditions`.
+- **Data:** one AWC METAR bounding-box query per airport, validated (station pattern, coordinates), de-duplicated (the latest observation per station) and filtered by true distance.
+- **Errors:** as for `/conditions` (400, 404, 502, 503, 504).
+
+**Response:**
+- `airport`, `area`;
+- `stations`: `station`, `name`, `latitude`, `longitude`, `distance_nm`, `observed_at`, `current_until`, `stale_until`, `data_status` (`current` or `stale`), `conditions` (the observed index, D-007), sorted by distance;
+- `complete`: false when AWC's 400-record cap was reached;
+- `dropped`, `fetched_at`;
+- `data_status`: `available` or `unavailable`;
+- `unavailable_reason`: `no_stations` or `unusable_data`;
+- `source`.
+
+Stale stations are unscored, and expired ones are dropped.
+
+**Caching:** 10 minutes per airport; 60 s when every station is already stale (the D-007 stale-CDN rule); 5 minutes when there are no stations.
+
+## GET /v1/map/radar
+The latest RainViewer radar frame for the map (CF-010 §5). **Only with `RAINVIEWER_EDUCATIONAL_USE=true`** (personal/educational use only); otherwise `enabled: false`, `unavailable_reason: "provider_disabled"`, and nothing is fetched.
+
+**Response:**
+- `enabled`;
+- `data_status` and `unavailable_reason`: `provider_disabled`, `invalid_index` or `no_frames`;
+- `frame`: `time`, `tile_url` (a `{z}/{x}/{y}` template on `tilecache.rainviewer.com` only), and `current_until` (frame time + 20 min);
+- `attribution` and `attribution_url`.
+
+**Index handling:** the index is validated before anything reaches the browser (exact tile host, path pattern, plausible times). It's cached for 5 minutes, with single-flight, a 60 s back-off after a failure, and a cap of 6 fetches per minute per process. Tiles stop at zoom 7, so at airport zoom the radar is coarse.
+
 ## GET /v1/airports/search
 Searches the local airport catalogue (OurAirports data, no provider call) by IATA or ICAO code, name or city. Matching ignores case and accents.
 
