@@ -14,6 +14,7 @@ import { LEVEL_WORDS } from "./ConditionsCard";
 // information for keyboard and screen-reader users (M6).
 
 const MapView = lazy(() => import("./MapView"));
+const AIRPORT_MARKER = "__airport__"; // MapView's key for the airport's own marker
 
 export const AIRCRAFT_REFRESH_MS = 30_000; // the server's cache period (M5)
 export const NEARBY_REFRESH_MS = 10 * 60_000;
@@ -206,6 +207,15 @@ export function AirportMap({ code, conditions }: { code: string; conditions: Con
         </p>
       )}
       {(() => {
+        if (selectedStation === AIRPORT_MARKER) {
+          const obs = conditions.observation;
+          return (
+            <p className="map-selected">
+              <strong>{conditions.airport.code}</strong> {conditions.airport.name}: {ownText}
+              {obs && ` · observed ${formatUtcTime(obs.observed_at)}`}
+            </p>
+          );
+        }
         const st = stations.find((x) => x.station === selectedStation);
         if (!st) return null;
         const index =

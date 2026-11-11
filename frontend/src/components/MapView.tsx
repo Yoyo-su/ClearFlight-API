@@ -22,6 +22,9 @@ maplibregl.setWorkerUrl(workerUrl);
 export const MAP_STYLE_URL: string =
   import.meta.env.VITE_MAP_STYLE_URL ?? "https://tiles.openfreemap.org/styles/positron";
 
+/** The selection key for the airport's own weather marker. */
+export const AIRPORT_MARKER = "__airport__";
+
 export interface MapViewProps {
   center: { latitude: number; longitude: number };
   radiusNm: number;
@@ -35,6 +38,7 @@ export interface MapViewProps {
 }
 
 const NM_PER_DEGREE = 60;
+const OWN_SOURCES = new Set(["area", "aircraft", "radar"]); // not the basemap
 
 function circle(lat: number, lon: number, radiusNm: number, steps = 64): Feature {
   const coordinates = Array.from({ length: steps + 1 }, (_, i) => {
@@ -146,7 +150,21 @@ export default function MapView({
       // a radar tile), just leaves that tile blank.
       const e = event as { sourceId?: string; tile?: unknown; error?: unknown };
       if (!readyRef.current && !e.sourceId && !e.tile) latest.current.onError();
-      else console.warn("Map tile error", e.error);
+      else {
+        if (e.tile && e.sourceId && !OWN_SOURCES.has(e.sourceId)) basemapErrors += 1;
+        console.warn("Map tile error", e.error);
+      }
+    });
+    // A total basemap outage (the style loads, every tile fails) would leave a
+    // silently blank map; once loading settles, treat it as a failure.
+    let basemapErrors = 0;
+    let basemapLoaded = 0;
+    map.on("data", (event) => {
+      const e = event as { dataType?: string; sourceId?: string; tile?: unknown };
+      if (e.dataType === "source" && e.tile && e.sourceId && !OWN_SOURCES.has(e.sourceId)) basemapLoaded += 1;
+    });
+    map.on("idle", () => {
+      if (basemapErrors > 0 && basemapLoaded === 0) latest.current.onError();
     });
     map.on("load", () => {
       const dLat = radiusNm / NM_PER_DEGREE;
@@ -238,7 +256,7 @@ export default function MapView({
       const options = above ? { element: el, anchor: "bottom" as const, offset: [0, -18] as [number, number] } : { element: el };
       markersRef.current.push(new maplibregl.Marker(options).setLngLat([lon, lat]).addTo(map));
     };
-    if (data.airportLabel) label(data.airportLabel, "map-label map-label-airport", center.longitude, center.latitude, undefined, true);
+    if (data.airportLabel) label(data.airportLabel, "map-label map-label-airport", center.longitude, center.latitude, AIRPORT_MARKER, true);
     for (const s of data.stations) {
       const score =
         s.view === "stale" ? "old report" : s.conditions.score === null ? "unknown" : `${s.conditions.score} ${LEVEL_WORDS[s.conditions.level]}`;

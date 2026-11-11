@@ -1,6 +1,6 @@
 # Current milestone: CF-010 Airport map
 
-**Status:** Implemented on `feat/cf-010-airport-map`; in review (design approved 2026-11-11, D-013)
+**Status:** Implemented and reviewed on `feat/cf-010-airport-map`; PR open for owner merge (design approved 2026-11-11, D-013)
 **Source of truth:** [docs/development-plan.md](development-plan.md) v1.1 (§5 CF-010, §7, §8); decisions D-010, D-012, D-013
 **Last updated:** 2026-11-12
 
@@ -8,7 +8,12 @@
 A live map on each airport page: aircraft positions and observed weather nearby, with honest states, polling only while visible, and clear attribution.
 
 ## Next task
-Reviews (quality-reviewer and Codex), then the PR for owner merge. Design: [cf-010-design.md](cf-010-design.md).
+Owner review and merge of the CF-010 PR; then CF-011 observed movements. Design: [cf-010-design.md](cf-010-design.md).
+- **Reviews:**
+  - quality-reviewer: 3 Medium and 7 Low, fixed;
+  - Codex: r1 1H/5M/2L, r2 0H/3M/4L, scoped r3 0H/1M/1L, all fixed with tests.
+  
+  The r3 fixes (total basemap outage, airport marker selection) weren't re-reviewed, as the review cap was reached with no open High.
 - **Done:**
   - RQ-003 map tiles: OpenFreeMap, with MapLibre;
   - `/nearby-conditions` (AWC bbox) and `/map/radar` (RainViewer behind `RAINVIEWER_EDUCATIONAL_USE`);

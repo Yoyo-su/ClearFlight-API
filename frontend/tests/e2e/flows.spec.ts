@@ -257,3 +257,27 @@ test("when the map can't load, the list still carries the data (CF-010)", async 
   await expect(page.getByRole("table", { name: /Aircraft within 25 nm/ }).getByRole("row")).not.toHaveCount(1);
   await expectAccessible(page);
 });
+
+test("a total basemap tile outage shows the failure note, not a blank map (CF-010)", async ({ page }) => {
+  // A real WebGL map rendered in software plus axe: slower than other flows.
+  test.slow();
+  await mockApi(page, { EGLL: "conditions-egll-severe" });
+  const styleWithTiles = {
+    version: 8,
+    sources: { base: { type: "vector", tiles: ["https://tiles.openfreemap.org/tiles/{z}/{x}/{y}.pbf"], maxzoom: 14 } },
+    layers: [
+      { id: "background", type: "background", paint: { "background-color": "#eef2f6" } },
+      { id: "water", type: "fill", source: "base", "source-layer": "water", paint: { "fill-color": "#a0c8f0" } },
+    ],
+  };
+  await page.route("https://tiles.openfreemap.org/**", (route) =>
+    route.request().url().endsWith(".pbf")
+      ? route.fulfill({ status: 503, body: "" })
+      : route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(styleWithTiles) }),
+  );
+  await page.goto("/airport/EGLL");
+  const map = page.getByRole("region", { name: "Live map" });
+  await map.scrollIntoViewIfNeeded();
+  await expect(map.getByText("The map couldn't load. The list below has the same information.")).toBeVisible({ timeout: 20_000 });
+  await expect(map.getByRole("button", { name: "Try the map again" })).toBeVisible();
+});
