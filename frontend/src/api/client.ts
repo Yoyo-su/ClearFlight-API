@@ -3,6 +3,12 @@ import {
   AirportSearchResponseSchema,
   ConditionsResponseSchema,
   ForecastResponseSchema,
+  AircraftResponseSchema,
+  NearbyConditionsResponseSchema,
+  RadarResponseSchema,
+  type AircraftResponse,
+  type NearbyConditionsResponse,
+  type RadarResponse,
   type AirportSearchResponse,
   type ConditionsResponse,
   type ForecastResponse,
@@ -70,6 +76,19 @@ export function fetchConditions(code: string, signal: AbortSignal): Promise<ApiR
 
 export function fetchForecast(code: string, signal: AbortSignal): Promise<ApiResult<ForecastResponse>> {
   return getJson(`/v1/airports/${encodeURIComponent(code)}/forecast`, ForecastResponseSchema, signal);
+}
+
+export function fetchAircraft(code: string, signal: AbortSignal): Promise<ApiResult<AircraftResponse>> {
+  return getJson(`/v1/airports/${encodeURIComponent(code)}/aircraft`, AircraftResponseSchema, signal);
+}
+
+export function fetchNearby(code: string, signal: AbortSignal): Promise<ApiResult<NearbyConditionsResponse>> {
+  return getJson(`/v1/airports/${encodeURIComponent(code)}/nearby-conditions`, NearbyConditionsResponseSchema, signal);
+}
+
+/** Radar isn't per airport; the code argument only fits the polling hook. */
+export function fetchRadar(_code: string, signal: AbortSignal): Promise<ApiResult<RadarResponse>> {
+  return getJson("/v1/map/radar", RadarResponseSchema, signal);
 }
 
 export function searchAirports(query: string, signal: AbortSignal): Promise<ApiResult<AirportSearchResponse>> {

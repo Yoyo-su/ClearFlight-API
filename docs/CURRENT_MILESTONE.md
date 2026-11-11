@@ -1,33 +1,27 @@
-# Current milestone: CF-009 Flight positions
+# Current milestone: CF-010 Airport map
 
-**Status:** Implemented and reviewed on `feat/cf-009-flight-positions`; PR open for owner merge (design approved 2026-11-10, D-012)
-**Source of truth:** [docs/development-plan.md](development-plan.md) v1.1 (§2 feature 2, §3, §4, §5, §8); decisions D-010, D-012
-**Last updated:** 2026-11-10
+**Status:** Implemented on `feat/cf-010-airport-map`; in review (design approved 2026-11-11, D-013)
+**Source of truth:** [docs/development-plan.md](development-plan.md) v1.1 (§5 CF-010, §7, §8); decisions D-010, D-012, D-013
+**Last updated:** 2026-11-12
 
 ## Goal
-Show the live aircraft positions reported near each airport, honestly labelled ("no aircraft" vs "coverage unknown"), from free sources behind one adapter, within provider budgets and the data-licence gate.
+A live map on each airport page: aircraft positions and observed weather nearby, with honest states, polling only while visible, and clear attribution.
 
 ## Next task
-Owner review and merge of the CF-009 PR; then CF-010 airport map (RQ-003 map tiles first). Design: [cf-009-design.md](cf-009-design.md).
-- **Reviews:**
-  - quality-reviewer (3 passes);
-  - Codex 3 rounds plus 2 owner-approved scoped rounds;
-  - the async HTTP rewrite chosen by the owner; final review found no High or Medium.
-- **OpenSky account (C2), verified live 2026-11-11:** the token endpoint issued a Bearer token (30 min), and authenticated calls returned aircraft at all three pilot airports. The credit counter matched OpenSky's count, and no credentials appear in the logs.
+Reviews (quality-reviewer and Codex), then the PR for owner merge. Design: [cf-010-design.md](cf-010-design.md).
 - **Done:**
-  - adsb.lol (default) and OpenSky adapters behind one interface;
-  - the area, classification, privacy and per-position expiry;
-  - the state rules;
-  - the OpenSky credit budget (Lua reservation, per-second slot, raise-only reconciliation, counter-loss sentinel, fail closed);
-  - single-flight;
-  - the licence gate;
-  - `GET /v1/airports/{code}/aircraft`.
-- **Live exit check (2026-11-10):** aircraft at EGLL, KJFK and RJBB through the finished adapters (adsb.lol, and OpenSky anonymous with the gate flag).
+  - RQ-003 map tiles: OpenFreeMap, with MapLibre;
+  - `/nearby-conditions` (AWC bbox) and `/map/radar` (RainViewer behind `RAINVIEWER_EDUCATIONAL_USE`);
+  - the polling hook, with every request path gated on "active" and visibility;
+  - the "Live map" section: lazy MapLibre, aircraft and station layers, the radar toggle (off by default), the always-visible list, and honest, expiring states;
+  - contract fixtures;
+  - unit tests, and e2e tests with axe (desktop and mobile), including request counting while hidden and the real WebGL canvas.
 
 ## Phase 2 order (plan v1.1)
 CF-008 forecast → CF-009 positions → CF-010 map → CF-011 movements → CF-012 disruption signals → CF-013 flight lookup. Then CF-006 public deployment (with the data-licence gate) and CF-007 validation.
 
 ## Completed since CF-005
+- CF-009 live positions: PR #25 merged 2026-11-11 (`b869095`). Spec: [cf-009-design.md](cf-009-design.md); decision D-012.
 - CF-008 forecast outlook: PR #24 merged 2026-11-10 (`429d1ca`). Spec: [cf-008-design.md](cf-008-design.md); decision D-011.
 - Cleanup PRs #20 (housekeeping), #21 (search ranking, visibility, zone names) and #22 (README rewrite; docs/API.md, docs/DEVELOPMENT.md), merged 2026-11-06/08.
 - RQ-002 free flight-data research (closed, follow-up), and plan v1.1 with its design critique.

@@ -26,6 +26,8 @@ services:
       OPENSKY_EDUCATIONAL_USE: "${OPENSKY_EDUCATIONAL_USE:-false}"
       OPENSKY_CLIENT_ID: ${OPENSKY_CLIENT_ID:-}
       OPENSKY_CLIENT_SECRET: ${OPENSKY_CLIENT_SECRET:-}
+      # RainViewer radar on the map is educational use only (CF-010 M4).
+      RAINVIEWER_EDUCATIONAL_USE: "${RAINVIEWER_EDUCATIONAL_USE:-false}"
     depends_on:
       - redis
   # Development web app (Vite dev server with live reload). The API is reached

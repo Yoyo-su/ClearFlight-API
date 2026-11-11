@@ -5,6 +5,9 @@ import { defineConfig, devices } from "@playwright/test";
 export default defineConfig({
   testDir: "tests/e2e",
   fullyParallel: true,
+  // The map renders WebGL in software in headless Chromium (CF-010), so many
+  // parallel browsers saturate a dev machine; CI runners default to few.
+  workers: process.env.CI ? undefined : 4,
   forbidOnly: Boolean(process.env.CI),
   retries: process.env.CI ? 1 : 0,
   reporter: process.env.CI ? [["list"], ["html", { open: "never" }]] : "list",

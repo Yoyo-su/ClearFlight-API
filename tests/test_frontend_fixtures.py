@@ -9,6 +9,9 @@ from app.api.models import (
     ConditionsResponse,
     ErrorResponse,
     ForecastResponse,
+    AircraftResponse,
+    NearbyConditionsResponse,
+    RadarResponse,
 )
 
 """
@@ -31,6 +34,12 @@ def model_for(name: str, status: int):
         return AirportSearchResponse
     if name.startswith("forecast-"):
         return ForecastResponse
+    if name.startswith("aircraft-") and status == 200:
+        return AircraftResponse
+    if name.startswith("nearby-") and status == 200:
+        return NearbyConditionsResponse
+    if name.startswith("radar-") and status == 200:
+        return RadarResponse
     if status == 200:
         return ConditionsResponse
     return ErrorResponse
@@ -45,13 +54,26 @@ class TestFrontendFixtures:
         statuses = {b.get("data_status") for b in bodies} - {None}
         reasons = {b.get("unavailable_reason") for b in bodies} - {None}
         errors = {b.get("reason") for b in bodies} - {None}
-        assert statuses == {"current", "stale", "unavailable", "available"}
+        assert statuses == {
+            "current",
+            "stale",
+            "unavailable",
+            "available",
+            "no_aircraft",
+            "coverage_unknown",
+            "quota_exhausted",
+        }
         assert reasons == {
             "no_metar_station",
             "no_report",
             "observation_too_old",
             "no_forecast",
             "forecast_expired",
+            "no_coverage_evidence",
+            "daily_budget",
+            "provider_disabled",
+            "no_stations",
+            "invalid_index",
         }
         assert errors == {
             "invalid_code",

@@ -1,0 +1,38 @@
+{
+  "status": 200,
+  "headers": {},
+  "body": {
+    "airport": {
+      "code": "RJBB",
+      "icao": "RJBB",
+      "iata": "KIX",
+      "name": "Kansai International Airport",
+      "city": "Osaka",
+      "country": "Japan",
+      "country_code": "JP",
+      "timezone": "Asia/Tokyo"
+    },
+    "area": {
+      "latitude": 34.427299,
+      "longitude": 135.244003,
+      "radius_nm": 25.0
+    },
+    "source": {
+      "provider": "adsblol",
+      "name": "adsb.lol (ODbL 1.0)",
+      "attribution_url": "https://adsb.lol",
+      "access": "keyless",
+      "privacy_filter": "applied"
+    },
+    "observed_at": "2026-10-30T07:55:00Z",
+    "fetched_at": "2026-10-30T07:55:00Z",
+    "aircraft": [],
+    "withheld": 0,
+    "excluded": 0,
+    "dropped": 0,
+    "data_status": "no_aircraft",
+    "unavailable_reason": null,
+    "retry_at": null,
+    "disclaimer": "Live positions from volunteer receiver networks. Coverage is incomplete and positions can be delayed; not for navigation or safety use."
+  }
+}

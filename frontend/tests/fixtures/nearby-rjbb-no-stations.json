@@ -1,0 +1,28 @@
+{
+  "status": 200,
+  "headers": {},
+  "body": {
+    "airport": {
+      "code": "RJBB",
+      "icao": "RJBB",
+      "iata": "KIX",
+      "name": "Kansai International Airport",
+      "city": "Osaka",
+      "country": "Japan",
+      "country_code": "JP",
+      "timezone": "Asia/Tokyo"
+    },
+    "area": {
+      "latitude": 34.427299,
+      "longitude": 135.244003,
+      "radius_nm": 50.0
+    },
+    "stations": [],
+    "complete": true,
+    "dropped": 0,
+    "fetched_at": "2026-10-30T07:55:00Z",
+    "data_status": "unavailable",
+    "unavailable_reason": "no_stations",
+    "source": "NOAA Aviation Weather Center (METAR)"
+  }
+}

@@ -1,0 +1,103 @@
+{
+  "status": 200,
+  "headers": {},
+  "body": {
+    "airport": {
+      "code": "EGLL",
+      "icao": "EGLL",
+      "iata": "LHR",
+      "name": "London Heathrow Airport",
+      "city": "London",
+      "country": "United Kingdom",
+      "country_code": "GB",
+      "timezone": "Europe/London"
+    },
+    "area": {
+      "latitude": 51.470748,
+      "longitude": -0.459909,
+      "radius_nm": 25.0
+    },
+    "source": {
+      "provider": "adsblol",
+      "name": "adsb.lol (ODbL 1.0)",
+      "attribution_url": "https://adsb.lol",
+      "access": "keyless",
+      "privacy_filter": "applied"
+    },
+    "observed_at": "2026-10-30T07:55:00Z",
+    "fetched_at": "2026-10-30T07:55:00Z",
+    "aircraft": [
+      {
+        "id": "4d24cb",
+        "callsign": "RYR4AU",
+        "latitude": 51.380814,
+        "longitude": -0.745437,
+        "altitude_ft": 36900,
+        "on_ground": false,
+        "ground_speed_kt": 464,
+        "track_deg": 145,
+        "vertical_rate_fpm": 960,
+        "category": "A3",
+        "kind": "aircraft",
+        "position_at": "2026-10-30T07:54:59.635000Z",
+        "expires_at": "2026-10-30T07:55:59.635000Z",
+        "distance_nm": 11.98
+      },
+      {
+        "id": "406b80",
+        "callsign": null,
+        "latitude": 51.160828,
+        "longitude": -0.182838,
+        "altitude_ft": null,
+        "on_ground": true,
+        "ground_speed_kt": 0,
+        "track_deg": null,
+        "vertical_rate_fpm": null,
+        "category": "A3",
+        "kind": "aircraft",
+        "position_at": "2026-10-30T07:54:48.475000Z",
+        "expires_at": "2026-10-30T07:55:48.475000Z",
+        "distance_nm": 21.32
+      },
+      {
+        "id": "4073a0",
+        "callsign": null,
+        "latitude": 51.155273,
+        "longitude": -0.185728,
+        "altitude_ft": null,
+        "on_ground": true,
+        "ground_speed_kt": 0,
+        "track_deg": null,
+        "vertical_rate_fpm": null,
+        "category": null,
+        "kind": "unclassified",
+        "position_at": "2026-10-30T07:54:56.697000Z",
+        "expires_at": "2026-10-30T07:55:56.697000Z",
+        "distance_nm": 21.56
+      },
+      {
+        "id": "406c72",
+        "callsign": null,
+        "latitude": 51.153554,
+        "longitude": -0.176888,
+        "altitude_ft": null,
+        "on_ground": true,
+        "ground_speed_kt": 0,
+        "track_deg": null,
+        "vertical_rate_fpm": null,
+        "category": null,
+        "kind": "unclassified",
+        "position_at": "2026-10-30T07:54:59.623000Z",
+        "expires_at": "2026-10-30T07:55:59.623000Z",
+        "distance_nm": 21.81
+      }
+    ],
+    "withheld": 0,
+    "excluded": 8,
+    "dropped": 0,
+    "data_status": "available",
+    "unavailable_reason": null,
+    "retry_at": null,
+    "disclaimer": "Live positions from volunteer receiver networks. Coverage is incomplete and positions can be delayed; not for navigation or safety use."
+  }
+}

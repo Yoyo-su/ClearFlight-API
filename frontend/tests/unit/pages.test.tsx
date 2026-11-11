@@ -117,7 +117,7 @@ describe("airport page: current data", () => {
     await settle();
     expect(screen.getByTestId("path")).toHaveTextContent("/airport/AAI");
     expect(screen.getByRole("heading", { name: "No weather station" })).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: /Refresh|Try again/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /^(Refresh|Try again)$/ })).not.toBeInTheDocument();
   });
 
   it("remembers the airport as recently viewed", async () => {
