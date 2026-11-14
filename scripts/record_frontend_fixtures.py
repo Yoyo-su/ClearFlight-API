@@ -140,6 +140,78 @@ FORECAST_ERRORS = {
         MetarUpstreamError("invalid_forecast", "station mismatch"),
     ),
 }
+# CF-009/CF-010 map layers, recorded at NOW like the rest.
+POSITIONS = ROOT / "tests" / "testfiles"
+
+
+def aircraft_feed(name: str, **area):
+    """A recorded adsb.lol answer re-dated so its data time is NOW."""
+    from app.services.positions import Area
+    from app.services.positions_providers import AdsbLol
+
+    body = json.loads((POSITIONS / "adsblol" / f"point_{name}.json").read_text())
+    body["now"] = int(NOW.timestamp() * 1000)
+    return AdsbLol.parse(body, Area(**area), NOW)
+
+
+def aircraft_cases():
+    from app.services.positions_providers import AdsbLol, QuotaExhausted
+
+    kjfk = dict(latitude=40.639447, longitude=-73.779317, radius_nm=25.0)
+    egll = dict(latitude=51.470748, longitude=-0.459909, radius_nm=25.0)
+    empty = aircraft_feed("rjbb", latitude=34.4273, longitude=135.244, radius_nm=25.0)
+    empty.targets, empty.airborne = [], 0
+    return {
+        "aircraft-kjfk-available": (
+            "KJFK",
+            (aircraft_feed("kjfk", **kjfk), True, AdsbLol()),
+            None,
+        ),
+        "aircraft-egll-available": (
+            "EGLL",
+            (aircraft_feed("egll", **egll), True, AdsbLol()),
+            None,
+        ),
+        "aircraft-rjbb-no-aircraft": ("RJBB", (empty, True, AdsbLol()), None),
+        "aircraft-rjbb-coverage-unknown": ("RJBB", (empty, False, AdsbLol()), None),
+        "aircraft-egll-quota": (
+            "EGLL",
+            None,
+            QuotaExhausted("daily_budget", datetime(2026, 10, 31, tzinfo=timezone.utc)),
+        ),
+    }
+
+
+def nearby_result():
+    """The recorded bbox answer near EGLL, re-dated: newest report 20 min old."""
+    from app.services.nearby import parse_nearby
+    from app.services.positions import Area
+
+    records = json.loads((AWC / "metar_bbox_egll.json").read_text())
+    shift = int((NOW - timedelta(minutes=20)).timestamp()) - max(
+        r["obsTime"] for r in records
+    )
+    for record in records:
+        record["obsTime"] += shift
+    area = Area(51.470748, -0.459909, 50.0)
+    return parse_nearby(records, area, "EGLL", NOW)
+
+
+def radar_index(minutes_old: int = 5, **changes):
+    latest = int((NOW - timedelta(minutes=minutes_old)).timestamp())
+    index = {
+        "host": "https://tilecache.rainviewer.com",
+        "radar": {
+            "past": [
+                {"time": latest - 600 * i, "path": f"/v2/radar/fixture{i}"}
+                for i in range(3, -1, -1)
+            ]
+        },
+    }
+    index.update(changes)
+    return index
+
+
 SEARCHES = {
     "search-lon": "lon",
     "search-osaka": "osaka",
@@ -189,6 +261,62 @@ def main(out: Path = OUT) -> int:
     for name, (code, error) in FORECAST_ERRORS.items():
         with mock.patch("app.api.forecast.taf.get_latest_forecast", side_effect=error):
             save(name, client.get(f"/v1/airports/{code}/forecast"))
+    from app.services.positions_providers import ProviderDisabled
+
+    for name, (code, result, error) in {
+        **aircraft_cases(),
+        "aircraft-egll-disabled": (
+            "EGLL",
+            None,
+            ProviderDisabled("educational_use_not_enabled"),
+        ),
+    }.items():
+        with mock.patch(
+            "app.api.aircraft.utc_now", return_value=NOW + timedelta(seconds=1)
+        ), mock.patch(
+            "app.api.aircraft.positions_service.get_positions",
+            return_value=result,
+            side_effect=error,
+        ):
+            save(name, client.get(f"/v1/airports/{code}/aircraft"))
+    for name, result in {
+        "nearby-egll-available": nearby_result(),
+        "nearby-rjbb-no-stations": {
+            "stations": [],
+            "complete": True,
+            "dropped": 0,
+            "fetched_at": NOW,
+            "records": 0,
+        },
+    }.items():
+        code = "EGLL" if "egll" in name else "RJBB"
+        with mock.patch("app.api.nearby.utc_now", return_value=NOW), mock.patch(
+            "app.api.nearby.get_nearby", return_value=result
+        ):
+            save(name, client.get(f"/v1/airports/{code}/nearby-conditions"))
+
+    class IndexReply:
+        def __init__(self, body):
+            self.status_code, self.body = 200, body
+
+        def json(self):
+            return self.body
+
+    from app.core.config import settings
+    from app.services import radar
+
+    radar_cases = {
+        "radar-disabled": (False, radar_index()),
+        "radar-available": (True, radar_index()),
+        "radar-invalid-index": (True, radar_index(host="https://evil.example")),
+    }
+    for name, (enabled, index) in radar_cases.items():
+        with mock.patch.multiple(
+            settings, RAINVIEWER_EDUCATIONAL_USE=enabled
+        ), mock.patch("app.api.radar.utc_now", return_value=NOW), mock.patch.object(
+            radar, "cached_index", return_value=index
+        ):
+            save(name, client.get("/v1/map/radar"))
     for name, query in SEARCHES.items():
         save(name, client.get("/v1/airports/search", params={"q": query}))
 

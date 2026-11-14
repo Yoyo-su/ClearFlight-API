@@ -3,6 +3,7 @@ import { useLocation, useNavigate, useParams } from "react-router";
 
 import type { ConditionsResponse } from "../api/types";
 import { AirportHeading } from "../components/AirportHeading";
+import { AirportMap } from "../components/AirportMap";
 import { ConditionsCard } from "../components/ConditionsCard";
 import { ForecastSection } from "../components/ForecastSection";
 import { Layout, SearchForm } from "../components/Layout";
@@ -224,6 +225,7 @@ function DataView({ data, state, refresh, now, forecast, retryForecast }: {
       {failedNote}
       {body}
       <ForecastSection state={forecast} retry={retryForecast} now={now} timeZone={data.airport.timezone} />
+      <AirportMap code={data.airport.code} conditions={data} />
     </>
   );
 }

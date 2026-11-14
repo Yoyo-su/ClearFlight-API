@@ -17,6 +17,37 @@ Locked pilot decisions live in [development-plan.md §1](development-plan.md) an
 
 ## Entries
 
+### D-013: CF-010 airport map rules (2026-11-11)
+- **Decision:** The airport map follows [cf-010-design.md](cf-010-design.md) r3, with the owner's choices M1–M6:
+  - M1: an OpenFreeMap basemap via MapLibre GL JS 6.16.0, lazy-loaded, with a configurable style URL;
+  - M2: a "Live map" section on the airport page;
+  - M3: observed conditions at stations within 50 nm (`/nearby-conditions`);
+  - M4: RainViewer radar, but only with `RAINVIEWER_EDUCATIONAL_USE=true`, off by default in the UI, latest frame only, labelled coarse;
+  - M5: aircraft refresh every 30 s only while the tab is visible and the map is on screen;
+  - M6: an always-visible list with the same data.
+
+  **Implementation rules:**
+  - Every request path of the gated polling hook (first load, interval, resume, manual, 503 retry) waits for "active"; work that falls due while inactive is deferred.
+  - State claims expire: `no_aircraft` and `coverage_unknown` at `observed_at` + 60 s, `quota_exhausted` at `retry_at`. Each position expires at its `expires_at`, stations by their freshness times, and the radar frame at `current_until`.
+  - Station and airport markers are DOM labels with the number and level word (no glyph downloads).
+  - MapLibre's worker is emitted by Vite and set with `setWorkerUrl`. The bundled default can't find it, which would have shipped a broken map. It was caught before commit, when the e2e test was made to require the real canvas instead of accepting the fallback.
+  - Local e2e is capped at 4 workers, because software WebGL in headless Chromium is CPU-heavy.
+- **Why:**
+  - honest live claims (plan §4) and no background polling (P6);
+  - the free-data licences (plan §8, RQ-003);
+  - privacy, since tiles reveal the viewed area to the tile host;
+  - accessibility.
+- **Alternatives considered:**
+  - OSM's own tiles (best effort, blocks without notice);
+  - Stadia or MapTiler free tiers (non-commercial only);
+  - a separate map page;
+  - the airport only;
+  - no radar;
+  - 15 s polling;
+  - a toggled list.
+- **Source:** cf-010-design.md §9 and §11 (Codex design critique: 2 High and 3 Medium, plus 1 constraint conflict, all fixed in r3); RQ-003 (local research note, 2026-11-11); branch `feat/cf-010-airport-map`.
+- **Status:** accepted
+
 ### D-012: CF-009 live positions rules (2026-11-10)
 - **Decision:** Live positions follow [cf-009-design.md](cf-009-design.md) r3, with the owner's choices C1–C6:
   - C1: adsb.lol is the default, with OpenSky behind the same interface;

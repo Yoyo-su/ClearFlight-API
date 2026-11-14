@@ -176,9 +176,14 @@ def get_latest_observation(icao: str) -> Observation | None:
     return observation
 
 
-def fetch_metar_records(station: str, url: str = AWC_METAR_URL) -> list:
+def fetch_metar_records(
+    station: str, url: str = AWC_METAR_URL, params: dict | None = None
+) -> list:
     """Request the latest records for a station from an AWC data API (METAR by
     default; the TAF adapter passes its own URL) under the shared rate cap.
+
+    `params` replaces the station query, e.g. {"bbox": "..."} for an area
+    (CF-010); `station` then only labels log messages.
 
     Retries once after a short backoff on timeouts, connection errors, 429 and
     5xx. Every attempt uses a token from the rate limiter.
@@ -196,7 +201,7 @@ def fetch_metar_records(station: str, url: str = AWC_METAR_URL) -> list:
         try:
             response = requests.get(
                 url,
-                params={"ids": station, "format": "json"},
+                params={**(params or {"ids": station}), "format": "json"},
                 headers={"User-Agent": settings.METAR_USER_AGENT},
                 timeout=settings.PROVIDER_TIMEOUT,
             )

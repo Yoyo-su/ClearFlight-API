@@ -1,0 +1,860 @@
+{
+  "status": 200,
+  "headers": {},
+  "body": {
+    "airport": {
+      "code": "EGLL",
+      "icao": "EGLL",
+      "iata": "LHR",
+      "name": "London Heathrow Airport",
+      "city": "London",
+      "country": "United Kingdom",
+      "country_code": "GB",
+      "timezone": "Europe/London"
+    },
+    "area": {
+      "latitude": 51.470748,
+      "longitude": -0.459909,
+      "radius_nm": 50.0
+    },
+    "stations": [
+      {
+        "station": "EGWU",
+        "name": "Northolt, EN, GB",
+        "latitude": 51.549,
+        "longitude": -0.417,
+        "distance_nm": 5.0,
+        "observed_at": "2026-10-30T07:35:00Z",
+        "current_until": "2026-10-30T09:05:00Z",
+        "stale_until": "2026-10-30T10:35:00Z",
+        "data_status": "current",
+        "conditions": {
+          "version": "0.1",
+          "score": 1,
+          "level": "low",
+          "factors": [
+            {
+              "name": "wind",
+              "value": 8,
+              "unit": "kt",
+              "score": 0,
+              "detail": "8 kt"
+            },
+            {
+              "name": "visibility",
+              "value": 10000,
+              "unit": "m",
+              "score": 0,
+              "detail": "10.0 km or more"
+            },
+            {
+              "name": "ceiling",
+              "value": 4500,
+              "unit": "ft",
+              "score": 0,
+              "detail": "4,500 ft"
+            },
+            {
+              "name": "weather",
+              "value": [
+                "-RA"
+              ],
+              "unit": null,
+              "score": 1,
+              "detail": "-RA"
+            }
+          ],
+          "explanation": "Observed conditions index 1/10 (low), mainly from reported weather -RA.",
+          "disclaimer": "Experimental index of the weather reported at the airport. It is not a forecast and does not predict delays, cancellations or flight safety."
+        }
+      },
+      {
+        "station": "EGLF",
+        "name": "Farnborough Arpt, EN, GB",
+        "latitude": 51.28,
+        "longitude": -0.773,
+        "distance_nm": 16.4,
+        "observed_at": "2026-10-30T07:35:00Z",
+        "current_until": "2026-10-30T09:05:00Z",
+        "stale_until": "2026-10-30T10:35:00Z",
+        "data_status": "current",
+        "conditions": {
+          "version": "0.1",
+          "score": 3,
+          "level": "moderate",
+          "factors": [
+            {
+              "name": "wind",
+              "value": 7,
+              "unit": "kt",
+              "score": 0,
+              "detail": "7 kt"
+            },
+            {
+              "name": "visibility",
+              "value": 6003,
+              "unit": "m",
+              "score": 3,
+              "detail": "6.0 km"
+            },
+            {
+              "name": "ceiling",
+              "value": 2900,
+              "unit": "ft",
+              "score": 3,
+              "detail": "2,900 ft"
+            },
+            {
+              "name": "weather",
+              "value": [],
+              "unit": null,
+              "score": 0,
+              "detail": "no significant weather reported"
+            }
+          ],
+          "explanation": "Observed conditions index 3/10 (moderate), mainly from visibility of 6.0 km and a cloud ceiling at 2,900 ft.",
+          "disclaimer": "Experimental index of the weather reported at the airport. It is not a forecast and does not predict delays, cancellations or flight safety."
+        }
+      },
+      {
+        "station": "EGLC",
+        "name": "London City Arpt, EN, GB",
+        "latitude": 51.505,
+        "longitude": 0.055,
+        "distance_nm": 19.4,
+        "observed_at": "2026-10-30T07:35:00Z",
+        "current_until": "2026-10-30T09:05:00Z",
+        "stale_until": "2026-10-30T10:35:00Z",
+        "data_status": "current",
+        "conditions": {
+          "version": "0.1",
+          "score": 1,
+          "level": "low",
+          "factors": [
+            {
+              "name": "wind",
+              "value": 7,
+              "unit": "kt",
+              "score": 0,
+              "detail": "7 kt"
+            },
+            {
+              "name": "visibility",
+              "value": 10000,
+              "unit": "m",
+              "score": 0,
+              "detail": "10.0 km or more"
+            },
+            {
+              "name": "ceiling",
+              "value": 4000,
+              "unit": "ft",
+              "score": 0,
+              "detail": "4,000 ft"
+            },
+            {
+              "name": "weather",
+              "value": [
+                "-RA"
+              ],
+              "unit": null,
+              "score": 1,
+              "detail": "-RA"
+            }
+          ],
+          "explanation": "Observed conditions index 1/10 (low), mainly from reported weather -RA.",
+          "disclaimer": "Experimental index of the weather reported at the airport. It is not a forecast and does not predict delays, cancellations or flight safety."
+        }
+      },
+      {
+        "station": "EGKB",
+        "name": "London/Biggin Hill Arpt, EN, GB",
+        "latitude": 51.33,
+        "longitude": 0.033,
+        "distance_nm": 20.3,
+        "observed_at": "2026-10-30T07:35:00Z",
+        "current_until": "2026-10-30T09:05:00Z",
+        "stale_until": "2026-10-30T10:35:00Z",
+        "data_status": "current",
+        "conditions": {
+          "version": "0.1",
+          "score": 6,
+          "level": "high",
+          "factors": [
+            {
+              "name": "wind",
+              "value": 10,
+              "unit": "kt",
+              "score": 2,
+              "detail": "10 kt"
+            },
+            {
+              "name": "visibility",
+              "value": 4007,
+              "unit": "m",
+              "score": 6,
+              "detail": "4.0 km"
+            },
+            {
+              "name": "ceiling",
+              "value": 800,
+              "unit": "ft",
+              "score": 6,
+              "detail": "800 ft"
+            },
+            {
+              "name": "weather",
+              "value": [
+                "-RA",
+                "BR"
+              ],
+              "unit": null,
+              "score": 1,
+              "detail": "-RA BR"
+            }
+          ],
+          "explanation": "Observed conditions index 6/10 (high), mainly from visibility of 4.0 km and a cloud ceiling at 800 ft.",
+          "disclaimer": "Experimental index of the weather reported at the airport. It is not a forecast and does not predict delays, cancellations or flight safety."
+        }
+      },
+      {
+        "station": "EGKK",
+        "name": "London/Gatwick Arpt, EN, GB",
+        "latitude": 51.148,
+        "longitude": -0.19,
+        "distance_nm": 21.9,
+        "observed_at": "2026-10-30T07:35:00Z",
+        "current_until": "2026-10-30T09:05:00Z",
+        "stale_until": "2026-10-30T10:35:00Z",
+        "data_status": "current",
+        "conditions": {
+          "version": "0.1",
+          "score": 3,
+          "level": "moderate",
+          "factors": [
+            {
+              "name": "wind",
+              "value": 9,
+              "unit": "kt",
+              "score": 0,
+              "detail": "9 kt"
+            },
+            {
+              "name": "visibility",
+              "value": 8996,
+              "unit": "m",
+              "score": 0,
+              "detail": "9.0 km"
+            },
+            {
+              "name": "ceiling",
+              "value": 2400,
+              "unit": "ft",
+              "score": 3,
+              "detail": "2,400 ft"
+            },
+            {
+              "name": "weather",
+              "value": [
+                "-RA"
+              ],
+              "unit": null,
+              "score": 1,
+              "detail": "-RA"
+            }
+          ],
+          "explanation": "Observed conditions index 3/10 (moderate), mainly from a cloud ceiling at 2,400 ft.",
+          "disclaimer": "Experimental index of the weather reported at the airport. It is not a forecast and does not predict delays, cancellations or flight safety."
+        }
+      },
+      {
+        "station": "EGVO",
+        "name": "Odiham, EN, GB",
+        "latitude": 51.239,
+        "longitude": -0.945,
+        "distance_nm": 22.9,
+        "observed_at": "2026-10-30T07:35:00Z",
+        "current_until": "2026-10-30T09:05:00Z",
+        "stale_until": "2026-10-30T10:35:00Z",
+        "data_status": "current",
+        "conditions": {
+          "version": "0.1",
+          "score": 6,
+          "level": "high",
+          "factors": [
+            {
+              "name": "wind",
+              "value": 7,
+              "unit": "kt",
+              "score": 0,
+              "detail": "7 kt"
+            },
+            {
+              "name": "visibility",
+              "value": 7001,
+              "unit": "m",
+              "score": 3,
+              "detail": "7.0 km"
+            },
+            {
+              "name": "ceiling",
+              "value": 600,
+              "unit": "ft",
+              "score": 6,
+              "detail": "600 ft"
+            },
+            {
+              "name": "weather",
+              "value": [
+                "BR"
+              ],
+              "unit": null,
+              "score": 0,
+              "detail": "BR"
+            }
+          ],
+          "explanation": "Observed conditions index 6/10 (high), mainly from a cloud ceiling at 600 ft.",
+          "disclaimer": "Experimental index of the weather reported at the airport. It is not a forecast and does not predict delays, cancellations or flight safety."
+        }
+      },
+      {
+        "station": "EGGW",
+        "name": "Luton Arpt, EN, GB",
+        "latitude": 51.875,
+        "longitude": -0.368,
+        "distance_nm": 24.5,
+        "observed_at": "2026-10-30T07:35:00Z",
+        "current_until": "2026-10-30T09:05:00Z",
+        "stale_until": "2026-10-30T10:35:00Z",
+        "data_status": "current",
+        "conditions": {
+          "version": "0.1",
+          "score": 1,
+          "level": "low",
+          "factors": [
+            {
+              "name": "wind",
+              "value": 8,
+              "unit": "kt",
+              "score": 0,
+              "detail": "8 kt"
+            },
+            {
+              "name": "visibility",
+              "value": 10000,
+              "unit": "m",
+              "score": 0,
+              "detail": "10.0 km or more"
+            },
+            {
+              "name": "ceiling",
+              "value": null,
+              "unit": "ft",
+              "score": 0,
+              "detail": "no cloud ceiling"
+            },
+            {
+              "name": "weather",
+              "value": [
+                "-RA"
+              ],
+              "unit": null,
+              "score": 1,
+              "detail": "-RA"
+            }
+          ],
+          "explanation": "Observed conditions index 1/10 (low), mainly from reported weather -RA.",
+          "disclaimer": "Experimental index of the weather reported at the airport. It is not a forecast and does not predict delays, cancellations or flight safety."
+        }
+      },
+      {
+        "station": "EGUB",
+        "name": "Benson, EN, GB",
+        "latitude": 51.62,
+        "longitude": -1.099,
+        "distance_nm": 25.5,
+        "observed_at": "2026-10-30T07:35:00Z",
+        "current_until": "2026-10-30T09:05:00Z",
+        "stale_until": "2026-10-30T10:35:00Z",
+        "data_status": "current",
+        "conditions": {
+          "version": "0.1",
+          "score": 0,
+          "level": "low",
+          "factors": [
+            {
+              "name": "wind",
+              "value": 9,
+              "unit": "kt",
+              "score": 0,
+              "detail": "9 kt"
+            },
+            {
+              "name": "visibility",
+              "value": 10000,
+              "unit": "m",
+              "score": 0,
+              "detail": "10.0 km or more"
+            },
+            {
+              "name": "ceiling",
+              "value": 4200,
+              "unit": "ft",
+              "score": 0,
+              "detail": "4,200 ft"
+            },
+            {
+              "name": "weather",
+              "value": [],
+              "unit": null,
+              "score": 0,
+              "detail": "no significant weather reported"
+            }
+          ],
+          "explanation": "Observed conditions index 0/10 (low): no significant wind, visibility, cloud or weather was reported.",
+          "disclaimer": "Experimental index of the weather reported at the airport. It is not a forecast and does not predict delays, cancellations or flight safety."
+        }
+      },
+      {
+        "station": "EGSS",
+        "name": "London/Stansted Arpt, EN, GB",
+        "latitude": 51.881,
+        "longitude": 0.223,
+        "distance_nm": 35.4,
+        "observed_at": "2026-10-30T07:35:00Z",
+        "current_until": "2026-10-30T09:05:00Z",
+        "stale_until": "2026-10-30T10:35:00Z",
+        "data_status": "current",
+        "conditions": {
+          "version": "0.1",
+          "score": 0,
+          "level": "low",
+          "factors": [
+            {
+              "name": "wind",
+              "value": 7,
+              "unit": "kt",
+              "score": 0,
+              "detail": "7 kt"
+            },
+            {
+              "name": "visibility",
+              "value": 10000,
+              "unit": "m",
+              "score": 0,
+              "detail": "10.0 km or more"
+            },
+            {
+              "name": "ceiling",
+              "value": null,
+              "unit": "ft",
+              "score": 0,
+              "detail": "no cloud ceiling"
+            },
+            {
+              "name": "weather",
+              "value": [],
+              "unit": null,
+              "score": 0,
+              "detail": "no significant weather reported"
+            }
+          ],
+          "explanation": "Observed conditions index 0/10 (low): no significant wind, visibility, cloud or weather was reported.",
+          "disclaimer": "Experimental index of the weather reported at the airport. It is not a forecast and does not predict delays, cancellations or flight safety."
+        }
+      },
+      {
+        "station": "EGTC",
+        "name": "Cranfield Arpt, EN, GB",
+        "latitude": 52.072,
+        "longitude": -0.617,
+        "distance_nm": 36.6,
+        "observed_at": "2026-10-30T07:35:00Z",
+        "current_until": "2026-10-30T09:05:00Z",
+        "stale_until": "2026-10-30T10:35:00Z",
+        "data_status": "current",
+        "conditions": {
+          "version": "0.1",
+          "score": 0,
+          "level": "low",
+          "factors": [
+            {
+              "name": "wind",
+              "value": 9,
+              "unit": "kt",
+              "score": 0,
+              "detail": "9 kt"
+            },
+            {
+              "name": "visibility",
+              "value": 10000,
+              "unit": "m",
+              "score": 0,
+              "detail": "10.0 km or more"
+            },
+            {
+              "name": "ceiling",
+              "value": null,
+              "unit": "ft",
+              "score": 0,
+              "detail": "no cloud ceiling"
+            },
+            {
+              "name": "weather",
+              "value": [],
+              "unit": null,
+              "score": 0,
+              "detail": "no significant weather reported"
+            }
+          ],
+          "explanation": "Observed conditions index 0/10 (low): no significant wind, visibility, cloud or weather was reported.",
+          "disclaimer": "Experimental index of the weather reported at the airport. It is not a forecast and does not predict delays, cancellations or flight safety."
+        }
+      },
+      {
+        "station": "EGKA",
+        "name": "Shoreham Arpt, EN, GB",
+        "latitude": 50.836,
+        "longitude": -0.294,
+        "distance_nm": 38.6,
+        "observed_at": "2026-10-30T07:35:00Z",
+        "current_until": "2026-10-30T09:05:00Z",
+        "stale_until": "2026-10-30T10:35:00Z",
+        "data_status": "current",
+        "conditions": {
+          "version": "0.1",
+          "score": 3,
+          "level": "moderate",
+          "factors": [
+            {
+              "name": "wind",
+              "value": 9,
+              "unit": "kt",
+              "score": 0,
+              "detail": "9 kt"
+            },
+            {
+              "name": "visibility",
+              "value": 8996,
+              "unit": "m",
+              "score": 0,
+              "detail": "9.0 km"
+            },
+            {
+              "name": "ceiling",
+              "value": 1000,
+              "unit": "ft",
+              "score": 3,
+              "detail": "1,000 ft"
+            },
+            {
+              "name": "weather",
+              "value": [],
+              "unit": null,
+              "score": 0,
+              "detail": "no significant weather reported"
+            }
+          ],
+          "explanation": "Observed conditions index 3/10 (moderate), mainly from a cloud ceiling at 1,000 ft.",
+          "disclaimer": "Experimental index of the weather reported at the airport. It is not a forecast and does not predict delays, cancellations or flight safety."
+        }
+      },
+      {
+        "station": "EGTK",
+        "name": "Oxford Arpt, EN, GB",
+        "latitude": 51.838,
+        "longitude": -1.317,
+        "distance_nm": 38.8,
+        "observed_at": "2026-10-30T07:35:00Z",
+        "current_until": "2026-10-30T09:05:00Z",
+        "stale_until": "2026-10-30T10:35:00Z",
+        "data_status": "current",
+        "conditions": {
+          "version": "0.1",
+          "score": 2,
+          "level": "low",
+          "factors": [
+            {
+              "name": "wind",
+              "value": 11,
+              "unit": "kt",
+              "score": 2,
+              "detail": "11 kt"
+            },
+            {
+              "name": "visibility",
+              "value": 10000,
+              "unit": "m",
+              "score": 0,
+              "detail": "10.0 km or more"
+            },
+            {
+              "name": "ceiling",
+              "value": null,
+              "unit": "ft",
+              "score": 0,
+              "detail": "no cloud ceiling"
+            },
+            {
+              "name": "weather",
+              "value": [],
+              "unit": null,
+              "score": 0,
+              "detail": "no significant weather reported"
+            }
+          ],
+          "explanation": "Observed conditions index 2/10 (low), mainly from wind of 11 kt.",
+          "disclaimer": "Experimental index of the weather reported at the airport. It is not a forecast and does not predict delays, cancellations or flight safety."
+        }
+      },
+      {
+        "station": "EGMC",
+        "name": "Southend Arpt, EN, GB",
+        "latitude": 51.571,
+        "longitude": 0.696,
+        "distance_nm": 43.6,
+        "observed_at": "2026-10-30T07:35:00Z",
+        "current_until": "2026-10-30T09:05:00Z",
+        "stale_until": "2026-10-30T10:35:00Z",
+        "data_status": "current",
+        "conditions": {
+          "version": "0.1",
+          "score": 0,
+          "level": "low",
+          "factors": [
+            {
+              "name": "wind",
+              "value": 7,
+              "unit": "kt",
+              "score": 0,
+              "detail": "7 kt"
+            },
+            {
+              "name": "visibility",
+              "value": 7998,
+              "unit": "m",
+              "score": 0,
+              "detail": "8.0 km"
+            },
+            {
+              "name": "ceiling",
+              "value": 4200,
+              "unit": "ft",
+              "score": 0,
+              "detail": "4,200 ft"
+            },
+            {
+              "name": "weather",
+              "value": [],
+              "unit": null,
+              "score": 0,
+              "detail": "no significant weather reported"
+            }
+          ],
+          "explanation": "Observed conditions index 0/10 (low): no significant wind, visibility, cloud or weather was reported.",
+          "disclaimer": "Experimental index of the weather reported at the airport. It is not a forecast and does not predict delays, cancellations or flight safety."
+        }
+      },
+      {
+        "station": "EGVN",
+        "name": "Brize Norton, EN, GB",
+        "latitude": 51.758,
+        "longitude": -1.578,
+        "distance_nm": 45.1,
+        "observed_at": "2026-10-30T07:35:00Z",
+        "current_until": "2026-10-30T09:05:00Z",
+        "stale_until": "2026-10-30T10:35:00Z",
+        "data_status": "current",
+        "conditions": {
+          "version": "0.1",
+          "score": 2,
+          "level": "low",
+          "factors": [
+            {
+              "name": "wind",
+              "value": 12,
+              "unit": "kt",
+              "score": 2,
+              "detail": "12 kt"
+            },
+            {
+              "name": "visibility",
+              "value": 10000,
+              "unit": "m",
+              "score": 0,
+              "detail": "10.0 km or more"
+            },
+            {
+              "name": "ceiling",
+              "value": 5500,
+              "unit": "ft",
+              "score": 0,
+              "detail": "5,500 ft"
+            },
+            {
+              "name": "weather",
+              "value": [],
+              "unit": null,
+              "score": 0,
+              "detail": "no significant weather reported"
+            }
+          ],
+          "explanation": "Observed conditions index 2/10 (low), mainly from wind of 12 kt.",
+          "disclaimer": "Experimental index of the weather reported at the airport. It is not a forecast and does not predict delays, cancellations or flight safety."
+        }
+      },
+      {
+        "station": "EGVP",
+        "name": "Middle Wallop, EN, GB",
+        "latitude": 51.139,
+        "longitude": -1.569,
+        "distance_nm": 46.1,
+        "observed_at": "2026-10-30T07:35:00Z",
+        "current_until": "2026-10-30T09:05:00Z",
+        "stale_until": "2026-10-30T10:35:00Z",
+        "data_status": "current",
+        "conditions": {
+          "version": "0.1",
+          "score": 3,
+          "level": "moderate",
+          "factors": [
+            {
+              "name": "wind",
+              "value": 11,
+              "unit": "kt",
+              "score": 2,
+              "detail": "11 kt"
+            },
+            {
+              "name": "visibility",
+              "value": 8996,
+              "unit": "m",
+              "score": 0,
+              "detail": "9.0 km"
+            },
+            {
+              "name": "ceiling",
+              "value": 2700,
+              "unit": "ft",
+              "score": 3,
+              "detail": "2,700 ft"
+            },
+            {
+              "name": "weather",
+              "value": [
+                "HZ"
+              ],
+              "unit": null,
+              "score": 0,
+              "detail": "HZ"
+            }
+          ],
+          "explanation": "Observed conditions index 3/10 (moderate), mainly from a cloud ceiling at 2,700 ft.",
+          "disclaimer": "Experimental index of the weather reported at the airport. It is not a forecast and does not predict delays, cancellations or flight safety."
+        }
+      },
+      {
+        "station": "EGHI",
+        "name": "Southampton Intl, EN, GB",
+        "latitude": 50.944,
+        "longitude": -1.358,
+        "distance_nm": 46.3,
+        "observed_at": "2026-10-30T07:35:00Z",
+        "current_until": "2026-10-30T09:05:00Z",
+        "stale_until": "2026-10-30T10:35:00Z",
+        "data_status": "current",
+        "conditions": {
+          "version": "0.1",
+          "score": 3,
+          "level": "moderate",
+          "factors": [
+            {
+              "name": "wind",
+              "value": 5,
+              "unit": "kt",
+              "score": 0,
+              "detail": "5 kt"
+            },
+            {
+              "name": "visibility",
+              "value": 10000,
+              "unit": "m",
+              "score": 0,
+              "detail": "10.0 km or more"
+            },
+            {
+              "name": "ceiling",
+              "value": 2200,
+              "unit": "ft",
+              "score": 3,
+              "detail": "2,200 ft"
+            },
+            {
+              "name": "weather",
+              "value": [],
+              "unit": null,
+              "score": 0,
+              "detail": "no significant weather reported"
+            }
+          ],
+          "explanation": "Observed conditions index 3/10 (moderate), mainly from a cloud ceiling at 2,200 ft.",
+          "disclaimer": "Experimental index of the weather reported at the airport. It is not a forecast and does not predict delays, cancellations or flight safety."
+        }
+      },
+      {
+        "station": "EGSC",
+        "name": "Cambridge Arpt, EN, GB",
+        "latitude": 52.205,
+        "longitude": 0.175,
+        "distance_nm": 50.0,
+        "observed_at": "2026-10-30T07:35:00Z",
+        "current_until": "2026-10-30T09:05:00Z",
+        "stale_until": "2026-10-30T10:35:00Z",
+        "data_status": "current",
+        "conditions": {
+          "version": "0.1",
+          "score": 0,
+          "level": "low",
+          "factors": [
+            {
+              "name": "wind",
+              "value": 7,
+              "unit": "kt",
+              "score": 0,
+              "detail": "7 kt"
+            },
+            {
+              "name": "visibility",
+              "value": 8996,
+              "unit": "m",
+              "score": 0,
+              "detail": "9.0 km"
+            },
+            {
+              "name": "ceiling",
+              "value": null,
+              "unit": "ft",
+              "score": 0,
+              "detail": "no cloud ceiling"
+            },
+            {
+              "name": "weather",
+              "value": [],
+              "unit": null,
+              "score": 0,
+              "detail": "no significant weather reported"
+            }
+          ],
+          "explanation": "Observed conditions index 0/10 (low): no significant wind, visibility, cloud or weather was reported.",
+          "disclaimer": "Experimental index of the weather reported at the airport. It is not a forecast and does not predict delays, cancellations or flight safety."
+        }
+      }
+    ],
+    "complete": true,
+    "dropped": 0,
+    "fetched_at": "2026-10-30T07:55:00Z",
+    "data_status": "available",
+    "unavailable_reason": null,
+    "source": "NOAA Aviation Weather Center (METAR)"
+  }
+}

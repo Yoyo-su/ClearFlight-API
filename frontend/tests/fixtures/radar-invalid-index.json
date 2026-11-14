@@ -1,0 +1,12 @@
+{
+  "status": 200,
+  "headers": {},
+  "body": {
+    "enabled": true,
+    "data_status": "unavailable",
+    "unavailable_reason": "invalid_index",
+    "frame": null,
+    "attribution": "Radar © RainViewer",
+    "attribution_url": "https://www.rainviewer.com"
+  }
+}

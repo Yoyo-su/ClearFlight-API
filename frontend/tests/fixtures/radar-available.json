@@ -1,0 +1,16 @@
+{
+  "status": 200,
+  "headers": {},
+  "body": {
+    "enabled": true,
+    "data_status": "available",
+    "unavailable_reason": null,
+    "frame": {
+      "time": "2026-10-30T07:50:00Z",
+      "tile_url": "https://tilecache.rainviewer.com/v2/radar/fixture0/256/{z}/{x}/{y}/2/1_0.png",
+      "current_until": "2026-10-30T08:10:00Z"
+    },
+    "attribution": "Radar © RainViewer",
+    "attribution_url": "https://www.rainviewer.com"
+  }
+}

@@ -1,0 +1,595 @@
+[
+ {
+  "icaoId": "EGGW",
+  "receiptTime": "2026-11-11T12:25:05.638Z",
+  "obsTime": 1794399600,
+  "reportTime": "2026-11-11T12:20:00.000Z",
+  "temp": 8,
+  "dewp": 6,
+  "wdir": 40,
+  "wspd": 8,
+  "visib": "6+",
+  "altim": 1004,
+  "qcField": 2,
+  "wxString": "-RA",
+  "metarType": "METAR",
+  "rawOb": "METAR EGGW 111220Z AUTO 04008KT 9999 -RA NCD 08/06 Q1004",
+  "lat": 51.875,
+  "lon": -0.368,
+  "elev": 159,
+  "name": "Luton Arpt, EN, GB",
+  "cover": "CLR",
+  "clouds": [],
+  "fltCat": "VFR"
+ },
+ {
+  "icaoId": "EGVO",
+  "receiptTime": "2026-11-11T12:30:05.793Z",
+  "obsTime": 1794399600,
+  "reportTime": "2026-11-11T12:20:00.000Z",
+  "temp": 9,
+  "dewp": 7,
+  "wdir": 30,
+  "wspd": 7,
+  "visib": 4.35,
+  "altim": 1003,
+  "qcField": 0,
+  "wxString": "BR",
+  "metarType": "METAR",
+  "rawOb": "METAR EGVO 111220Z 03007KT 7000 BR BKN006 OVC028 09/07 Q1003 TEMPO 9999 SCT007 RMK YLO1 TEMPO GRN",
+  "lat": 51.239,
+  "lon": -0.945,
+  "elev": 118,
+  "name": "Odiham, EN, GB",
+  "cover": "OVC",
+  "clouds": [
+   {
+    "cover": "BKN",
+    "base": 600
+   },
+   {
+    "cover": "OVC",
+    "base": 2800
+   }
+  ],
+  "fltCat": "IFR"
+ },
+ {
+  "icaoId": "EGVN",
+  "receiptTime": "2026-11-11T12:32:07.837Z",
+  "obsTime": 1794399600,
+  "reportTime": "2026-11-11T12:20:00.000Z",
+  "temp": 10,
+  "dewp": 6,
+  "wdir": 40,
+  "wspd": 12,
+  "visib": "6+",
+  "altim": 1004,
+  "qcField": 2,
+  "metarType": "METAR",
+  "rawOb": "METAR EGVN 111220Z AUTO 04012KT 9999 FEW018/// OVC055/// 10/06 Q1004",
+  "lat": 51.758,
+  "lon": -1.578,
+  "elev": 83,
+  "name": "Brize Norton, EN, GB",
+  "cover": "OVC",
+  "clouds": [
+   {
+    "cover": "FEW",
+    "base": 1800
+   },
+   {
+    "cover": "OVC",
+    "base": 5500
+   }
+  ],
+  "fltCat": "VFR"
+ },
+ {
+  "icaoId": "EGHI",
+  "receiptTime": "2026-11-11T12:24:26.663Z",
+  "obsTime": 1794399600,
+  "reportTime": "2026-11-11T12:20:00.000Z",
+  "temp": 10,
+  "dewp": 7,
+  "wdir": 50,
+  "wspd": 5,
+  "visib": "6+",
+  "altim": 1003,
+  "qcField": 2,
+  "metarType": "METAR",
+  "rawOb": "METAR EGHI 111220Z AUTO 05005KT 020V080 9999 OVC022 10/07 Q1003",
+  "lat": 50.944,
+  "lon": -1.358,
+  "elev": 13,
+  "name": "Southampton Intl, EN, GB",
+  "cover": "OVC",
+  "clouds": [
+   {
+    "cover": "OVC",
+    "base": 2200
+   }
+  ],
+  "fltCat": "MVFR"
+ },
+ {
+  "icaoId": "EGLF",
+  "receiptTime": "2026-11-11T12:26:11.492Z",
+  "obsTime": 1794399600,
+  "reportTime": "2026-11-11T12:20:00.000Z",
+  "temp": 9,
+  "dewp": 8,
+  "wdir": 30,
+  "wspd": 7,
+  "visib": 3.73,
+  "altim": 1004,
+  "qcField": 0,
+  "metarType": "METAR",
+  "rawOb": "METAR EGLF 111220Z 03007KT 6000 SCT007 OVC029 09/08 Q1004",
+  "lat": 51.28,
+  "lon": -0.773,
+  "elev": 65,
+  "name": "Farnborough Arpt, EN, GB",
+  "cover": "OVC",
+  "clouds": [
+   {
+    "cover": "SCT",
+    "base": 700
+   },
+   {
+    "cover": "OVC",
+    "base": 2900
+   }
+  ],
+  "fltCat": "MVFR"
+ },
+ {
+  "icaoId": "EGVP",
+  "receiptTime": "2026-11-11T12:30:05.829Z",
+  "obsTime": 1794399600,
+  "reportTime": "2026-11-11T12:20:00.000Z",
+  "temp": 10,
+  "dewp": 7,
+  "wdir": 50,
+  "wspd": 11,
+  "visib": 5.59,
+  "altim": 1003,
+  "qcField": 16,
+  "wxString": "HZ",
+  "metarType": "METAR",
+  "rawOb": "METAR EGVP 111220Z 05011KT 9000 HZ FEW011 BKN027 10/07 Q1003 NOSIG RMK BLU BLU",
+  "lat": 51.139,
+  "lon": -1.569,
+  "elev": 80,
+  "name": "Middle Wallop, EN, GB",
+  "cover": "BKN",
+  "clouds": [
+   {
+    "cover": "FEW",
+    "base": 1100
+   },
+   {
+    "cover": "BKN",
+    "base": 2700
+   }
+  ],
+  "fltCat": "MVFR"
+ },
+ {
+  "icaoId": "EGTC",
+  "receiptTime": "2026-11-11T12:24:28.373Z",
+  "obsTime": 1794399600,
+  "reportTime": "2026-11-11T12:20:00.000Z",
+  "temp": 9,
+  "dewp": 7,
+  "wdir": 40,
+  "wspd": 9,
+  "visib": "6+",
+  "altim": 1004,
+  "qcField": 0,
+  "metarType": "METAR",
+  "rawOb": "METAR EGTC 111220Z 04009KT 9999 FEW006 09/07 Q1004",
+  "lat": 52.072,
+  "lon": -0.617,
+  "elev": 110,
+  "name": "Cranfield Arpt, EN, GB",
+  "cover": "FEW",
+  "clouds": [
+   {
+    "cover": "FEW",
+    "base": 600
+   }
+  ],
+  "fltCat": "VFR"
+ },
+ {
+  "icaoId": "EGKB",
+  "receiptTime": "2026-11-11T12:25:05.807Z",
+  "obsTime": 1794399600,
+  "reportTime": "2026-11-11T12:20:00.000Z",
+  "temp": 8,
+  "dewp": 7,
+  "wdir": 40,
+  "wspd": 10,
+  "visib": 2.49,
+  "altim": 1003,
+  "qcField": 0,
+  "wxString": "-RA BR",
+  "metarType": "METAR",
+  "rawOb": "METAR EGKB 111220Z 04010KT 4000 -RA BR BKN008 BKN030 08/07 Q1003",
+  "lat": 51.33,
+  "lon": 0.033,
+  "elev": 183,
+  "name": "London/Biggin Hill Arpt, EN, GB",
+  "cover": "BKN",
+  "clouds": [
+   {
+    "cover": "BKN",
+    "base": 800
+   },
+   {
+    "cover": "BKN",
+    "base": 3000
+   }
+  ],
+  "fltCat": "IFR"
+ },
+ {
+  "icaoId": "EGLC",
+  "receiptTime": "2026-11-11T12:25:05.909Z",
+  "obsTime": 1794399600,
+  "reportTime": "2026-11-11T12:20:00.000Z",
+  "temp": 10,
+  "dewp": 8,
+  "wdir": 50,
+  "wspd": 7,
+  "visib": "6+",
+  "altim": 1004,
+  "qcField": 2,
+  "wxString": "-RA",
+  "metarType": "METAR",
+  "rawOb": "METAR EGLC 111220Z AUTO 05007KT 9999 -RA OVC040 10/08 Q1004",
+  "lat": 51.505,
+  "lon": 0.055,
+  "elev": 10,
+  "name": "London City Arpt, EN, GB",
+  "cover": "OVC",
+  "clouds": [
+   {
+    "cover": "OVC",
+    "base": 4000
+   }
+  ],
+  "fltCat": "VFR"
+ },
+ {
+  "icaoId": "EGKA",
+  "receiptTime": "2026-11-11T12:25:05.704Z",
+  "obsTime": 1794399600,
+  "reportTime": "2026-11-11T12:20:00.000Z",
+  "temp": 10,
+  "dewp": 9,
+  "wdir": 20,
+  "wspd": 9,
+  "visib": 5.59,
+  "altim": 1003,
+  "qcField": 0,
+  "metarType": "METAR",
+  "rawOb": "METAR EGKA 111220Z 02009KT 9000 BKN010 10/09 Q1003",
+  "lat": 50.836,
+  "lon": -0.294,
+  "elev": 2,
+  "name": "Shoreham Arpt, EN, GB",
+  "cover": "BKN",
+  "clouds": [
+   {
+    "cover": "BKN",
+    "base": 1000
+   }
+  ],
+  "fltCat": "MVFR"
+ },
+ {
+  "icaoId": "EGKK",
+  "receiptTime": "2026-11-11T12:25:28.519Z",
+  "obsTime": 1794399600,
+  "reportTime": "2026-11-11T12:20:00.000Z",
+  "temp": 10,
+  "dewp": 8,
+  "wdir": 40,
+  "wspd": 9,
+  "visib": 5.59,
+  "altim": 1003,
+  "qcField": 0,
+  "wxString": "-RA",
+  "metarType": "METAR",
+  "rawOb": "METAR EGKK 111220Z 04009KT 9000 -RA FEW011 BKN024 10/08 Q1003",
+  "lat": 51.148,
+  "lon": -0.19,
+  "elev": 58,
+  "name": "London/Gatwick Arpt, EN, GB",
+  "cover": "BKN",
+  "clouds": [
+   {
+    "cover": "FEW",
+    "base": 1100
+   },
+   {
+    "cover": "BKN",
+    "base": 2400
+   }
+  ],
+  "fltCat": "MVFR"
+ },
+ {
+  "icaoId": "EGWU",
+  "receiptTime": "2026-11-11T12:30:05.857Z",
+  "obsTime": 1794399600,
+  "reportTime": "2026-11-11T12:20:00.000Z",
+  "temp": 10,
+  "dewp": 8,
+  "wdir": 50,
+  "wspd": 8,
+  "visib": "6+",
+  "altim": 1004,
+  "qcField": 16,
+  "wxString": "-RA",
+  "metarType": "METAR",
+  "rawOb": "METAR EGWU 111220Z 05008KT 9999 -RA FEW013 OVC045 10/08 Q1004 NOSIG RMK BLU BLU",
+  "lat": 51.549,
+  "lon": -0.417,
+  "elev": 33,
+  "name": "Northolt, EN, GB",
+  "cover": "OVC",
+  "clouds": [
+   {
+    "cover": "FEW",
+    "base": 1300
+   },
+   {
+    "cover": "OVC",
+    "base": 4500
+   }
+  ],
+  "fltCat": "VFR"
+ },
+ {
+  "icaoId": "EGTK",
+  "receiptTime": "2026-11-11T12:24:28.449Z",
+  "obsTime": 1794399600,
+  "reportTime": "2026-11-11T12:20:00.000Z",
+  "temp": 10,
+  "dewp": 6,
+  "wdir": 40,
+  "wspd": 11,
+  "visib": "6+",
+  "altim": 1004,
+  "qcField": 0,
+  "metarType": "METAR",
+  "rawOb": "METAR EGTK 111220Z 04011KT 9999 FEW020 10/06 Q1004",
+  "lat": 51.838,
+  "lon": -1.317,
+  "elev": 78,
+  "name": "Oxford Arpt, EN, GB",
+  "cover": "FEW",
+  "clouds": [
+   {
+    "cover": "FEW",
+    "base": 2000
+   }
+  ],
+  "fltCat": "VFR"
+ },
+ {
+  "icaoId": "EGSC",
+  "receiptTime": "2026-11-11T12:24:28.306Z",
+  "obsTime": 1794399600,
+  "reportTime": "2026-11-11T12:20:00.000Z",
+  "temp": 11,
+  "dewp": 5,
+  "wdir": 50,
+  "wspd": 7,
+  "visib": 5.59,
+  "altim": 1004,
+  "qcField": 0,
+  "metarType": "METAR",
+  "rawOb": "METAR EGSC 111220Z 05007KT 020V080 9000 FEW025 11/05 Q1004",
+  "lat": 52.205,
+  "lon": 0.175,
+  "elev": 19,
+  "name": "Cambridge Arpt, EN, GB",
+  "cover": "FEW",
+  "clouds": [
+   {
+    "cover": "FEW",
+    "base": 2500
+   }
+  ],
+  "fltCat": "VFR"
+ },
+ {
+  "icaoId": "EGSS",
+  "receiptTime": "2026-11-11T12:25:28.810Z",
+  "obsTime": 1794399600,
+  "reportTime": "2026-11-11T12:20:00.000Z",
+  "temp": 10,
+  "dewp": 7,
+  "wdir": 40,
+  "wspd": 7,
+  "visib": "6+",
+  "altim": 1004,
+  "qcField": 2,
+  "metarType": "METAR",
+  "rawOb": "METAR EGSS 111220Z AUTO 04007KT 9999 FEW018 10/07 Q1004",
+  "lat": 51.881,
+  "lon": 0.223,
+  "elev": 101,
+  "name": "London/Stansted Arpt, EN, GB",
+  "cover": "FEW",
+  "clouds": [
+   {
+    "cover": "FEW",
+    "base": 1800
+   }
+  ],
+  "fltCat": "VFR"
+ },
+ {
+  "icaoId": "EGMC",
+  "receiptTime": "2026-11-11T12:25:05.995Z",
+  "obsTime": 1794399600,
+  "reportTime": "2026-11-11T12:20:00.000Z",
+  "temp": 10,
+  "dewp": 8,
+  "wdir": 40,
+  "wspd": 7,
+  "visib": 4.97,
+  "altim": 1003,
+  "qcField": 0,
+  "metarType": "METAR",
+  "rawOb": "METAR EGMC 111220Z 04007KT 010V080 8000 FEW021 BKN042 10/08 Q1003",
+  "lat": 51.571,
+  "lon": 0.696,
+  "elev": 15,
+  "name": "Southend Arpt, EN, GB",
+  "cover": "BKN",
+  "clouds": [
+   {
+    "cover": "FEW",
+    "base": 2100
+   },
+   {
+    "cover": "BKN",
+    "base": 4200
+   }
+  ],
+  "fltCat": "MVFR"
+ },
+ {
+  "icaoId": "EGUB",
+  "receiptTime": "2026-11-11T12:30:05.720Z",
+  "obsTime": 1794399600,
+  "reportTime": "2026-11-11T12:20:00.000Z",
+  "temp": 10,
+  "dewp": 7,
+  "wdir": 30,
+  "wspd": 9,
+  "visib": "6+",
+  "altim": 1004,
+  "qcField": 16,
+  "metarType": "METAR",
+  "rawOb": "METAR EGUB 111220Z 03009KT 9999 FEW020 BKN042 10/07 Q1004 NOSIG RMK BLU BLU",
+  "lat": 51.62,
+  "lon": -1.099,
+  "elev": 56,
+  "name": "Benson, EN, GB",
+  "cover": "BKN",
+  "clouds": [
+   {
+    "cover": "FEW",
+    "base": 2000
+   },
+   {
+    "cover": "BKN",
+    "base": 4200
+   }
+  ],
+  "fltCat": "VFR"
+ },
+ {
+  "icaoId": "EGLL",
+  "receiptTime": "2026-11-11T12:26:11.447Z",
+  "obsTime": 1794399600,
+  "reportTime": "2026-11-11T12:20:00.000Z",
+  "temp": 10,
+  "dewp": 8,
+  "wdir": 50,
+  "wspd": 7,
+  "visib": "6+",
+  "altim": 1004,
+  "qcField": 19,
+  "metarType": "METAR",
+  "rawOb": "METAR EGLL 111220Z COR AUTO 05007KT 010V080 9999 FEW013 OVC042 10/08 Q1004 NOSIG",
+  "lat": 51.477,
+  "lon": -0.461,
+  "elev": 26,
+  "name": "London/Heathrow Intl, EN, GB",
+  "cover": "OVC",
+  "clouds": [
+   {
+    "cover": "FEW",
+    "base": 1300
+   },
+   {
+    "cover": "OVC",
+    "base": 4200
+   }
+  ],
+  "fltCat": "VFR"
+ },
+ {
+  "icaoId": "EGDM",
+  "receiptTime": "2026-11-11T12:30:04.542Z",
+  "obsTime": 1794399600,
+  "reportTime": "2026-11-11T12:20:00.000Z",
+  "temp": 9,
+  "dewp": 7,
+  "wdir": 50,
+  "wspd": 9,
+  "visib": "6+",
+  "altim": 1003,
+  "qcField": 0,
+  "metarType": "METAR",
+  "rawOb": "METAR EGDM 111220Z 05009KT 9999 SCT015 OVC030 09/07 Q1003 BECMG FEW015 RMK WHT BECMG BLU",
+  "lat": 51.153,
+  "lon": -1.75,
+  "elev": 122,
+  "name": "Boscombe Down, EN, GB",
+  "cover": "OVC",
+  "clouds": [
+   {
+    "cover": "SCT",
+    "base": 1500
+   },
+   {
+    "cover": "OVC",
+    "base": 3000
+   }
+  ],
+  "fltCat": "MVFR"
+ },
+ {
+  "icaoId": "EGVA",
+  "receiptTime": "2026-11-11T12:10:07.037Z",
+  "obsTime": 1794398100,
+  "reportTime": "2026-11-11T12:00:00.000Z",
+  "temp": 9.9,
+  "dewp": 5.7,
+  "wdir": 70,
+  "wspd": 9,
+  "visib": "6+",
+  "altim": 1004.5,
+  "slp": 1004.8,
+  "qcField": 14,
+  "wxString": "-RA",
+  "maxT": 10,
+  "minT": 7.8,
+  "precip": 0.005,
+  "pcp6hr": 0.005,
+  "pcp24hr": 0.4,
+  "metarType": "METAR",
+  "rawOb": "METAR EGVA 111155Z AUTO 07009KT 9999 -RA OVC047 10/06 A2966 RMK AO2 RAB52 SLP048 P0000 60000 70040 T00990057 10100 20078 50000 $",
+  "lat": 51.682,
+  "lon": -1.79,
+  "elev": 84,
+  "name": "Fairford, EN, GB",
+  "cover": "OVC",
+  "clouds": [
+   {
+    "cover": "OVC",
+    "base": 4700
+   }
+  ],
+  "fltCat": "VFR"
+ }
+]

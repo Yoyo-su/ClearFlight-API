@@ -8,6 +8,9 @@ import {
   ConditionsResponseSchema,
   ErrorResponseSchema,
   ForecastResponseSchema,
+  AircraftResponseSchema,
+  NearbyConditionsResponseSchema,
+  RadarResponseSchema,
 } from "../../src/api/types";
 import { fixture } from "./helpers";
 
@@ -24,6 +27,9 @@ const names = readdirSync(join(__dirname, "..", "fixtures"))
 function schemaFor(name: string, status: number): Schema<unknown> {
   if (name.startsWith("search-")) return AirportSearchResponseSchema;
   if (name.startsWith("forecast-")) return ForecastResponseSchema;
+  if (status === 200 && name.startsWith("aircraft-")) return AircraftResponseSchema;
+  if (status === 200 && name.startsWith("nearby-")) return NearbyConditionsResponseSchema;
+  if (status === 200 && name.startsWith("radar-")) return RadarResponseSchema;
   return status === 200 ? ConditionsResponseSchema : ErrorResponseSchema;
 }
 
@@ -99,5 +105,25 @@ describe("the forecast schema rejects contract changes", () => {
     ["an hour that ends before it starts", { ...good, hours: [{ ...hour, end: hour.start }] }, "hour ends before it starts"],
   ])("rejects %s", (_, body, message) => {
     expect(() => validate(ForecastResponseSchema, body)).toThrow(message);
+  });
+});
+
+describe("the map-layer schemas reject contract changes", () => {
+  it("rejects radar tiles from any other host", () => {
+    const body = fixture("radar-available").body as { frame: Record<string, unknown> };
+    const evil = { ...body, frame: { ...body.frame, tile_url: "https://evil.example/{z}/{x}/{y}.png" } };
+    expect(() => validate(RadarResponseSchema, evil)).toThrow("unexpected radar tile host");
+  });
+
+  it("rejects a no_aircraft answer without a feed time", () => {
+    const body = fixture("aircraft-rjbb-no-aircraft").body as Record<string, unknown>;
+    expect(() => validate(AircraftResponseSchema, { ...body, observed_at: null })).toThrow("lacks observed_at");
+  });
+
+  it("rejects an aircraft without its expiry time", () => {
+    const body = fixture("aircraft-egll-available").body as { aircraft: Record<string, unknown>[] };
+    const first = { ...body.aircraft[0]! };
+    delete first.expires_at;
+    expect(() => validate(AircraftResponseSchema, { ...body, aircraft: [first] })).toThrow("expires_at: missing field");
   });
 });

@@ -1,0 +1,32 @@
+{
+  "status": 200,
+  "headers": {},
+  "body": {
+    "airport": {
+      "code": "EGLL",
+      "icao": "EGLL",
+      "iata": "LHR",
+      "name": "London Heathrow Airport",
+      "city": "London",
+      "country": "United Kingdom",
+      "country_code": "GB",
+      "timezone": "Europe/London"
+    },
+    "area": {
+      "latitude": 51.470748,
+      "longitude": -0.459909,
+      "radius_nm": 25.0
+    },
+    "source": null,
+    "observed_at": null,
+    "fetched_at": null,
+    "aircraft": [],
+    "withheld": 0,
+    "excluded": 0,
+    "dropped": 0,
+    "data_status": "quota_exhausted",
+    "unavailable_reason": "daily_budget",
+    "retry_at": "2026-10-31T00:00:00Z",
+    "disclaimer": "Live positions from volunteer receiver networks. Coverage is incomplete and positions can be delayed; not for navigation or safety use."
+  }
+}
