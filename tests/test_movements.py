@@ -5,10 +5,14 @@ from unittest import mock
 
 import fakeredis
 import pytest
+from fastapi.testclient import TestClient
 
+from app.main import app
+from app.services import cache, positions_service
 from app.services import movements as mv
+from app.services.metar import MetarUpstreamError
 from app.services.positions import Area, FeedResult, Target, distance_nm
-from app.services.positions_providers import AdsbLol
+from app.services.positions_providers import AdsbLol, ProviderDisabled, QuotaExhausted
 
 """
 Test suite for movement detection (CF-011 design r3 §3-§5): recorded tracks
@@ -460,3 +464,173 @@ class TestContext:
             distance_nm(ctx.latitude, ctx.longitude, p.latitude, p.longitude) <= 10
             for p in ctx.neighbours
         )
+
+
+LHR = (51.470748, -0.459909)
+
+
+def lhr_target(state, alt=None, id="abc123"):
+    return Target(
+        id=id, callsign="BAW1", latitude=LHR[0], longitude=LHR[1], altitude_ft=alt,
+        on_ground=state == "ground", ground_speed_kt=None, track_deg=None, vertical_rate_fpm=None,
+        category="A3", kind="aircraft", position_at=T0, distance_nm=0.0,
+    )  # fmt: skip
+
+
+def get_movements(client, code, redis_client, now):
+    with mock.patch.object(cache, "redis_client", redis_client), mock.patch(
+        "app.api.movements.utc_now", return_value=now
+    ):
+        return client.get(f"/v1/airports/{code}/movements")
+
+
+@pytest.mark.describe("Movements endpoint")
+class TestEndpoint:
+    @pytest.fixture
+    def client(self):
+        return TestClient(app)
+
+    @pytest.fixture
+    def watched(self, fake_redis):
+        mv.observe(fake_redis, "adsblol", "EGLL", poll(0, lhr_target("ground")))
+        mv.observe(fake_redis, "adsblol", "EGLL", poll(0.5, lhr_target("air", 300)))
+        return fake_redis
+
+    @pytest.mark.it("returns movements newest first, watched windows and validation")
+    def test_available(self, client, watched):
+        body = get_movements(client, "lhr", watched, at(1)).json()
+        assert body["data_status"] == "available"
+        assert [(m["kind"], m["method"], m["callsign"]) for m in body["movements"]] == [
+            ("departure", "observed", "BAW1")
+        ]
+        assert body["watched"] == [
+            {
+                "from": "2026-11-15T07:00:00Z",
+                "to": "2026-11-15T07:00:30Z",
+                "ended_by": None,
+            }
+        ]
+        assert body["validation"] == {
+            "observed": "experimental",
+            "inferred": "experimental",
+            "airport": "experimental",
+        }
+        assert body["source"]["name"] == "adsb.lol (ODbL 1.0)"
+        assert "not an official departures board" in body["disclaimer"]
+
+    @pytest.mark.it("never lists movements older than 6 hours")
+    def test_retention(self, client, watched):
+        assert (
+            get_movements(client, "LHR", watched, at(6 * 60 + 2)).json()["movements"]
+            == []
+        )
+
+    @pytest.mark.it("lists at most 100, newest first")
+    def test_cap(self, client, fake_redis):
+        state = mv.empty_state()
+        state["last_poll"] = at(0).isoformat()
+        state["movements"] = [
+            {"kind": "arrival", "method": "observed", "id": f"{i:06x}", "callsign": None,
+             "time_from": at(i / 10).isoformat(), "time_to": at(i / 10).isoformat(), "distance_nm": 1.0}
+            for i in range(150)
+        ]  # fmt: skip
+        fake_redis.set("movements:v1:adsblol:EGLL", json.dumps(state))
+        fake_redis.set("movements:v1:adsblol:EGLL:last", state["last_poll"])
+        listed = get_movements(client, "LHR", fake_redis, at(20)).json()["movements"]
+        assert len(listed) == 100 and listed[0]["time_to"] > listed[-1]["time_to"]
+
+    @pytest.mark.it("says not watched when nobody has viewed the airport")
+    def test_not_watched(self, client, fake_redis):
+        body = get_movements(client, "LHR", fake_redis, at(1)).json()
+        assert (body["data_status"], body["unavailable_reason"], body["movements"]) == (
+            "unavailable",
+            "not_watched",
+            [],
+        )
+
+    @pytest.mark.it("says the store is unavailable when Redis fails")
+    def test_store_down(self, client):
+        broken = mock.Mock()
+        broken.get.side_effect = __import__("redis").ConnectionError("down")
+        body = get_movements(client, "LHR", broken, at(1)).json()
+        assert body["unavailable_reason"] == "store_unavailable"
+
+    @pytest.mark.it("reports a validated airport from the P5 results")
+    def test_validation(self, client, watched):
+        with mock.patch.dict(
+            "app.api.movements.VALIDATION",
+            {"EGLL": {"observed": "validated", "airport": "validated"}},
+        ):
+            body = get_movements(client, "LHR", watched, at(1)).json()
+        assert body["validation"] == {
+            "observed": "validated",
+            "inferred": "experimental",
+            "airport": "validated",
+        }
+
+    @pytest.mark.it("rejects bad and unknown codes")
+    def test_codes(self, client, fake_redis):
+        assert get_movements(client, "L!", fake_redis, at(1)).status_code == 400
+        assert get_movements(client, "QQQ", fake_redis, at(1)).status_code == 404
+
+
+@pytest.mark.describe("Positions hook: once per fresh fetch, failures recorded")
+class TestHook:
+    @pytest.fixture(autouse=True)
+    def fresh(self):
+        positions_service._providers.clear()
+        yield
+        positions_service._providers.clear()
+
+    def area(self):
+        return Area(LHR[0], LHR[1], 25.0)
+
+    @pytest.mark.it(
+        "runs detection once per fresh fetch, before the cache is published, never on a cache hit"
+    )
+    def test_once(self, fake_redis):
+        provider = positions_service.get_provider()
+        order = []
+        result = poll(0, lhr_target("ground"))
+        with mock.patch.object(cache, "redis_client", fake_redis), mock.patch.object(
+            provider, "fetch", return_value=result
+        ), mock.patch.object(
+            mv, "observe", side_effect=lambda *a: order.append("observe")
+        ), mock.patch.object(
+            positions_service, "store", side_effect=lambda *a: order.append("store")
+        ):
+            positions_service.get_positions("EGLL", self.area())
+        assert order == ["observe", "store"]
+        fake_redis.set("positions:v1:adsblol:EGLL", json.dumps(result.to_dict()))
+        with mock.patch.object(cache, "redis_client", fake_redis), mock.patch.object(
+            mv, "observe"
+        ) as observe:
+            positions_service.get_positions("EGLL", self.area())
+        assert not observe.called
+
+    @pytest.mark.it("records a failed fetch as a failed poll with its reason")
+    @pytest.mark.parametrize(
+        "error, reason",
+        [
+            (QuotaExhausted("daily_budget", None), "quota_exhausted"),
+            (MetarUpstreamError("requests_busy"), "busy"),
+            (MetarUpstreamError("http_502"), "provider_error"),
+        ],
+    )
+    def test_failure(self, fake_redis, error, reason):
+        provider = positions_service.get_provider()
+        with mock.patch.object(cache, "redis_client", fake_redis), mock.patch.object(
+            provider, "fetch", side_effect=error
+        ), mock.patch.object(mv, "record_failed_poll") as record:
+            with pytest.raises(type(error)):
+                positions_service.get_positions("EGLL", self.area())
+        record.assert_called_once_with(fake_redis, "adsblol", "EGLL", reason)
+
+    @pytest.mark.it("records nothing when the provider is disabled (no poll happened)")
+    def test_disabled(self, fake_redis):
+        with mock.patch.object(
+            positions_service, "get_provider", side_effect=ProviderDisabled("x")
+        ), mock.patch.object(mv, "record_failed_poll") as record:
+            with pytest.raises(ProviderDisabled):
+                positions_service.get_positions("EGLL", self.area())
+        assert not record.called
