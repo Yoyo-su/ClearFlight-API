@@ -482,19 +482,24 @@ describe("live map: recent movements (CF-011)", () => {
     await setOnScreen(true);
     await settle();
     const rows = within(movementsTable()).getAllByRole("row").slice(1);
-    expect(rows).toHaveLength(12);
+    expect(rows).toHaveLength(7);
     expect(rows[0]).toHaveTextContent("Arrival");
-    expect(rows[0]).toHaveTextContent("JNA480");
+    expect(rows[0]).toHaveTextContent("AAR712");
+    // Local airport time and UTC, both labelled (spec §1).
+    expect(rows[0]).toHaveTextContent("07:52 local (07:52 UTC)");
     expect(
       within(movementsTable()).getAllByText(
-        /Inferred \(seen only low near the runway\)/,
+        /Inferred \(seen only low near the runway\) · experimental/,
       ).length,
     ).toBe(6);
     expect(
       within(movementsTable()).getAllByText(
-        /Observed \(on the ground and in the air\)/,
+        /Observed \(on the ground and in the air\) · experimental/,
       ).length,
-    ).toBe(6);
+    ).toBe(1);
+    expect(
+      within(section()).getByText(/not an official departures board/),
+    ).toBeInTheDocument();
   });
 
   it("says movements are experimental until checked against the board, and shows when it watched", async () => {
@@ -529,11 +534,12 @@ describe("live map: recent movements (CF-011)", () => {
     await renderMap();
     await setOnScreen(true);
     await settle();
-    expect(within(movementsTable()).getAllByRole("row")).toHaveLength(13);
+    expect(within(movementsTable()).getAllByRole("row")).toHaveLength(8);
     await settle(6 * 60 * 60_000 + 60_000);
     expect(
-      within(movementsTable()).queryByText("JNA480"),
+      within(movementsTable()).queryByText("JJA8906"),
     ).not.toBeInTheDocument();
+    expect(within(movementsTable()).getAllByRole("row")).toHaveLength(2);
   });
 
   it("requests movements only while the map section is on screen", async () => {
@@ -545,5 +551,111 @@ describe("live map: recent movements (CF-011)", () => {
     await setOnScreen(false);
     await settle(5 * 60_000);
     expect(calls(fetch, "/movements")).toBe(1);
+  });
+});
+
+describe("live map: movements states and labels (CF-011)", () => {
+  function variant(patch: Record<string, unknown>) {
+    const f = fixture("movements-rksi-mixed");
+    return { ...f, body: { ...(f.body as object), ...patch } } as typeof f;
+  }
+  function movementsTable() {
+    return screen.getByRole("table", { name: /Recent movements/ });
+  }
+  async function show(route: Route) {
+    layers.movements = () => route;
+    await renderMap();
+    await setOnScreen(true);
+    await settle();
+  }
+
+  it("marks a method validated only where its own result passed", async () => {
+    await show(
+      variant({
+        validation: {
+          observed: "validated",
+          inferred: "experimental",
+          airport: "validated",
+        },
+      }),
+    );
+    expect(movementsTable()).not.toHaveAccessibleName(
+      /experimental: not yet checked/,
+    );
+    expect(
+      within(movementsTable()).getByText(/Observed .* · validated/),
+    ).toBeInTheDocument();
+    expect(
+      within(movementsTable()).getAllByText(/Inferred .* · experimental/),
+    ).toHaveLength(6);
+  });
+
+  it("says why each watched window ended", async () => {
+    await show(
+      variant({
+        watched: [
+          {
+            from: "2026-10-30T07:00:00Z",
+            to: "2026-10-30T07:10:00Z",
+            ended_by: "quota_exhausted",
+          },
+          {
+            from: "2026-10-30T07:39:12Z",
+            to: "2026-10-30T07:54:03Z",
+            ended_by: null,
+          },
+        ],
+      }),
+    );
+    expect(
+      within(section()).getByText(
+        /07:00–07:10 \(ended by the request limit\), 07:39–07:54\./,
+      ),
+    ).toBeInTheDocument();
+  });
+
+  it("explains airborne-only coverage", async () => {
+    await show(variant({ coverage_mode: "airborne_only" }));
+    expect(
+      within(section()).getByText(/receivers don't see aircraft on the ground/),
+    ).toBeInTheDocument();
+  });
+
+  it("says it can't detect movements when there's no recent receiver data", async () => {
+    await show(
+      variant({
+        movements: [],
+        coverage_mode: "unknown",
+        coverage_reason: "no_recent_data",
+      }),
+    );
+    expect(
+      within(movementsTable()).getByText(
+        "Can't detect movements here right now: no recent receiver data near this airport.",
+      ),
+    ).toBeInTheDocument();
+  });
+
+  it("says movements aren't available when the store is down", async () => {
+    await show(
+      variant({
+        movements: [],
+        watched: [],
+        data_status: "unavailable",
+        unavailable_reason: "store_unavailable",
+      }),
+    );
+    expect(
+      within(movementsTable()).getByText(
+        "Movements aren't available right now.",
+      ),
+    ).toBeInTheDocument();
+  });
+
+  it("says movements couldn't be loaded when the request fails", async () => {
+    await show("network");
+    expect(
+      within(movementsTable()).getByText("Movements couldn't be loaded."),
+    ).toBeInTheDocument();
   });
 });

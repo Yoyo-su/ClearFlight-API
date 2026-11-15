@@ -95,13 +95,16 @@ def attribute(
     return ranked[0][1]
 
 
+def is_replay(result: FeedResult, state: dict) -> bool:
+    """Data time already processed (or older): a no-op, never a failed poll."""
+    return state["last_poll"] is not None and result.observed_at <= parse(
+        state["last_poll"]
+    )
+
+
 def usable(result: FeedResult, state: dict) -> bool:
     if abs(result.fetched_at - result.observed_at) > FRESH_FEED:
         return False
-    if state["last_poll"] is not None and result.observed_at <= parse(
-        state["last_poll"]
-    ):
-        return False  # a repeated or older provider timestamp is not a new poll
     if not result.targets and result.dropped:
         return False  # nothing usable in the answer
     return True
@@ -183,6 +186,8 @@ def recently_observed(state: dict, target_id: str, t: datetime) -> bool:
 
 def detect(state: dict, result: FeedResult, ctx: AirportContext) -> dict:
     """Process one fresh provider answer for the viewed airport (spec §3-§4)."""
+    if is_replay(result, state):
+        return state  # exactly once by data time (spec §5)
     if not usable(result, state):
         return record_failure(state, "unusable")
     t = result.observed_at
@@ -212,6 +217,7 @@ def detect(state: dict, result: FeedResult, ctx: AirportContext) -> dict:
             "alt": target.altitude_ft,
             "vr": target.vertical_rate_fpm,
             "callsign": target.callsign,
+            "seen": iso(t),  # the last usable poll the aircraft was present in
         }
         seen.add(target.id)
         if status == "airborne":
@@ -220,13 +226,23 @@ def detect(state: dict, result: FeedResult, ctx: AirportContext) -> dict:
             cov["ground_near"] += 1
         if status == "airborne" and low_and_close(fix, ctx):
             cov["low_air_near"] += 1
-        if status == "unknown":
-            continue  # no evidence: keep the previous fix as it was
         prev = state["aircraft"].get(target.id)
-        # The last known fix, in this window (state is cleared at every break)
-        # and at most 90 s ago; "unknown" fixes in between neither complete
-        # nor break the transition.
-        consecutive = prev is not None and t - parse(prev["t"]) <= MAX_POLL_GAP
+        if status == "unknown":
+            # No evidence: keep the previous fix, but the aircraft was present,
+            # so it isn't absent (pending arrival) and the chain isn't broken.
+            state["pending"].pop(target.id, None)
+            if prev is not None and prev.get("seen", prev["t"]) == previous_poll:
+                prev["seen"] = iso(t)
+            continue
+        # The last known fix, in this window (state is cleared at every break),
+        # at most 90 s ago, with the aircraft present at every usable poll
+        # since (spec §3: consecutive polls); "unknown" fixes in between
+        # neither complete nor break the transition.
+        consecutive = (
+            prev is not None
+            and prev.get("seen", prev["t"]) == previous_poll
+            and t - parse(prev["t"]) <= MAX_POLL_GAP
+        )
 
         # A reappearance within 10 min withdraws an inferred arrival (go-around, coverage drop).
         if status == "airborne":
@@ -357,6 +373,8 @@ def coverage_mode(state: dict) -> tuple[str, str | None]:
     airborne = sum(b["airborne"] for b in state["coverage"])
     if observed or ground >= 3:
         return "surface", None
+    if ground:
+        return "unknown", "not_enough_watching"  # some ground evidence, not enough
     if low:
         return "airborne_only", None
     if airborne:
@@ -465,6 +483,8 @@ def observe(client, provider: str, code: str, result: FeedResult) -> None:
         return
     try:
         state, last = load(client, provider, code)
+        if is_replay(result, state):
+            return  # already processed: nothing to write
         state = detect(state, result, ctx)
         if not save(client, provider, code, state, last):
             logger.info("Movements for %s already processed by another request", code)
@@ -497,5 +517,15 @@ def read(client, provider: str, code: str, now: datetime) -> dict | None:
     state["movements"] = [
         m for m in state["movements"] if now - parse(m["time_to"]) < RETENTION
     ]
+    window = state.get("window")
+    if window is not None and now - parse(window["to"]) > MAX_POLL_GAP:
+        # Nobody is watching any more: the open window ended at its last poll.
+        state["windows"].append(
+            {"from": window["from"], "to": window["to"], "ended_by": "gap"}
+        )
+        state["window"] = None
     state["windows"] = [w for w in state["windows"] if now - parse(w["to"]) < RETENTION]
+    state["coverage"] = [
+        b for b in state["coverage"] if now - parse(b["hour"]) < COVERAGE_TTL
+    ]
     return state

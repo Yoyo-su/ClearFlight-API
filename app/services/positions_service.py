@@ -113,6 +113,10 @@ def get_positions(code: str, area: Area) -> tuple[FeedResult, bool, object]:
         publish_failure(client, cache_key, e, lock.token)
         movements.record_failed_poll(client, provider.name, code, failed_poll_reason(e))
         raise
+    except Exception:
+        # Any other failure is still a failed poll for movements (never absence).
+        movements.record_failed_poll(client, provider.name, code, "provider_error")
+        raise
     finally:
         try:
             lock.release()

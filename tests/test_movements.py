@@ -123,13 +123,16 @@ class TestRecorded:
         assert counts == {("departure", "inferred"): 7, ("arrival", "inferred"): 5}
         assert mv.coverage_mode(state)[0] == "airborne_only"
 
-    @pytest.mark.it("RKSI: mixed, one movement per aircraft")
+    @pytest.mark.it(
+        "RKSI: mixed, one movement per aircraft; no transition across a missed poll"
+    )
     def test_rksi(self):
+        # Five aircraft vanish for exactly one poll between their air and
+        # ground fixes: not consecutive polls (spec §3), so not observed.
         state, counts = self.replay("rksi", "RKSI")
         assert counts == {
-            ("departure", "observed"): 1,
             ("departure", "inferred"): 1,
-            ("arrival", "observed"): 5,
+            ("arrival", "observed"): 1,
             ("arrival", "inferred"): 5,
         }
         ids = [m["id"] for m in state["movements"]]
@@ -189,18 +192,31 @@ class TestObserved:
         assert kinds(state) == []
         assert state["windows"][0]["ended_by"] == "provider_error"
 
-    @pytest.mark.it(
-        "a stale or repeated provider answer is a failed poll, never processed twice"
-    )
+    @pytest.mark.it("a stale provider answer is a failed poll")
     def test_unusable(self):
         # Newer than the last poll, but its data is 70 s older than its fetch.
         state = run(
             poll(0, target()), poll(1.5, target(state="air", alt=300), stale_s=70)
         )
         assert kinds(state) == [] and state["windows"][0]["ended_by"] == "unusable"
-        state = run(poll(0, target()))
-        repeat = poll(0, target(state="air", alt=300))
-        assert mv.detect(state, repeat, CTX)["windows"][-1]["ended_by"] == "unusable"
+
+    @pytest.mark.it(
+        "a replayed data time is a no-op: state unchanged, the next transition still found"
+    )
+    def test_replay_noop(self):
+        state = run(poll(0), poll(0.5, target()))
+        before = json.dumps(state, sort_keys=True)
+        state = mv.detect(state, poll(0.5, target(state="air", alt=300)), CTX)
+        assert json.dumps(state, sort_keys=True) == before
+        state = run(poll(1, target(state="air", alt=300)), state=state)
+        assert kinds(state) == [("departure", "observed")]
+
+    @pytest.mark.it(
+        "an aircraft absent from the poll between its fixes makes no observed transition"
+    )
+    def test_absent_between(self):
+        state = run(poll(0, target()), poll(0.5), poll(1, target(state="air", alt=300)))
+        assert kinds(state) == []
 
     @pytest.mark.it("an answer with only dropped rows is unusable")
     def test_all_dropped(self):
@@ -295,6 +311,16 @@ class TestInferred:
         assert kinds(state) == [("arrival", "inferred")]
         assert state["movements"][0]["time_to"] == at(1).isoformat()
 
+    @pytest.mark.it(
+        "needs 2 consecutive absent polls: an unknown-altitude fix in between resets it"
+    )
+    def test_arrival_unknown_resets(self):
+        descending = target(state="air", alt=400, vr=-700, lon_nm=1.2)
+        state = run(
+            poll(0, descending), poll(0.5), poll(1, target(state="unknown")), poll(1.5)
+        )
+        assert kinds(state) == []
+
     @pytest.mark.it("isn't confirmed if the window ends before 2 absent polls")
     def test_arrival_window_end(self):
         descending = target(state="air", alt=400, vr=-700, lon_nm=1.2)
@@ -367,6 +393,13 @@ class TestWindowsCoverage:
         assert mv.coverage_mode(low) == ("airborne_only", None)
         ground = run(*[poll(i / 2, target(id=f"g{i:05x}")) for i in range(12)])
         assert mv.coverage_mode(ground) == ("surface", None)
+        # One ground fix is evidence against airborne_only, though not enough for surface.
+        mixed = [
+            poll(i / 2, target(id=f"a{i:05x}", state="air", alt=500, vr=0, lon_nm=1))
+            for i in range(11)
+        ]
+        mixed = run(*mixed, poll(5.5, target(id="g00001")))
+        assert mv.coverage_mode(mixed) == ("unknown", "not_enough_watching")
 
 
 @pytest.fixture
@@ -440,6 +473,34 @@ class TestStore:
             )
         state = mv.read(fake_redis, "adsblol", "HOME", at(1))
         assert state["windows"][-1]["ended_by"] == "detector_error"
+
+    @pytest.mark.it(
+        "applies a replay without writing; a later transition is still found"
+    )
+    def test_replay_store(self, fake_redis):
+        mv.observe(fake_redis, "adsblol", "HOME", poll(0))
+        mv.observe(fake_redis, "adsblol", "HOME", poll(0.5, target()))
+        before = fake_redis.get("movements:v1:adsblol:HOME")
+        mv.observe(
+            fake_redis, "adsblol", "HOME", poll(0.5, target(state="air", alt=300))
+        )
+        assert fake_redis.get("movements:v1:adsblol:HOME") == before
+        mv.observe(fake_redis, "adsblol", "HOME", poll(1, target(state="air", alt=300)))
+        assert kinds(mv.read(fake_redis, "adsblol", "HOME", at(1.2))) == [
+            ("departure", "observed")
+        ]
+
+    @pytest.mark.it("closes an open window at read time once nobody is watching")
+    def test_read_closes_window(self, fake_redis):
+        mv.observe(fake_redis, "adsblol", "HOME", poll(0))
+        mv.observe(fake_redis, "adsblol", "HOME", poll(0.5))
+        assert mv.read(fake_redis, "adsblol", "HOME", at(1))["window"] is not None
+        state = mv.read(fake_redis, "adsblol", "HOME", at(3))
+        assert state["window"] is None
+        assert state["windows"] == [
+            {"from": at(0).isoformat(), "to": at(0.5).isoformat(), "ended_by": "gap"}
+        ]
+        assert mv.read(fake_redis, "adsblol", "HOME", at(7 * 60))["windows"] == []
 
     @pytest.mark.it("expires state with a TTL and filters retention at read time")
     def test_ttl(self, fake_redis):
@@ -634,3 +695,13 @@ class TestHook:
             with pytest.raises(ProviderDisabled):
                 positions_service.get_positions("EGLL", self.area())
         assert not record.called
+
+    @pytest.mark.it("records an unexpected provider failure as a failed poll too")
+    def test_unexpected_failure(self, fake_redis):
+        provider = positions_service.get_provider()
+        with mock.patch.object(cache, "redis_client", fake_redis), mock.patch.object(
+            provider, "fetch", side_effect=KeyError("bad row")
+        ), mock.patch.object(mv, "record_failed_poll") as record:
+            with pytest.raises(KeyError):
+                positions_service.get_positions("EGLL", self.area())
+        record.assert_called_once_with(fake_redis, "adsblol", "EGLL", "provider_error")

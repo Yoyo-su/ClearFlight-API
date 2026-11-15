@@ -493,6 +493,12 @@ function localTime(iso: string, timeZone: string | null): string {
   }
 }
 
+/** "18:43 local (09:43 UTC)", or only UTC when the airport's zone is unknown. */
+function movementTime(iso: string, timeZone: string | null): string {
+  const utc = formatUtcTime(iso);
+  return timeZone ? `${localTime(iso, timeZone)} local (${utc})` : utc;
+}
+
 /** Recent departures and arrivals detected while this page was open (CF-011). */
 function MovementsList({
   data,
@@ -556,7 +562,7 @@ function MovementsList({
           ) : (
             rows.map((m) => (
               <tr key={`${m.id}-${m.kind}-${m.time_to}`}>
-                <td>{localTime(m.time_to, timeZone)}</td>
+                <td>{movementTime(m.time_to, timeZone)}</td>
                 <td>{m.kind === "departure" ? "Departure" : "Arrival"}</td>
                 <th scope="row">
                   {m.callsign ?? `${m.id.toUpperCase()} (no callsign)`}
@@ -565,9 +571,9 @@ function MovementsList({
                   {m.method === "observed"
                     ? "Observed (on the ground and in the air)"
                     : "Inferred (seen only low near the runway)"}
-                  {data && data.validation[m.method] === "experimental"
-                    ? ""
-                    : " · validated"}
+                  {data && data.validation[m.method] === "validated"
+                    ? " · validated"
+                    : " · experimental"}
                 </td>
               </tr>
             ))
@@ -580,6 +586,7 @@ function MovementsList({
           aren't known.{modeText}
         </p>
       )}
+      {data && <p className="muted small map-note">{data.disclaimer}</p>}
     </div>
   );
 }
