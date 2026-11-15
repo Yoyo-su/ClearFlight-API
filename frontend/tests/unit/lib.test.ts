@@ -375,3 +375,21 @@ describe("forecast ageing (CF-008 §5)", () => {
     expect(of("forecast-aai-no-station")).toBe("no-station");
   });
 });
+
+describe("movement times (CF-011 §1)", () => {
+  it("shows the airport's local time and UTC, both labelled", async () => {
+    const { movementTime } = await import("../../src/lib/format");
+    expect(movementTime("2026-11-15T09:43:20Z", "Asia/Seoul")).toBe(
+      "18:43 local (09:43 UTC)",
+    );
+    expect(movementTime("2026-11-15T09:43:20Z", "America/New_York")).toBe(
+      "04:43 local (09:43 UTC)",
+    );
+  });
+
+  it("shows only UTC when the airport's zone is unknown or invalid", async () => {
+    const { movementTime, localTime } = await import("../../src/lib/format");
+    expect(movementTime("2026-11-15T09:43:20Z", null)).toBe("09:43 UTC");
+    expect(localTime("2026-11-15T09:43:20Z", "Not/AZone")).toBe("09:43 UTC");
+  });
+});

@@ -159,6 +159,26 @@ export function formatWeather(groups: string[]): string {
     : "None reported";
 }
 
+/** "HH:mm" in the airport's zone (UTC when unknown or invalid). */
+export function localTime(iso: string, timeZone: string | null): string {
+  try {
+    return new Intl.DateTimeFormat("en-GB", {
+      hour: "2-digit",
+      minute: "2-digit",
+      hourCycle: "h23",
+      timeZone: timeZone ?? "UTC",
+    }).format(new Date(iso));
+  } catch {
+    return formatUtcTime(iso);
+  }
+}
+
+/** "18:43 local (09:43 UTC)", or only UTC when the airport's zone is unknown. */
+export function movementTime(iso: string, timeZone: string | null): string {
+  const utc = formatUtcTime(iso);
+  return timeZone ? `${localTime(iso, timeZone)} local (${utc})` : utc;
+}
+
 /** "07:20 UTC" from an ISO timestamp. */
 export function formatUtcTime(iso: string): string {
   return `${new Date(iso).toISOString().slice(11, 16)} UTC`;

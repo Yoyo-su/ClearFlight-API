@@ -18,7 +18,7 @@ import {
   viewAt,
   type StationView,
 } from "../lib/ageing";
-import { formatUtcTime } from "../lib/format";
+import { formatUtcTime, localTime, movementTime } from "../lib/format";
 import { LEVEL_WORDS } from "./ConditionsCard";
 
 // The "Live map" section (CF-010 design r3). Nothing is requested until the
@@ -479,25 +479,6 @@ const ENDED_BY: Record<string, string> = {
   detector_error: "a detection error",
   state_lost: "lost state",
 };
-
-function localTime(iso: string, timeZone: string | null): string {
-  try {
-    return new Intl.DateTimeFormat("en-GB", {
-      hour: "2-digit",
-      minute: "2-digit",
-      hourCycle: "h23",
-      timeZone: timeZone ?? "UTC",
-    }).format(new Date(iso));
-  } catch {
-    return formatUtcTime(iso);
-  }
-}
-
-/** "18:43 local (09:43 UTC)", or only UTC when the airport's zone is unknown. */
-function movementTime(iso: string, timeZone: string | null): string {
-  const utc = formatUtcTime(iso);
-  return timeZone ? `${localTime(iso, timeZone)} local (${utc})` : utc;
-}
 
 /** Recent departures and arrivals detected while this page was open (CF-011). */
 function MovementsList({
