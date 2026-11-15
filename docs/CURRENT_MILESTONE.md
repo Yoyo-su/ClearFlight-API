@@ -1,14 +1,17 @@
-# Current milestone: CF-010 Airport map
+# Current milestone: CF-011 Observed movements
 
-**Status:** Implemented and reviewed on `feat/cf-010-airport-map`; PR open for owner merge (design approved 2026-11-11, D-013)
-**Source of truth:** [docs/development-plan.md](development-plan.md) v1.1 (§5 CF-010, §7, §8); decisions D-010, D-012, D-013
-**Last updated:** 2026-11-12
+**Status:** Implementing on `feat/cf-011-observed-movements` (design r3 approved 2026-11-15, D-014); CF-010 merged (PR #26)
+**Source of truth:** [docs/development-plan.md](development-plan.md) v1.1 (§5 CF-011, §7, §8); decisions D-012, D-013, D-014
+**Last updated:** 2026-11-15
 
 ## Goal
-A live map on each airport page: aircraft positions and observed weather nearby, with honest states, polling only while visible, and clear attribution.
+Recent departures and arrivals on the airport map, detected from live positions while the page is open, labelled observed or inferred, honest about what was watched and validated against airport boards before being called validated.
 
 ## Next task
-Owner review and merge of the CF-010 PR; then CF-011 observed movements. Design: [cf-010-design.md](cf-010-design.md).
+- **Done:** field elevation in the catalogue; detector, store and positions hook (recorded-track fixtures, 10-mutant sweep); `GET /v1/airports/{code}/movements`; the "Recent movements" list in the map section (unit, contract, e2e with axe).
+- **Remaining:** P5 validation (Heathrow recording 2026-11-15 06:55–08:10 UTC with the board; JFK and KIX busy hours), recorded in `docs/validation/`; reviews (quality-reviewer, Codex); PR.
+
+## Previous: CF-010 Airport map (merged, PR #26)
 - **Reviews:**
   - quality-reviewer: 3 Medium and 7 Low, fixed;
   - Codex: r1 1H/5M/2L, r2 0H/3M/4L, scoped r3 0H/1M/1L, all fixed with tests.

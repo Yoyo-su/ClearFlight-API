@@ -118,13 +118,16 @@ Every key has a TTL: movements, windows and polls 6 h, refreshed on write; aircr
 - **Cache hits never run detection.**
 - **Partial state loss:** missing aircraft state or `last_poll` is treated as a window break, so no movements are inferred across it.
 
+**As built** (2026-11-15, replaces the multi-key Lua design above; same guarantees): one JSON state key per (provider, airport) holds movements, aircraft state, windows and coverage counters, with a separate `:last` key holding `last_poll`. A Lua script writes both only if `:last` still equals the value read (compare-and-set), so a replayed or concurrent poll is a no-op. Retention (6 h) is trimmed on write and filtered on read; the key's TTL is 24 h. A missing or out-of-step `:last` is a window break (`ended_by: "state_lost"`). Detector failures are failed polls with `ended_by: "detector_error"`, and a storage failure `store_error`.
+
 **API:** `GET /v1/airports/{code}/movements`
 ```text
 {
   airport, source: {...as /aircraft},
   movements: [ { kind: "departure" | "arrival", method: "observed" | "inferred",
                  callsign, id, time_from, time_to, distance_nm } ],   // newest first, up to 100, none older than 6 h
-  watched: [ { from, to, ended_by: null | "gap" | "provider_error" | "quota_exhausted" | "busy" | "unusable" } ],
+  watched: [ { from, to, ended_by: null | "gap" | "provider_error" | "quota_exhausted" | "busy" | "unusable"
+                                     | "store_error" | "detector_error" | "state_lost" } ],
   coverage_mode: "surface" | "airborne_only" | "unknown", coverage_reason: null | "not_enough_watching" | "no_low_traffic_seen" | "no_recent_data",
   validation: { observed: "validated" | "experimental", inferred: "validated" | "experimental",
                 airport: "validated" | "experimental" },     // §9

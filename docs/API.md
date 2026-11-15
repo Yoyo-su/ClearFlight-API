@@ -137,6 +137,22 @@ Live aircraft positions reported within 25 nm of the airport (CF-009; [design](c
 - OpenSky can't classify surface vehicles, so they appear as `unclassified`.
 - A full Redis wipe can't be told apart from a new day; the first OpenSky response's header then restores the count.
 
+## GET /v1/airports/{code}/movements
+Recent departures and arrivals detected near the airport **while someone had its live map open** (CF-011; [design](cf-011-design.md), D-014). Not an official departures board.
+- **Data:** read from the movement store only; no provider call. Movements are detected from each fresh `/aircraft` fetch, so an airport nobody viewed has none.
+- **Errors:** 400 invalid code, 404 unknown airport.
+
+**Response:**
+- `airport`, `source` (as `/aircraft`, or null when positions are disabled);
+- `movements`, newest first, at most 100, none older than 6 h: `kind` (`departure` or `arrival`), `method` (`observed`: seen on the ground and in the air; `inferred`: seen only low and close, climbing or descending), `id` (ICAO hex), `callsign`, `time_from` and `time_to` (the movement happened between them), `distance_nm` from the airport;
+- `watched`: windows of consecutive usable polls, `from`, `to` and `ended_by` (null for the open window; otherwise `gap`, `provider_error`, `quota_exhausted`, `busy`, `unusable`, `store_error`, `detector_error` or `state_lost`). Movements outside these windows aren't known;
+- `coverage_mode`: `surface` (ground fixes seen), `airborne_only` (only inferred movements are possible) or `unknown`, with `coverage_reason` `not_enough_watching`, `no_low_traffic_seen` or `no_recent_data`;
+- `validation`: `observed`, `inferred` and `airport`, each `validated` or `experimental` (P5, design §9);
+- `data_status`: `available` or `unavailable`, with `unavailable_reason` `not_watched` or `store_unavailable`;
+- `disclaimer`.
+
+**Rules (D-014):** attributed to the nearest catalogue airport within 4 nm, dropped when a second airport is within 1 nm of that distance; observed transitions need fixes within 90 s in one window; inferred movements need a known field elevation, under 1,500 ft above it, within 2 nm and over 200 fpm, never at a window's edge, and an inferred arrival needs 2 absent polls and is withdrawn if the aircraft reappears within 10 minutes; one movement per aircraft and kind per 10 minutes; helicopters are excluded.
+
 ## GET /v1/airports/{code}/nearby-conditions
 Observed conditions at reporting stations within **50 nm** of the airport (CF-010; [design](cf-010-design.md) §4, D-013). The airport itself is excluded; its own conditions come from `/conditions`.
 - **Data:** one AWC METAR bounding-box query per airport, validated (station pattern, coordinates), de-duplicated (the latest observation per station) and filtered by true distance.

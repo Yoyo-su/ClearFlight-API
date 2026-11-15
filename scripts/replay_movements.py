@@ -55,9 +55,14 @@ def main() -> int:
     summary = {}
     for m in found:
         summary[(m["kind"], m["method"])] = summary.get((m["kind"], m["method"]), 0) + 1
-    print(f"{args.code}: {len(args.files)} polls; " + ", ".join(f"{k[1]} {k[0]}s: {v}" for k, v in sorted(summary.items())))
+    print(
+        f"{args.code}: {len(args.files)} polls; "
+        + ", ".join(f"{k[1]} {k[0]}s: {v}" for k, v in sorted(summary.items()))
+    )
     mode = movements.coverage_mode(state)
-    print(f"coverage mode: {mode[0]}{f' ({mode[1]})' if mode[1] else ''}; windows: {len(state['windows']) + (1 if state['window'] else 0)}")
+    print(
+        f"coverage mode: {mode[0]}{f' ({mode[1]})' if mode[1] else ''}; windows: {len(state['windows']) + (1 if state['window'] else 0)}"
+    )
     if args.json:
         args.json.write_text(json.dumps(found, indent=1))
     return 0
