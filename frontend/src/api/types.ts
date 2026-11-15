@@ -1,4 +1,16 @@
-import { arr, bool, datetime, literal, nullable, num, obj, oneOf, refine, str, type Infer } from "./schema";
+import {
+  arr,
+  bool,
+  datetime,
+  literal,
+  nullable,
+  num,
+  obj,
+  oneOf,
+  refine,
+  str,
+  type Infer,
+} from "./schema";
 
 // The v1 API (app/api/models.py; D-007, D-008), as runtime schemas with the
 // TypeScript types derived from them. Recorded responses in tests/fixtures
@@ -18,10 +30,25 @@ const airportFields = {
 };
 
 export const AirportSchema = obj(airportFields);
-export const AirportResultSchema = obj({ ...airportFields, type: str, latitude: num, longitude: num });
-export const AirportSearchResponseSchema = obj({ query: str, count: num, results: arr(AirportResultSchema) });
+export const AirportResultSchema = obj({
+  ...airportFields,
+  type: str,
+  latitude: num,
+  longitude: num,
+});
+export const AirportSearchResponseSchema = obj({
+  query: str,
+  count: num,
+  results: arr(AirportResultSchema),
+});
 
-export const SkyConditionSchema = literal("clear", "cavok", "clouds", "obscured", "unknown");
+export const SkyConditionSchema = literal(
+  "clear",
+  "cavok",
+  "clouds",
+  "obscured",
+  "unknown",
+);
 export const CloudLayerSchema = obj({ cover: str, base_ft: num });
 
 export const ObservationSchema = obj({
@@ -47,7 +74,13 @@ export const ObservationSchema = obj({
   weather_phenomena: arr(str),
 });
 
-export const LevelSchema = literal("low", "moderate", "high", "severe", "unknown");
+export const LevelSchema = literal(
+  "low",
+  "moderate",
+  "high",
+  "severe",
+  "unknown",
+);
 export const FactorSchema = obj({
   name: literal("wind", "visibility", "ceiling", "weather"),
   value: nullable(oneOf(num, arr(str))),
@@ -69,7 +102,9 @@ const conditionsResponseFields = obj({
   observation: nullable(ObservationSchema),
   conditions: ConditionsSchema,
   data_status: literal("current", "stale", "unavailable"),
-  unavailable_reason: nullable(literal("no_metar_station", "no_report", "observation_too_old")),
+  unavailable_reason: nullable(
+    literal("no_metar_station", "no_report", "observation_too_old"),
+  ),
   last_observed_at: nullable(datetime),
   current_until: nullable(datetime),
   stale_until: nullable(datetime),
@@ -78,17 +113,25 @@ const conditionsResponseFields = obj({
 // Cross-field rules the ageing rule depends on (D11): a current or stale
 // response carries its observation and both eligibility times; an
 // unavailable one carries no observation.
-export const ConditionsResponseSchema = refine(conditionsResponseFields, (r) => {
-  if (r.data_status === "unavailable") {
-    if (r.observation !== null) return "unavailable response has an observation";
-    if (r.unavailable_reason === null) return "unavailable response has no reason";
+export const ConditionsResponseSchema = refine(
+  conditionsResponseFields,
+  (r) => {
+    if (r.data_status === "unavailable") {
+      if (r.observation !== null)
+        return "unavailable response has an observation";
+      if (r.unavailable_reason === null)
+        return "unavailable response has no reason";
+      return null;
+    }
+    if (r.observation === null)
+      return `${r.data_status} response has no observation`;
+    if (r.current_until === null || r.stale_until === null)
+      return `${r.data_status} response lacks current_until/stale_until`;
+    if (r.unavailable_reason !== null)
+      return `${r.data_status} response has an unavailable_reason`;
     return null;
-  }
-  if (r.observation === null) return `${r.data_status} response has no observation`;
-  if (r.current_until === null || r.stale_until === null) return `${r.data_status} response lacks current_until/stale_until`;
-  if (r.unavailable_reason !== null) return `${r.data_status} response has an unavailable_reason`;
-  return null;
-});
+  },
+);
 
 export const ErrorResponseSchema = obj({ detail: str, reason: str });
 
@@ -116,9 +159,13 @@ export const ForecastHourSchema = refine(
     possible: arr(ForecastPossibleSchema),
   }),
   (h) => {
-    if (Date.parse(h.end) <= Date.parse(h.start)) return "hour ends before it starts";
-    if (h.status === "not_yet_valid") return h.prevailing === null ? null : "not-yet-valid hour has a forecast";
-    return h.prevailing === null ? `${h.status} hour has no prevailing conditions` : null;
+    if (Date.parse(h.end) <= Date.parse(h.start))
+      return "hour ends before it starts";
+    if (h.status === "not_yet_valid")
+      return h.prevailing === null ? null : "not-yet-valid hour has a forecast";
+    return h.prevailing === null
+      ? `${h.status} hour has no prevailing conditions`
+      : null;
   },
 );
 const forecastResponseFields = obj({
@@ -126,7 +173,9 @@ const forecastResponseFields = obj({
   forecast: nullable(ForecastSummarySchema),
   hours: arr(ForecastHourSchema),
   data_status: literal("available", "unavailable"),
-  unavailable_reason: nullable(literal("no_metar_station", "no_forecast", "forecast_expired")),
+  unavailable_reason: nullable(
+    literal("no_metar_station", "no_forecast", "forecast_expired"),
+  ),
   disclaimer: str,
 });
 
@@ -135,11 +184,13 @@ const forecastResponseFields = obj({
 export const ForecastResponseSchema = refine(forecastResponseFields, (r) => {
   if (r.data_status === "unavailable") {
     if (r.hours.length > 0) return "unavailable forecast has hours";
-    if (r.unavailable_reason === null) return "unavailable forecast has no reason";
+    if (r.unavailable_reason === null)
+      return "unavailable forecast has no reason";
     return null;
   }
   if (r.forecast === null) return "available forecast has no summary";
-  if (r.unavailable_reason !== null) return "available forecast has an unavailable_reason";
+  if (r.unavailable_reason !== null)
+    return "available forecast has an unavailable_reason";
   return null;
 });
 
@@ -181,7 +232,13 @@ const aircraftResponseFields = obj({
   withheld: num,
   excluded: num,
   dropped: num,
-  data_status: literal("available", "no_aircraft", "coverage_unknown", "quota_exhausted", "unavailable"),
+  data_status: literal(
+    "available",
+    "no_aircraft",
+    "coverage_unknown",
+    "quota_exhausted",
+    "unavailable",
+  ),
   unavailable_reason: nullable(
     literal(
       "no_location",
@@ -201,8 +258,10 @@ const aircraftResponseFields = obj({
 // The expiry rules depend on these: a feed answer carries its data time.
 export const AircraftResponseSchema = refine(aircraftResponseFields, (r) => {
   const fed = r.data_status === "available" || r.data_status === "no_aircraft";
-  if (fed && (r.observed_at === null || r.source === null)) return `${r.data_status} response lacks observed_at/source`;
-  if (r.data_status === "no_aircraft" && r.aircraft.length > 0) return "no_aircraft response has aircraft";
+  if (fed && (r.observed_at === null || r.source === null))
+    return `${r.data_status} response lacks observed_at/source`;
+  if (r.data_status === "no_aircraft" && r.aircraft.length > 0)
+    return "no_aircraft response has aircraft";
   return null;
 });
 
@@ -227,7 +286,9 @@ export const NearbyConditionsResponseSchema = obj({
   dropped: num,
   fetched_at: nullable(datetime),
   data_status: literal("available", "unavailable"),
-  unavailable_reason: nullable(literal("no_stations", "unusable_data", "reports_too_old")),
+  unavailable_reason: nullable(
+    literal("no_stations", "unusable_data", "reports_too_old"),
+  ),
   source: str,
 });
 
@@ -235,23 +296,91 @@ export const RadarResponseSchema = refine(
   obj({
     enabled: bool,
     data_status: literal("available", "unavailable"),
-    unavailable_reason: nullable(literal("provider_disabled", "invalid_index", "no_frames")),
-    frame: nullable(obj({ time: datetime, tile_url: str, current_until: datetime })),
+    unavailable_reason: nullable(
+      literal("provider_disabled", "invalid_index", "no_frames"),
+    ),
+    frame: nullable(
+      obj({ time: datetime, tile_url: str, current_until: datetime }),
+    ),
     attribution: str,
     attribution_url: str,
   }),
   (r) => {
-    if (r.frame && !r.frame.tile_url.startsWith("https://tilecache.rainviewer.com/")) return "unexpected radar tile host";
-    if (r.data_status === "available" && r.frame === null) return "available radar has no frame";
+    if (
+      r.frame &&
+      !r.frame.tile_url.startsWith("https://tilecache.rainviewer.com/")
+    )
+      return "unexpected radar tile host";
+    if (r.data_status === "available" && r.frame === null)
+      return "available radar has no frame";
     return null;
   },
 );
 
+// CF-011 observed movements (docs/cf-011-design.md §5).
+const ValidationWordSchema = literal("validated", "experimental");
+export const MovementSchema = obj({
+  kind: literal("departure", "arrival"),
+  method: literal("observed", "inferred"),
+  id: str,
+  callsign: nullable(str),
+  time_from: datetime,
+  time_to: datetime,
+  distance_nm: num,
+});
+export const MovementsResponseSchema = obj({
+  airport: AirportSchema,
+  source: nullable(
+    obj({
+      provider: literal("adsblol", "opensky"),
+      name: str,
+      attribution_url: str,
+      access: literal("keyless", "anonymous", "account"),
+      privacy_filter: literal("applied", "unavailable"),
+    }),
+  ),
+  movements: arr(MovementSchema),
+  watched: arr(
+    obj({
+      from: datetime,
+      to: datetime,
+      ended_by: nullable(
+        literal(
+          "gap",
+          "provider_error",
+          "quota_exhausted",
+          "busy",
+          "unusable",
+          "store_error",
+          "detector_error",
+          "state_lost",
+        ),
+      ),
+    }),
+  ),
+  coverage_mode: literal("surface", "airborne_only", "unknown"),
+  coverage_reason: nullable(
+    literal("not_enough_watching", "no_low_traffic_seen", "no_recent_data"),
+  ),
+  validation: obj({
+    observed: ValidationWordSchema,
+    inferred: ValidationWordSchema,
+    airport: ValidationWordSchema,
+  }),
+  data_status: literal("available", "unavailable"),
+  unavailable_reason: nullable(literal("not_watched", "store_unavailable")),
+  disclaimer: str,
+});
+
 export type Airport = Infer<typeof AirportSchema>;
+export type Movement = Infer<typeof MovementSchema>;
+export type MovementsResponse = Infer<typeof MovementsResponseSchema>;
 export type AircraftPosition = Infer<typeof AircraftPositionSchema>;
 export type AircraftResponse = Infer<typeof AircraftResponseSchema>;
 export type NearbyStation = Infer<typeof NearbyStationSchema>;
-export type NearbyConditionsResponse = Infer<typeof NearbyConditionsResponseSchema>;
+export type NearbyConditionsResponse = Infer<
+  typeof NearbyConditionsResponseSchema
+>;
 export type RadarResponse = Infer<typeof RadarResponseSchema>;
 export type AirportResult = Infer<typeof AirportResultSchema>;
 export type AirportSearchResponse = Infer<typeof AirportSearchResponseSchema>;
@@ -264,7 +393,9 @@ export type FactorName = Factor["name"];
 export type Conditions = Infer<typeof ConditionsSchema>;
 export type ConditionsResponse = Infer<typeof ConditionsResponseSchema>;
 export type DataStatus = ConditionsResponse["data_status"];
-export type UnavailableReason = NonNullable<ConditionsResponse["unavailable_reason"]>;
+export type UnavailableReason = NonNullable<
+  ConditionsResponse["unavailable_reason"]
+>;
 export type ErrorResponse = Infer<typeof ErrorResponseSchema>;
 export type ForecastSummary = Infer<typeof ForecastSummarySchema>;
 export type ForecastHour = Infer<typeof ForecastHourSchema>;

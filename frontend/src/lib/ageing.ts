@@ -5,6 +5,7 @@ import type {
   ConditionsResponse,
   ForecastHour,
   ForecastResponse,
+  Movement,
   NearbyStation,
   RadarResponse,
 } from "../api/types";
@@ -35,9 +36,18 @@ export const STALE_EXPLANATION =
   "No score: the latest observation is too old to score; its values are shown with their age.";
 
 /** The conditions to show: a score is withdrawn once the data is stale. */
-export function conditionsFor(data: ConditionsResponse, view: View): Conditions {
-  if (view !== "stale" || data.conditions.score === null) return data.conditions;
-  return { ...data.conditions, score: null, level: "unknown", explanation: STALE_EXPLANATION };
+export function conditionsFor(
+  data: ConditionsResponse,
+  view: View,
+): Conditions {
+  if (view !== "stale" || data.conditions.score === null)
+    return data.conditions;
+  return {
+    ...data.conditions,
+    score: null,
+    level: "unknown",
+    explanation: STALE_EXPLANATION,
+  };
 }
 
 // Forecasts age too (CF-008 spec §5): an hour leaves the screen once it has
@@ -51,11 +61,19 @@ export type ForecastView =
   | { kind: "no-forecast" }
   | { kind: "no-station" };
 
-export function forecastViewAt(data: ForecastResponse, now: Date): ForecastView {
-  if (data.unavailable_reason === "no_metar_station") return { kind: "no-station" };
+export function forecastViewAt(
+  data: ForecastResponse,
+  now: Date,
+): ForecastView {
+  if (data.unavailable_reason === "no_metar_station")
+    return { kind: "no-station" };
   if (data.unavailable_reason === "no_forecast") return { kind: "no-forecast" };
   const t = now.getTime();
-  if (data.unavailable_reason === "forecast_expired" || !data.forecast || t >= Date.parse(data.forecast.valid_to)) {
+  if (
+    data.unavailable_reason === "forecast_expired" ||
+    !data.forecast ||
+    t >= Date.parse(data.forecast.valid_to)
+  ) {
     return { kind: "expired" };
   }
   const hours = data.hours.filter((hour) => Date.parse(hour.end) > t);
@@ -77,21 +95,31 @@ export type AircraftView =
   | { kind: "unavailable"; reason: string | null }
   | { kind: "outdated" }; // the claim or every position has expired
 
-export function aircraftViewAt(data: AircraftResponse, now: Date): AircraftView {
+export function aircraftViewAt(
+  data: AircraftResponse,
+  now: Date,
+): AircraftView {
   const t = now.getTime();
-  const claimHolds = data.observed_at !== null && t < Date.parse(data.observed_at) + CLAIM_MS;
+  const claimHolds =
+    data.observed_at !== null && t < Date.parse(data.observed_at) + CLAIM_MS;
   switch (data.data_status) {
     case "available": {
-      const aircraft = data.aircraft.filter((a) => t < Date.parse(a.expires_at));
+      const aircraft = data.aircraft.filter(
+        (a) => t < Date.parse(a.expires_at),
+      );
       if (aircraft.length > 0) return { kind: "aircraft", aircraft };
       // Only withheld aircraft, or every position has expired.
-      return data.aircraft.length === 0 && claimHolds ? { kind: "aircraft", aircraft: [] } : { kind: "outdated" };
+      return data.aircraft.length === 0 && claimHolds
+        ? { kind: "aircraft", aircraft: [] }
+        : { kind: "outdated" };
     }
     case "no_aircraft":
       return claimHolds ? { kind: "no-aircraft" } : { kind: "outdated" };
     case "coverage_unknown":
       // Claims without a feed time (e.g. "busy") hold until the next refresh.
-      return data.observed_at === null || claimHolds ? { kind: "coverage-unknown", reason: data.unavailable_reason } : { kind: "outdated" };
+      return data.observed_at === null || claimHolds
+        ? { kind: "coverage-unknown", reason: data.unavailable_reason }
+        : { kind: "outdated" };
     case "quota_exhausted":
       return data.retry_at === null || t < Date.parse(data.retry_at)
         ? { kind: "limit", retryAt: data.retry_at }
@@ -106,18 +134,39 @@ export function aircraftViewAt(data: AircraftResponse, now: Date): AircraftView 
 export type StationView = NearbyStation & { view: "current" | "stale" };
 
 /** Stations that may still be shown, with their status now (D-007/D-008). */
-export function stationsAt(stations: NearbyStation[], now: Date): StationView[] {
+export function stationsAt(
+  stations: NearbyStation[],
+  now: Date,
+): StationView[] {
   const t = now.getTime();
   return stations
     .filter((s) => t <= Date.parse(s.stale_until))
     .map((s) => ({
       ...s,
-      view: s.data_status === "stale" || t > Date.parse(s.current_until) ? ("stale" as const) : ("current" as const),
+      view:
+        s.data_status === "stale" || t > Date.parse(s.current_until)
+          ? ("stale" as const)
+          : ("current" as const),
     }));
 }
 
 /** The radar frame to show now, if any. */
-export function radarFrameAt(data: RadarResponse | null, now: Date): RadarResponse["frame"] {
+export function radarFrameAt(
+  data: RadarResponse | null,
+  now: Date,
+): RadarResponse["frame"] {
   const frame = data?.frame ?? null;
-  return frame && now.getTime() < Date.parse(frame.current_until) ? frame : null;
+  return frame && now.getTime() < Date.parse(frame.current_until)
+    ? frame
+    : null;
+}
+
+// Movements (CF-011 §5): never shown more than 6 h after they happened, even
+// while refreshes fail.
+export const MOVEMENT_RETENTION_MS = 6 * 60 * 60_000;
+
+export function movementsAt(movements: Movement[], now: Date): Movement[] {
+  return movements.filter(
+    (m) => now.getTime() < Date.parse(m.time_to) + MOVEMENT_RETENTION_MS,
+  );
 }

@@ -7,14 +7,20 @@ export interface ClockReading {
   zone: string; // "GMT (UTC+0)", "EDT (UTC−4)", "UTC−3"
 }
 
-function part(parts: Intl.DateTimeFormatPart[], type: Intl.DateTimeFormatPartTypes): string {
+function part(
+  parts: Intl.DateTimeFormatPart[],
+  type: Intl.DateTimeFormatPartTypes,
+): string {
   return parts.find((p) => p.type === type)?.value ?? "";
 }
 
 /** "UTC+9", "UTC−4", "UTC+5:30" from Intl's "GMT+09:00" style offset. */
 function utcOffset(timeZone: string, now: Date): string {
   const name = part(
-    new Intl.DateTimeFormat("en-US", { timeZone, timeZoneName: "longOffset" }).formatToParts(now),
+    new Intl.DateTimeFormat("en-US", {
+      timeZone,
+      timeZoneName: "longOffset",
+    }).formatToParts(now),
     "timeZoneName",
   );
   const match = /GMT([+-])(\d{2}):(\d{2})/.exec(name);
@@ -24,8 +30,19 @@ function utcOffset(timeZone: string, now: Date): string {
   return `UTC${sign === "-" ? "−" : "+"}${text}`;
 }
 
-function zoneLabel(timeZone: string, now: Date, style: "short" | "long", locale: string): string {
-  return part(new Intl.DateTimeFormat(locale, { timeZone, timeZoneName: style }).formatToParts(now), "timeZoneName");
+function zoneLabel(
+  timeZone: string,
+  now: Date,
+  style: "short" | "long",
+  locale: string,
+): string {
+  return part(
+    new Intl.DateTimeFormat(locale, {
+      timeZone,
+      timeZoneName: style,
+    }).formatToParts(now),
+    "timeZoneName",
+  );
 }
 
 /**
@@ -39,7 +56,8 @@ function zoneLabel(timeZone: string, now: Date, style: "short" | "long", locale:
 function zoneName(timeZone: string, now: Date): string | null {
   // "GMT+1"/"UTC−4" are offsets, not names; a bare "GMT" is a real name
   // (London in winter), a bare "UTC" isn't one for a local zone.
-  const isOffset = (name: string) => /^(GMT|UTC)[+−-]/.test(name) || name === "UTC";
+  const isOffset = (name: string) =>
+    /^(GMT|UTC)[+−-]/.test(name) || name === "UTC";
   for (const locale of ["en-GB", "en-US"]) {
     const name = zoneLabel(timeZone, now, "short", locale);
     if (name && !isOffset(name)) return name;

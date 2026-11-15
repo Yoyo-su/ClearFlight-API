@@ -1,0 +1,150 @@
+{
+  "status": 200,
+  "headers": {},
+  "body": {
+    "airport": {
+      "code": "RKSI",
+      "icao": "RKSI",
+      "iata": "ICN",
+      "name": "Incheon International Airport",
+      "city": "Seoul",
+      "country": "South Korea",
+      "country_code": "KR",
+      "timezone": "Asia/Seoul"
+    },
+    "source": {
+      "provider": "adsblol",
+      "name": "adsb.lol (ODbL 1.0)",
+      "attribution_url": "https://adsb.lol",
+      "access": "keyless",
+      "privacy_filter": "applied"
+    },
+    "movements": [
+      {
+        "kind": "arrival",
+        "method": "observed",
+        "id": "71c016",
+        "callsign": "JNA480",
+        "time_from": "2026-10-30T07:53:02.502000Z",
+        "time_to": "2026-10-30T07:54:03.003000Z",
+        "distance_nm": 1.4
+      },
+      {
+        "kind": "departure",
+        "method": "observed",
+        "id": "71c050",
+        "callsign": "JJA1393",
+        "time_from": "2026-10-30T07:50:59.004000Z",
+        "time_to": "2026-10-30T07:52:00.501000Z",
+        "distance_nm": 1.0
+      },
+      {
+        "kind": "arrival",
+        "method": "inferred",
+        "id": "71c259",
+        "callsign": "AAR712",
+        "time_from": "2026-10-30T07:50:59.004000Z",
+        "time_to": "2026-10-30T07:52:00.501000Z",
+        "distance_nm": 1.6
+      },
+      {
+        "kind": "arrival",
+        "method": "observed",
+        "id": "71c513",
+        "callsign": "TWB614",
+        "time_from": "2026-10-30T07:50:28.500000Z",
+        "time_to": "2026-10-30T07:51:29.501000Z",
+        "distance_nm": 1.4
+      },
+      {
+        "kind": "arrival",
+        "method": "inferred",
+        "id": "71c073",
+        "callsign": "ASV248",
+        "time_from": "2026-10-30T07:49:27Z",
+        "time_to": "2026-10-30T07:50:28.500000Z",
+        "distance_nm": 1.3
+      },
+      {
+        "kind": "arrival",
+        "method": "observed",
+        "id": "78063b",
+        "callsign": "CDG4613",
+        "time_from": "2026-10-30T07:47:55.001000Z",
+        "time_to": "2026-10-30T07:48:56.501000Z",
+        "distance_nm": 1.5
+      },
+      {
+        "kind": "arrival",
+        "method": "inferred",
+        "id": "862d2e",
+        "callsign": "JAL6717",
+        "time_from": "2026-10-30T07:46:54.005000Z",
+        "time_to": "2026-10-30T07:47:55.001000Z",
+        "distance_nm": 1.5
+      },
+      {
+        "kind": "arrival",
+        "method": "inferred",
+        "id": "ac3c0e",
+        "callsign": "FDX5132",
+        "time_from": "2026-10-30T07:44:51.501000Z",
+        "time_to": "2026-10-30T07:45:52.501000Z",
+        "distance_nm": 1.4
+      },
+      {
+        "kind": "arrival",
+        "method": "observed",
+        "id": "782333",
+        "callsign": "CES2073",
+        "time_from": "2026-10-30T07:44:20.501000Z",
+        "time_to": "2026-10-30T07:45:22.006000Z",
+        "distance_nm": 1.4
+      },
+      {
+        "kind": "arrival",
+        "method": "inferred",
+        "id": "71c321",
+        "callsign": "JJA1404",
+        "time_from": "2026-10-30T07:42:16.500000Z",
+        "time_to": "2026-10-30T07:43:19.501000Z",
+        "distance_nm": 1.6
+      },
+      {
+        "kind": "arrival",
+        "method": "observed",
+        "id": "71c339",
+        "callsign": "JJA8906",
+        "time_from": "2026-10-30T07:40:13.502000Z",
+        "time_to": "2026-10-30T07:40:44.500000Z",
+        "distance_nm": 1.7
+      },
+      {
+        "kind": "departure",
+        "method": "inferred",
+        "id": "782234",
+        "callsign": "CSN684",
+        "time_from": "2026-10-30T07:39:43Z",
+        "time_to": "2026-10-30T07:40:13.502000Z",
+        "distance_nm": 1.7
+      }
+    ],
+    "watched": [
+      {
+        "from": "2026-10-30T07:39:12.512000Z",
+        "to": "2026-10-30T07:54:03.003000Z",
+        "ended_by": null
+      }
+    ],
+    "coverage_mode": "surface",
+    "coverage_reason": null,
+    "validation": {
+      "observed": "experimental",
+      "inferred": "experimental",
+      "airport": "experimental"
+    },
+    "data_status": "available",
+    "unavailable_reason": null,
+    "disclaimer": "Detected from volunteer receiver data while this page was open. May be incomplete; not an official departures board."
+  }
+}

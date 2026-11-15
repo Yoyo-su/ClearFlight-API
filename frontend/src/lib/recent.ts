@@ -24,15 +24,22 @@ function isRecent(value: unknown): value is RecentAirport {
 
 export function loadRecent(): RecentAirport[] {
   try {
-    const parsed: unknown = JSON.parse(window.localStorage.getItem(KEY) ?? "[]");
-    return Array.isArray(parsed) ? parsed.filter(isRecent).slice(0, MAX_RECENT) : [];
+    const parsed: unknown = JSON.parse(
+      window.localStorage.getItem(KEY) ?? "[]",
+    );
+    return Array.isArray(parsed)
+      ? parsed.filter(isRecent).slice(0, MAX_RECENT)
+      : [];
   } catch {
     return [];
   }
 }
 
 export function rememberAirport(airport: RecentAirport): RecentAirport[] {
-  const next = [airport, ...loadRecent().filter((a) => a.code !== airport.code)].slice(0, MAX_RECENT);
+  const next = [
+    airport,
+    ...loadRecent().filter((a) => a.code !== airport.code),
+  ].slice(0, MAX_RECENT);
   try {
     window.localStorage.setItem(KEY, JSON.stringify(next));
   } catch {

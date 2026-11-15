@@ -1,10 +1,23 @@
 import { lazy, Suspense, useEffect, useMemo, useRef, useState } from "react";
 
-import { fetchAircraft, fetchNearby, fetchRadar } from "../api/client";
+import {
+  fetchAircraft,
+  fetchMovements,
+  fetchNearby,
+  fetchRadar,
+} from "../api/client";
 import type { AircraftPosition, ConditionsResponse } from "../api/types";
 import { useAirportData } from "../hooks/useConditions";
 import { useNow } from "../hooks/useNow";
-import { aircraftViewAt, conditionsFor, radarFrameAt, stationsAt, viewAt, type StationView } from "../lib/ageing";
+import {
+  aircraftViewAt,
+  conditionsFor,
+  movementsAt,
+  radarFrameAt,
+  stationsAt,
+  viewAt,
+  type StationView,
+} from "../lib/ageing";
 import { formatUtcTime } from "../lib/format";
 import { LEVEL_WORDS } from "./ConditionsCard";
 
@@ -20,17 +33,25 @@ export const AIRCRAFT_REFRESH_MS = 30_000; // the server's cache period (M5)
 export const NEARBY_REFRESH_MS = 10 * 60_000;
 export const RADAR_REFRESH_MS = 5 * 60_000;
 
-function useOnScreen<T extends Element>(): [React.RefObject<T | null>, boolean] {
+function useOnScreen<T extends Element>(): [
+  React.RefObject<T | null>,
+  boolean,
+] {
   const ref = useRef<T>(null);
   // Without IntersectionObserver, treat the section as on screen (tab
   // visibility still gates every request).
-  const [onScreen, setOnScreen] = useState(() => typeof IntersectionObserver === "undefined");
+  const [onScreen, setOnScreen] = useState(
+    () => typeof IntersectionObserver === "undefined",
+  );
   useEffect(() => {
     const el = ref.current;
     if (!el || typeof IntersectionObserver === "undefined") return;
-    const observer = new IntersectionObserver(([entry]) => setOnScreen(entry?.isIntersecting ?? false), {
-      rootMargin: "200px 0px",
-    });
+    const observer = new IntersectionObserver(
+      ([entry]) => setOnScreen(entry?.isIntersecting ?? false),
+      {
+        rootMargin: "200px 0px",
+      },
+    );
     observer.observe(el);
     return () => observer.disconnect();
   }, []);
@@ -44,7 +65,9 @@ function secondsAgo(iso: string, now: Date): string {
 
 function altitude(a: AircraftPosition): string {
   if (a.on_ground) return "On ground";
-  return a.altitude_ft === null ? "Unknown" : `${a.altitude_ft.toLocaleString("en-GB")} ft`;
+  return a.altitude_ft === null
+    ? "Unknown"
+    : `${a.altitude_ft.toLocaleString("en-GB")} ft`;
 }
 
 const REASON_TEXT: Record<string, string> = {
@@ -54,7 +77,13 @@ const REASON_TEXT: Record<string, string> = {
   busy: "the position service is busy",
 };
 
-export function AirportMap({ code, conditions }: { code: string; conditions: ConditionsResponse }) {
+export function AirportMap({
+  code,
+  conditions,
+}: {
+  code: string;
+  conditions: ConditionsResponse;
+}) {
   const [sectionRef, onScreen] = useOnScreen<HTMLElement>();
   const [radarOn, setRadarOn] = useState(false);
   const [mapFailed, setMapFailed] = useState(false);
@@ -75,19 +104,37 @@ export function AirportMap({ code, conditions }: { code: string; conditions: Con
     refreshMs: NEARBY_REFRESH_MS,
     cooldownMs: AIRCRAFT_REFRESH_MS, // the same as the shared Refresh map button
   });
-  const radar = useAirportData(code, fetchRadar, { active: onScreen, refreshMs: RADAR_REFRESH_MS });
+  const radar = useAirportData(code, fetchRadar, {
+    active: onScreen,
+    refreshMs: RADAR_REFRESH_MS,
+  });
+  // Movements are detected only while positions are polled, i.e. while this
+  // section is on screen (CF-011), so the list lives here and shares its gate.
+  const moves = useAirportData(code, fetchMovements, {
+    active: onScreen,
+    refreshMs: AIRCRAFT_REFRESH_MS,
+    cooldownMs: AIRCRAFT_REFRESH_MS,
+  });
 
   const aircraftData = aircraft.state.data;
   const nearbyData = nearby.state.data;
   const radarData = radar.state.data;
+  const movesData = moves.state.data;
   // Every position's own deadline (C4), not just the earliest one.
-  const expiries = (aircraftData?.aircraft ?? []).map((a) => Date.parse(a.expires_at));
+  const expiries = (aircraftData?.aircraft ?? []).map((a) =>
+    Date.parse(a.expires_at),
+  );
   const now = useNow(onScreen ? 5000 : 60_000, [
     ...expiries,
-    aircraftData?.observed_at ? Date.parse(aircraftData.observed_at) + 60_000 : null,
+    aircraftData?.observed_at
+      ? Date.parse(aircraftData.observed_at) + 60_000
+      : null,
     aircraftData?.retry_at ? Date.parse(aircraftData.retry_at) : null,
     radarData?.frame ? Date.parse(radarData.frame.current_until) : null,
-    ...(nearbyData?.stations ?? []).flatMap((st) => [Date.parse(st.current_until), Date.parse(st.stale_until)]),
+    ...(nearbyData?.stations ?? []).flatMap((st) => [
+      Date.parse(st.current_until),
+      Date.parse(st.stale_until),
+    ]),
     conditions.current_until ? Date.parse(conditions.current_until) : null,
     conditions.stale_until ? Date.parse(conditions.stale_until) : null,
     aircraft.state.cooldownUntil || null,
@@ -95,55 +142,83 @@ export function AirportMap({ code, conditions }: { code: string; conditions: Con
 
   const view = aircraftData ? aircraftViewAt(aircraftData, now) : null;
   const shown = view?.kind === "aircraft" ? view.aircraft : [];
-  const stations: StationView[] = useMemo(() => (nearbyData ? stationsAt(nearbyData.stations, now) : []), [nearbyData, now]);
+  const stations: StationView[] = useMemo(
+    () => (nearbyData ? stationsAt(nearbyData.stations, now) : []),
+    [nearbyData, now],
+  );
   const frame = radarOn ? radarFrameAt(radarData, now) : null;
   const area = aircraftData?.area ?? nearbyData?.area ?? null;
 
   const conditionsView = viewAt(conditions, now);
   // The airport's own score only while its report is current (D-008/D11);
   // stale, too old or missing reports are never scored on the map.
-  const own = conditionsView === "current" ? conditionsFor(conditions, conditionsView) : null;
+  const own =
+    conditionsView === "current"
+      ? conditionsFor(conditions, conditionsView)
+      : null;
   let ownText: string;
-  if (own && own.score !== null) ownText = `${own.score} ${LEVEL_WORDS[own.level]} (observed)`;
+  if (own && own.score !== null)
+    ownText = `${own.score} ${LEVEL_WORDS[own.level]} (observed)`;
   else if (own) ownText = "unknown (observed)";
-  else if (conditionsView === "stale" || conditionsView === "too-old") ownText = "old report";
+  else if (conditionsView === "stale" || conditionsView === "too-old")
+    ownText = "old report";
   else ownText = "no current report";
   const airportLabel = `${conditions.airport.code} · ${ownText}`;
   const selectedAircraft = shown.find((a) => a.id === selected) ?? null;
   const coolingDown = now.getTime() < aircraft.state.cooldownUntil;
 
   let status: string;
-  if (!onScreen && !aircraftData) status = "The map loads when you scroll to it.";
-  else if (!view) status = aircraft.state.failure ? "Live positions couldn't be loaded." : "Loading live positions…";
+  if (!onScreen && !aircraftData)
+    status = "The map loads when you scroll to it.";
+  else if (!view)
+    status = aircraft.state.failure
+      ? "Live positions couldn't be loaded."
+      : "Loading live positions…";
   else if (view.kind === "aircraft") {
     status = `${shown.length} aircraft within ${area?.radius_nm ?? 25} nm · ${aircraftData?.source?.name ?? ""}`;
-  } else if (view.kind === "no-aircraft") status = `No aircraft reported within ${area?.radius_nm ?? 25} nm.`;
+  } else if (view.kind === "no-aircraft")
+    status = `No aircraft reported within ${area?.radius_nm ?? 25} nm.`;
   else if (view.kind === "coverage-unknown")
     status = `Can't confirm traffic near this airport: ${REASON_TEXT[view.reason ?? ""] ?? "coverage isn't known"}.`;
   else if (view.kind === "limit")
-    status = view.retryAt ? `Live positions limit reached; try again after ${formatUtcTime(view.retryAt)}.` : "Live positions limit reached.";
-  else if (view.kind === "disabled") status = "Live positions aren't available.";
-  else if (view.kind === "unavailable") status = "Live positions aren't available right now.";
+    status = view.retryAt
+      ? `Live positions limit reached; try again after ${formatUtcTime(view.retryAt)}.`
+      : "Live positions limit reached.";
+  else if (view.kind === "disabled")
+    status = "Live positions aren't available.";
+  else if (view.kind === "unavailable")
+    status = "Live positions aren't available right now.";
   else status = "Live positions couldn't be updated.";
-  if (aircraft.state.refreshFailed && view?.kind === "aircraft") status += " (couldn't update just now)";
+  if (aircraft.state.refreshFailed && view?.kind === "aircraft")
+    status += " (couldn't update just now)";
 
   const hidden = (aircraftData?.withheld ?? 0) + (aircraftData?.excluded ?? 0);
   // Honest empty states: no stations is a claim; unusable or expired reports aren't.
   let nearbyMessage = "Not loaded yet.";
   if (!nearbyData) {
-    if (nearby.state.failure) nearbyMessage = "Nearby weather couldn't be loaded.";
-  } else if (nearbyData.unavailable_reason === "unusable_data") nearbyMessage = "Nearby reports couldn't be used.";
-  else if (nearbyData.unavailable_reason === "reports_too_old" || nearbyData.stations.length > 0)
+    if (nearby.state.failure)
+      nearbyMessage = "Nearby weather couldn't be loaded.";
+  } else if (nearbyData.unavailable_reason === "unusable_data")
+    nearbyMessage = "Nearby reports couldn't be used.";
+  else if (
+    nearbyData.unavailable_reason === "reports_too_old" ||
+    nearbyData.stations.length > 0
+  )
     nearbyMessage = "Nearby reports are out of date."; // every one has expired on screen
   else nearbyMessage = "No nearby reporting stations.";
   const refreshMap = () => {
     aircraft.refresh();
     nearby.refresh();
+    moves.refresh();
   };
   const radarEnabled = radarData?.enabled ?? false;
 
   return (
-    <section ref={sectionRef} className="card map-section" aria-labelledby="map-heading">
+    <section
+      ref={sectionRef}
+      className="card map-section"
+      aria-labelledby="map-heading"
+    >
       <div className="card-title-row">
         <h2 id="map-heading" className="card-title">
           Live map
@@ -157,27 +232,52 @@ export function AirportMap({ code, conditions }: { code: string; conditions: Con
         {/* Only state changes are announced; the ticking age isn't. */}
         <span role="status">{status}</span>
         {view?.kind === "aircraft" && aircraftData?.fetched_at && (
-          <span className="muted small"> · updated {secondsAgo(aircraftData.fetched_at, now)}</span>
+          <span className="muted small">
+            {" "}
+            · updated {secondsAgo(aircraftData.fetched_at, now)}
+          </span>
         )}
       </p>
       <div className="map-controls">
         {radarEnabled && (
           <label className="radar-toggle">
-            <input type="checkbox" checked={radarOn} onChange={(e) => setRadarOn(e.target.checked)} />
+            <input
+              type="checkbox"
+              checked={radarOn}
+              onChange={(e) => setRadarOn(e.target.checked)}
+            />
             Radar (observed)
-            {radarOn && frame && <span className="muted small"> · {formatUtcTime(frame.time)} · coarse at this zoom</span>}
-            {radarOn && !frame && <span className="muted small"> · radar unavailable</span>}
+            {radarOn && frame && (
+              <span className="muted small">
+                {" "}
+                · {formatUtcTime(frame.time)} · coarse at this zoom
+              </span>
+            )}
+            {radarOn && !frame && (
+              <span className="muted small"> · radar unavailable</span>
+            )}
           </label>
         )}
-        <button type="button" className="button button-ghost" onClick={refreshMap} disabled={coolingDown || !onScreen}>
+        <button
+          type="button"
+          className="button button-ghost"
+          onClick={refreshMap}
+          disabled={coolingDown || !onScreen}
+        >
           Refresh map
         </button>
       </div>
       <div className="map-frame">
         {mapFailed ? (
           <div className="map-failed">
-            <p>The map couldn't load. The list below has the same information.</p>
-            <button type="button" className="button button-ghost" onClick={() => setMapFailed(false)}>
+            <p>
+              The map couldn't load. The list below has the same information.
+            </p>
+            <button
+              type="button"
+              className="button button-ghost"
+              onClick={() => setMapFailed(false)}
+            >
               Try the map again
             </button>
           </div>
@@ -201,8 +301,13 @@ export function AirportMap({ code, conditions }: { code: string; conditions: Con
       </div>
       {selectedAircraft && (
         <p className="map-selected">
-          <strong>{selectedAircraft.callsign ?? selectedAircraft.id.toUpperCase()}</strong>: {altitude(selectedAircraft)}
-          {selectedAircraft.ground_speed_kt !== null && ` · ${selectedAircraft.ground_speed_kt} kt`} · {selectedAircraft.distance_nm} nm away · position{" "}
+          <strong>
+            {selectedAircraft.callsign ?? selectedAircraft.id.toUpperCase()}
+          </strong>
+          : {altitude(selectedAircraft)}
+          {selectedAircraft.ground_speed_kt !== null &&
+            ` · ${selectedAircraft.ground_speed_kt} kt`}{" "}
+          · {selectedAircraft.distance_nm} nm away · position{" "}
           {secondsAgo(selectedAircraft.position_at, now)}
         </p>
       )}
@@ -211,7 +316,8 @@ export function AirportMap({ code, conditions }: { code: string; conditions: Con
           const obs = conditions.observation;
           return (
             <p className="map-selected">
-              <strong>{conditions.airport.code}</strong> {conditions.airport.name}: {ownText}
+              <strong>{conditions.airport.code}</strong>{" "}
+              {conditions.airport.name}: {ownText}
               {obs && ` · observed ${formatUtcTime(obs.observed_at)}`}
             </p>
           );
@@ -219,20 +325,31 @@ export function AirportMap({ code, conditions }: { code: string; conditions: Con
         const st = stations.find((x) => x.station === selectedStation);
         if (!st) return null;
         const index =
-          st.view === "stale" ? "not scored (old report)" : st.conditions.score === null ? "unknown" : `${st.conditions.score} / 10 ${LEVEL_WORDS[st.conditions.level]}`;
+          st.view === "stale"
+            ? "not scored (old report)"
+            : st.conditions.score === null
+              ? "unknown"
+              : `${st.conditions.score} / 10 ${LEVEL_WORDS[st.conditions.level]}`;
         return (
           <p className="map-selected">
             <strong>{st.station}</strong>
-            {st.name && ` ${st.name}`}: observed conditions index {index} · observed {formatUtcTime(st.observed_at)} · {st.distance_nm} nm away
+            {st.name && ` ${st.name}`}: observed conditions index {index} ·
+            observed {formatUtcTime(st.observed_at)} · {st.distance_nm} nm away
           </p>
         );
       })()}
       <p className="muted small map-note">
-        Map tiles from OpenFreeMap (© OpenMapTiles © OpenStreetMap contributors){frame && " and radar tiles from RainViewer"};
-        loading them sends your IP address and the area viewed to {frame ? "those services" : "that service"}.{" "}
+        Map tiles from OpenFreeMap (© OpenMapTiles © OpenStreetMap contributors)
+        {frame && " and radar tiles from RainViewer"}; loading them sends your
+        IP address and the area viewed to{" "}
+        {frame ? "those services" : "that service"}.{" "}
         {aircraftData?.source && (
           <>
-            Positions: <a href={aircraftData.source.attribution_url}>{aircraftData.source.name}</a>.{" "}
+            Positions:{" "}
+            <a href={aircraftData.source.attribution_url}>
+              {aircraftData.source.name}
+            </a>
+            .{" "}
           </>
         )}
         Weather: NOAA Aviation Weather Center.
@@ -245,11 +362,18 @@ export function AirportMap({ code, conditions }: { code: string; conditions: Con
       </p>
 
       {/* Scrollable, so focusable for keyboard scrolling; also the skip target. */}
-      <div id="map-list" className="map-list" tabIndex={0} role="region" aria-label="Aircraft and weather near the airport, as lists">
+      <div
+        id="map-list"
+        className="map-list"
+        tabIndex={0}
+        role="region"
+        aria-label="Aircraft and weather near the airport, as lists"
+      >
         <table className="map-table">
           <caption>
             Aircraft within {area?.radius_nm ?? 25} nm
-            {hidden > 0 && ` (${hidden} not shown: privacy or airport vehicles)`}
+            {hidden > 0 &&
+              ` (${hidden} not shown: privacy or airport vehicles)`}
           </caption>
           <thead>
             <tr>
@@ -269,10 +393,18 @@ export function AirportMap({ code, conditions }: { code: string; conditions: Con
             ) : (
               shown.map((a) => (
                 <tr key={a.id}>
-                  <th scope="row">{a.callsign ?? `${a.id.toUpperCase()} (no callsign)`}</th>
-                  <td>{a.kind === "aircraft" ? "Aircraft" : "Unclassified target"}</td>
+                  <th scope="row">
+                    {a.callsign ?? `${a.id.toUpperCase()} (no callsign)`}
+                  </th>
+                  <td>
+                    {a.kind === "aircraft" ? "Aircraft" : "Unclassified target"}
+                  </td>
                   <td>{altitude(a)}</td>
-                  <td>{a.ground_speed_kt === null ? "Unknown" : `${a.ground_speed_kt} kt`}</td>
+                  <td>
+                    {a.ground_speed_kt === null
+                      ? "Unknown"
+                      : `${a.ground_speed_kt} kt`}
+                  </td>
                   <td>{a.distance_nm} nm</td>
                   <td>{secondsAgo(a.position_at, now)}</td>
                 </tr>
@@ -282,8 +414,11 @@ export function AirportMap({ code, conditions }: { code: string; conditions: Con
         </table>
         <table className="map-table">
           <caption>
-            Observed weather at nearby airports (within {nearbyData?.area.radius_nm ?? 50} nm)
-            {nearbyData && !nearbyData.complete && " (some stations may be missing)"}
+            Observed weather at nearby airports (within{" "}
+            {nearbyData?.area.radius_nm ?? 50} nm)
+            {nearbyData &&
+              !nearbyData.complete &&
+              " (some stations may be missing)"}
           </caption>
           <thead>
             <tr>
@@ -296,9 +431,7 @@ export function AirportMap({ code, conditions }: { code: string; conditions: Con
           <tbody>
             {stations.length === 0 ? (
               <tr>
-                <td colSpan={4}>
-                  {nearbyMessage}
-                </td>
+                <td colSpan={4}>{nearbyMessage}</td>
               </tr>
             ) : (
               stations.map((s) => (
@@ -322,10 +455,131 @@ export function AirportMap({ code, conditions }: { code: string; conditions: Con
           </tbody>
         </table>
       </div>
+      <MovementsList
+        data={movesData}
+        failed={moves.state.failure !== null}
+        now={now}
+        timeZone={conditions.airport.timezone}
+      />
       <p className="disclaimer">
         {aircraftData?.disclaimer ??
           "Live positions from volunteer receiver networks. Coverage is incomplete and positions can be delayed; not for navigation or safety use."}
       </p>
     </section>
+  );
+}
+
+const ENDED_BY: Record<string, string> = {
+  gap: "a gap",
+  provider_error: "a provider error",
+  quota_exhausted: "the request limit",
+  busy: "a busy service",
+  unusable: "unusable data",
+  store_error: "a storage error",
+  detector_error: "a detection error",
+  state_lost: "lost state",
+};
+
+function localTime(iso: string, timeZone: string | null): string {
+  try {
+    return new Intl.DateTimeFormat("en-GB", {
+      hour: "2-digit",
+      minute: "2-digit",
+      hourCycle: "h23",
+      timeZone: timeZone ?? "UTC",
+    }).format(new Date(iso));
+  } catch {
+    return formatUtcTime(iso);
+  }
+}
+
+/** Recent departures and arrivals detected while this page was open (CF-011). */
+function MovementsList({
+  data,
+  failed,
+  now,
+  timeZone,
+}: {
+  data: import("../api/types").MovementsResponse | null;
+  failed: boolean;
+  now: Date;
+  timeZone: string | null;
+}) {
+  const rows = data ? movementsAt(data.movements, now) : [];
+  let empty = "Not loaded yet.";
+  if (!data) empty = failed ? "Movements couldn't be loaded." : empty;
+  else if (data.unavailable_reason === "store_unavailable")
+    empty = "Movements aren't available right now.";
+  else if (data.unavailable_reason === "not_watched")
+    empty = "No movements yet: they're detected only while this map is open.";
+  else if (data.coverage_reason === "no_recent_data")
+    empty =
+      "Can't detect movements here right now: no recent receiver data near this airport.";
+  else empty = "No departures or arrivals detected yet while watched.";
+
+  const windows = data?.watched ?? [];
+  const watchedText = windows
+    .map(
+      (w) =>
+        `${localTime(w.from, timeZone)}–${localTime(w.to, timeZone)}${w.ended_by ? ` (ended by ${ENDED_BY[w.ended_by] ?? w.ended_by})` : ""}`,
+    )
+    .join(", ");
+  let modeText = "";
+  if (data?.coverage_mode === "airborne_only")
+    modeText =
+      " Only inferred movements here: receivers don't see aircraft on the ground.";
+  else if (data?.coverage_mode === "surface")
+    modeText = " Receivers see aircraft on the ground here.";
+  const experimental = data && data.validation.airport === "experimental";
+
+  return (
+    <div className="movements">
+      <table className="map-table">
+        <caption>
+          Recent movements (detected while this page was open)
+          {experimental &&
+            " · experimental: not yet checked against the airport's board"}
+        </caption>
+        <thead>
+          <tr>
+            <th scope="col">Time</th>
+            <th scope="col">Movement</th>
+            <th scope="col">Callsign</th>
+            <th scope="col">How we know</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.length === 0 ? (
+            <tr>
+              <td colSpan={4}>{empty}</td>
+            </tr>
+          ) : (
+            rows.map((m) => (
+              <tr key={`${m.id}-${m.kind}-${m.time_to}`}>
+                <td>{localTime(m.time_to, timeZone)}</td>
+                <td>{m.kind === "departure" ? "Departure" : "Arrival"}</td>
+                <th scope="row">
+                  {m.callsign ?? `${m.id.toUpperCase()} (no callsign)`}
+                </th>
+                <td>
+                  {m.method === "observed"
+                    ? "Observed (on the ground and in the air)"
+                    : "Inferred (seen only low near the runway)"}
+                  {data && data.validation[m.method] === "experimental"
+                    ? ""
+                    : " · validated"}
+                </td>
+              </tr>
+            ))
+          )}
+        </tbody>
+      </table>
+      {data && data.data_status === "available" && (
+        <p className="muted small map-note">
+          Watched {watchedText || "not yet"}. Movements outside these times
+          aren't known.{modeText}
+        </p>
+      )}
+    </div>
   );
 }

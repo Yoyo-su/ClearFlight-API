@@ -6,6 +6,8 @@ import {
   AircraftResponseSchema,
   NearbyConditionsResponseSchema,
   RadarResponseSchema,
+  MovementsResponseSchema,
+  type MovementsResponse,
   type AircraftResponse,
   type NearbyConditionsResponse,
   type RadarResponse,
@@ -24,7 +26,13 @@ export const REQUEST_TIMEOUT_MS = 25_000;
 
 export type ApiResult<T> =
   | { kind: "ok"; data: T }
-  | { kind: "error"; status: number; reason: string; detail: string; retryAfter: number | null }
+  | {
+      kind: "error";
+      status: number;
+      reason: string;
+      detail: string;
+      retryAfter: number | null;
+    }
   | { kind: "network" };
 
 /** Our own cancellation (navigation, a newer request); callers ignore it. */
@@ -32,11 +40,21 @@ export function isAbort(error: unknown): boolean {
   return error instanceof DOMException && error.name === "AbortError";
 }
 
-async function getJson<T>(path: string, schema: Schema<T>, signal: AbortSignal): Promise<ApiResult<T>> {
-  const combined = AbortSignal.any([signal, AbortSignal.timeout(REQUEST_TIMEOUT_MS)]);
+async function getJson<T>(
+  path: string,
+  schema: Schema<T>,
+  signal: AbortSignal,
+): Promise<ApiResult<T>> {
+  const combined = AbortSignal.any([
+    signal,
+    AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+  ]);
   let response: Response;
   try {
-    response = await fetch(`${API_BASE}${path}`, { signal: combined, headers: { Accept: "application/json" } });
+    response = await fetch(`${API_BASE}${path}`, {
+      signal: combined,
+      headers: { Accept: "application/json" },
+    });
   } catch {
     if (signal.aborted) throw new DOMException("aborted", "AbortError");
     return { kind: "network" }; // includes the timeout
@@ -57,7 +75,13 @@ async function getJson<T>(path: string, schema: Schema<T>, signal: AbortSignal):
         // fall through: a 200 that doesn't match the contract is a failure
       }
     }
-    return { kind: "error", status: response.status, reason: "invalid_response", detail: "", retryAfter: null };
+    return {
+      kind: "error",
+      status: response.status,
+      reason: "invalid_response",
+      detail: "",
+      retryAfter: null,
+    };
   }
   const error = (body ?? {}) as Partial<ErrorResponse>;
   const retryAfter = Number(response.headers.get("Retry-After"));
@@ -66,31 +90,81 @@ async function getJson<T>(path: string, schema: Schema<T>, signal: AbortSignal):
     status: response.status,
     reason: typeof error.reason === "string" ? error.reason : "unknown",
     detail: typeof error.detail === "string" ? error.detail : "",
-    retryAfter: Number.isFinite(retryAfter) && retryAfter > 0 ? retryAfter : null,
+    retryAfter:
+      Number.isFinite(retryAfter) && retryAfter > 0 ? retryAfter : null,
   };
 }
 
-export function fetchConditions(code: string, signal: AbortSignal): Promise<ApiResult<ConditionsResponse>> {
-  return getJson(`/v1/airports/${encodeURIComponent(code)}/conditions`, ConditionsResponseSchema, signal);
+export function fetchConditions(
+  code: string,
+  signal: AbortSignal,
+): Promise<ApiResult<ConditionsResponse>> {
+  return getJson(
+    `/v1/airports/${encodeURIComponent(code)}/conditions`,
+    ConditionsResponseSchema,
+    signal,
+  );
 }
 
-export function fetchForecast(code: string, signal: AbortSignal): Promise<ApiResult<ForecastResponse>> {
-  return getJson(`/v1/airports/${encodeURIComponent(code)}/forecast`, ForecastResponseSchema, signal);
+export function fetchForecast(
+  code: string,
+  signal: AbortSignal,
+): Promise<ApiResult<ForecastResponse>> {
+  return getJson(
+    `/v1/airports/${encodeURIComponent(code)}/forecast`,
+    ForecastResponseSchema,
+    signal,
+  );
 }
 
-export function fetchAircraft(code: string, signal: AbortSignal): Promise<ApiResult<AircraftResponse>> {
-  return getJson(`/v1/airports/${encodeURIComponent(code)}/aircraft`, AircraftResponseSchema, signal);
+export function fetchAircraft(
+  code: string,
+  signal: AbortSignal,
+): Promise<ApiResult<AircraftResponse>> {
+  return getJson(
+    `/v1/airports/${encodeURIComponent(code)}/aircraft`,
+    AircraftResponseSchema,
+    signal,
+  );
 }
 
-export function fetchNearby(code: string, signal: AbortSignal): Promise<ApiResult<NearbyConditionsResponse>> {
-  return getJson(`/v1/airports/${encodeURIComponent(code)}/nearby-conditions`, NearbyConditionsResponseSchema, signal);
+export function fetchNearby(
+  code: string,
+  signal: AbortSignal,
+): Promise<ApiResult<NearbyConditionsResponse>> {
+  return getJson(
+    `/v1/airports/${encodeURIComponent(code)}/nearby-conditions`,
+    NearbyConditionsResponseSchema,
+    signal,
+  );
+}
+
+export function fetchMovements(
+  code: string,
+  signal: AbortSignal,
+): Promise<ApiResult<MovementsResponse>> {
+  return getJson(
+    `/v1/airports/${encodeURIComponent(code)}/movements`,
+    MovementsResponseSchema,
+    signal,
+  );
 }
 
 /** Radar isn't per airport; the code argument only fits the polling hook. */
-export function fetchRadar(_code: string, signal: AbortSignal): Promise<ApiResult<RadarResponse>> {
+export function fetchRadar(
+  _code: string,
+  signal: AbortSignal,
+): Promise<ApiResult<RadarResponse>> {
   return getJson("/v1/map/radar", RadarResponseSchema, signal);
 }
 
-export function searchAirports(query: string, signal: AbortSignal): Promise<ApiResult<AirportSearchResponse>> {
-  return getJson(`/v1/airports/search?q=${encodeURIComponent(query)}&limit=10`, AirportSearchResponseSchema, signal);
+export function searchAirports(
+  query: string,
+  signal: AbortSignal,
+): Promise<ApiResult<AirportSearchResponse>> {
+  return getJson(
+    `/v1/airports/search?q=${encodeURIComponent(query)}&limit=10`,
+    AirportSearchResponseSchema,
+    signal,
+  );
 }

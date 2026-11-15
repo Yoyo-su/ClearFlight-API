@@ -28,7 +28,8 @@ export function formatWind(obs: Observation): string {
   if (obs.wind_speed_kt === null) return NOT_REPORTED;
   if (obs.wind_speed_kt === 0) return "Calm";
   if (obs.wind_variable) return `Variable at ${knots(obs.wind_speed_kt)}`;
-  if (obs.wind_direction_deg === null) return `${knots(obs.wind_speed_kt)}, direction not reported`;
+  if (obs.wind_direction_deg === null)
+    return `${knots(obs.wind_speed_kt)}, direction not reported`;
   const direction = String(obs.wind_direction_deg).padStart(3, "0");
   return `From ${direction}° at ${knots(obs.wind_speed_kt)}`;
 }
@@ -37,11 +38,17 @@ export function formatGusts(gust: number | null): string {
   return gust === null ? "None reported" : knots(gust);
 }
 
-export function formatVisibility(metres: number | null, atLeast: boolean): string {
+export function formatVisibility(
+  metres: number | null,
+  atLeast: boolean,
+): string {
   if (metres === null) return NOT_REPORTED;
-  const metric = metres >= 1000 ? `${number(metres / 1000, 1)} km` : `${metres} m`;
+  const metric =
+    metres >= 1000 ? `${number(metres / 1000, 1)} km` : `${metres} m`;
   const miles = `${number(metres / METRES_PER_MILE, 1)} mi`;
-  return atLeast ? `${metric} or more (${miles} or more)` : `${metric} (${miles})`;
+  return atLeast
+    ? `${metric} or more (${miles} or more)`
+    : `${metric} (${miles})`;
 }
 
 export function formatHeight(feet: number): string {
@@ -70,12 +77,15 @@ export function formatCloud(obs: Observation): string {
     case "unknown":
       return NOT_REPORTED;
     default:
-      return obs.cloud_layers.length ? obs.cloud_layers.map(layer).join(", ") : NOT_REPORTED;
+      return obs.cloud_layers.length
+        ? obs.cloud_layers.map(layer).join(", ")
+        : NOT_REPORTED;
   }
 }
 
 export function formatCeiling(obs: Observation): string {
-  if (obs.sky_condition === "obscured" || obs.sky_condition === "unknown") return NOT_REPORTED;
+  if (obs.sky_condition === "obscured" || obs.sky_condition === "unknown")
+    return NOT_REPORTED;
   return obs.ceiling_ft === null ? "No ceiling" : formatHeight(obs.ceiling_ft);
 }
 
@@ -116,7 +126,8 @@ const PHENOMENA: Record<string, string> = {
   SS: "sandstorm",
   DS: "duststorm",
 };
-const GROUP = /^(-|\+|VC)?(MI|PR|BC|DR|BL|SH|TS|FZ)?((?:DZ|RA|SN|SG|IC|PL|GR|GS|UP|BR|FG|FU|VA|DU|SA|HZ|PY|PO|SQ|FC|SS|DS)*)$/;
+const GROUP =
+  /^(-|\+|VC)?(MI|PR|BC|DR|BL|SH|TS|FZ)?((?:DZ|RA|SN|SG|IC|PL|GR|GS|UP|BR|FG|FU|VA|DU|SA|HZ|PY|PO|SQ|FC|SS|DS)*)$/;
 
 function capitalise(text: string): string {
   return text.charAt(0).toUpperCase() + text.slice(1);
@@ -129,9 +140,12 @@ export function describeWeather(group: string): string {
     return `${group} (not recognised)`;
   }
   const [, intensity, descriptor, codes = ""] = match;
-  const things = (codes.match(/../g) ?? []).map((code) => PHENOMENA[code] ?? code).join(" and ");
+  const things = (codes.match(/../g) ?? [])
+    .map((code) => PHENOMENA[code] ?? code)
+    .join(" and ");
   let text: string;
-  if (descriptor === "TS") text = things ? `thunderstorm with ${things}` : "thunderstorm";
+  if (descriptor === "TS")
+    text = things ? `thunderstorm with ${things}` : "thunderstorm";
   else if (descriptor === "SH") text = things ? `${things} showers` : "showers";
   else text = descriptor ? `${DESCRIPTOR[descriptor]} ${things}` : things;
   if (intensity && intensity !== "VC") text = `${INTENSITY[intensity]} ${text}`;
@@ -140,7 +154,9 @@ export function describeWeather(group: string): string {
 }
 
 export function formatWeather(groups: string[]): string {
-  return groups.length ? groups.map(describeWeather).join(", ") : "None reported";
+  return groups.length
+    ? groups.map(describeWeather).join(", ")
+    : "None reported";
 }
 
 /** "07:20 UTC" from an ISO timestamp. */
@@ -150,7 +166,10 @@ export function formatUtcTime(iso: string): string {
 
 /** Whole minutes since `iso`, rounded up (matches the API's age_minutes). */
 export function minutesSince(iso: string, now: Date): number {
-  return Math.max(0, Math.ceil((now.getTime() - new Date(iso).getTime()) / 60000));
+  return Math.max(
+    0,
+    Math.ceil((now.getTime() - new Date(iso).getTime()) / 60000),
+  );
 }
 
 /** "35 min", "2 h 5 min", "4 h". */

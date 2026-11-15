@@ -18,7 +18,13 @@ export function ObservationCard({ observation }: { observation: Observation }) {
     ["Dew point", formatTemperature(observation.dewpoint_c)],
     ["Wind", formatWind(observation)],
     ["Gusts", formatGusts(observation.wind_gust_kt)],
-    ["Visibility", formatVisibility(observation.visibility_m, observation.visibility_at_least)],
+    [
+      "Visibility",
+      formatVisibility(
+        observation.visibility_m,
+        observation.visibility_at_least,
+      ),
+    ],
     ["Cloud", formatCloud(observation)],
     ["Ceiling", formatCeiling(observation)],
     ["Weather", formatWeather(observation.weather_phenomena)],
@@ -33,7 +39,9 @@ export function ObservationCard({ observation }: { observation: Observation }) {
         {rows.map(([label, value]) => (
           <div key={label} className="obs-row">
             <dt>{label}</dt>
-            <dd className={MISSING.has(value) ? "muted" : undefined}>{value}</dd>
+            <dd className={MISSING.has(value) ? "muted" : undefined}>
+              {value}
+            </dd>
           </div>
         ))}
       </dl>

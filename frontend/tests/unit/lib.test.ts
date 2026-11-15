@@ -1,7 +1,16 @@
 import { describe, expect, it } from "vitest";
 
-import type { ConditionsResponse, ForecastResponse, Observation } from "../../src/api/types";
-import { conditionsFor, forecastViewAt, STALE_EXPLANATION, viewAt } from "../../src/lib/ageing";
+import type {
+  ConditionsResponse,
+  ForecastResponse,
+  Observation,
+} from "../../src/api/types";
+import {
+  conditionsFor,
+  forecastViewAt,
+  STALE_EXPLANATION,
+  viewAt,
+} from "../../src/lib/ageing";
 import { isValidTimeZone, readClock } from "../../src/lib/clock";
 import {
   describeWeather,
@@ -19,11 +28,17 @@ import {
   formatWind,
   minutesSince,
 } from "../../src/lib/format";
-import { clearRecent, loadRecent, MAX_RECENT, rememberAirport } from "../../src/lib/recent";
+import {
+  clearRecent,
+  loadRecent,
+  MAX_RECENT,
+  rememberAirport,
+} from "../../src/lib/recent";
 import { fixture } from "./helpers";
 
 const obs = (fields: Partial<Observation>): Observation => ({
-  ...(fixture("conditions-egll-severe").body as ConditionsResponse).observation!,
+  ...(fixture("conditions-egll-severe").body as ConditionsResponse)
+    .observation!,
   ...fields,
 });
 
@@ -36,14 +51,22 @@ describe("unit formatting (both systems, metric first)", () => {
   });
 
   it("formats wind direction, speed, calm and variable", () => {
-    expect(formatWind(obs({ wind_direction_deg: 70, wind_speed_kt: 4 }))).toBe("From 070° at 4 kt (7 km/h)");
+    expect(formatWind(obs({ wind_direction_deg: 70, wind_speed_kt: 4 }))).toBe(
+      "From 070° at 4 kt (7 km/h)",
+    );
     expect(formatWind(obs({ wind_speed_kt: 0 }))).toBe("Calm");
-    expect(formatWind(obs({ wind_variable: true, wind_direction_deg: null, wind_speed_kt: 2 }))).toBe(
-      "Variable at 2 kt (4 km/h)",
-    );
-    expect(formatWind(obs({ wind_direction_deg: null, wind_speed_kt: 9 }))).toBe(
-      "9 kt (17 km/h), direction not reported",
-    );
+    expect(
+      formatWind(
+        obs({
+          wind_variable: true,
+          wind_direction_deg: null,
+          wind_speed_kt: 2,
+        }),
+      ),
+    ).toBe("Variable at 2 kt (4 km/h)");
+    expect(
+      formatWind(obs({ wind_direction_deg: null, wind_speed_kt: 9 })),
+    ).toBe("9 kt (17 km/h), direction not reported");
     expect(formatWind(obs({ wind_speed_kt: null }))).toBe("Not reported");
     expect(formatGusts(33)).toBe("33 kt (61 km/h)");
     expect(formatGusts(null)).toBe("None reported");
@@ -52,7 +75,9 @@ describe("unit formatting (both systems, metric first)", () => {
   it("formats visibility, including 'or more'", () => {
     expect(formatVisibility(1304, false)).toBe("1.3 km (0.8 mi)");
     expect(formatVisibility(145, false)).toBe("145 m (0.1 mi)");
-    expect(formatVisibility(16093, true)).toBe("16.1 km or more (10 mi or more)");
+    expect(formatVisibility(16093, true)).toBe(
+      "16.1 km or more (10 mi or more)",
+    );
     expect(formatVisibility(null, false)).toBe("Not reported");
   });
 
@@ -67,20 +92,39 @@ describe("unit formatting (both systems, metric first)", () => {
       ],
       ceiling_ft: 3000,
     });
-    expect(formatCloud(clouds)).toBe("Few clouds at 1,500 ft, Broken cloud at 3,000 ft");
+    expect(formatCloud(clouds)).toBe(
+      "Few clouds at 1,500 ft, Broken cloud at 3,000 ft",
+    );
     expect(formatCeiling(clouds)).toBe("3,000 ft (910 m)");
-    expect(formatCeiling(obs({ sky_condition: "clouds", ceiling_ft: null }))).toBe("No ceiling");
-    expect(formatCloud(obs({ sky_condition: "clear", cloud_layers: [] }))).toBe("No cloud detected");
-    expect(formatCloud(obs({ sky_condition: "cavok", cloud_layers: [] }))).toBe("CAVOK: no significant cloud");
-    expect(formatCloud(obs({ sky_condition: "obscured", cloud_layers: [] }))).toBe(
-      "Sky obscured; height not reported",
+    expect(
+      formatCeiling(obs({ sky_condition: "clouds", ceiling_ft: null })),
+    ).toBe("No ceiling");
+    expect(formatCloud(obs({ sky_condition: "clear", cloud_layers: [] }))).toBe(
+      "No cloud detected",
     );
-    expect(formatCeiling(obs({ sky_condition: "obscured" }))).toBe("Not reported");
-    expect(formatCloud(obs({ sky_condition: "unknown", cloud_layers: [] }))).toBe("Not reported");
-    expect(formatCloud(obs({ sky_condition: "clouds", cloud_layers: [] }))).toBe("Not reported");
-    expect(formatCloud(obs({ sky_condition: "clouds", cloud_layers: [{ cover: "XYZ", base_ft: 100 }] }))).toBe(
-      "XYZ at 100 ft",
+    expect(formatCloud(obs({ sky_condition: "cavok", cloud_layers: [] }))).toBe(
+      "CAVOK: no significant cloud",
     );
+    expect(
+      formatCloud(obs({ sky_condition: "obscured", cloud_layers: [] })),
+    ).toBe("Sky obscured; height not reported");
+    expect(formatCeiling(obs({ sky_condition: "obscured" }))).toBe(
+      "Not reported",
+    );
+    expect(
+      formatCloud(obs({ sky_condition: "unknown", cloud_layers: [] })),
+    ).toBe("Not reported");
+    expect(
+      formatCloud(obs({ sky_condition: "clouds", cloud_layers: [] })),
+    ).toBe("Not reported");
+    expect(
+      formatCloud(
+        obs({
+          sky_condition: "clouds",
+          cloud_layers: [{ cover: "XYZ", base_ft: 100 }],
+        }),
+      ),
+    ).toBe("XYZ at 100 ft");
   });
 
   it("formats pressure", () => {
@@ -109,7 +153,9 @@ describe("weather wording", () => {
   });
 
   it("lists groups or says none", () => {
-    expect(formatWeather(["+SHRA", "BR"])).toBe("Heavy rain showers (+SHRA), Mist (BR)");
+    expect(formatWeather(["+SHRA", "BR"])).toBe(
+      "Heavy rain showers (+SHRA), Mist (BR)",
+    );
     expect(formatWeather([])).toBe("None reported");
   });
 });
@@ -142,9 +188,19 @@ describe("local clock with DST (IANA zones)", () => {
     ["America/New_York", "2026-11-01T05:59:00Z", "01:59", "EDT (UTC−4)"],
     ["America/New_York", "2026-11-01T06:00:00Z", "01:00", "EST (UTC−5)"],
     // Tokyo: no DST
-    ["Asia/Tokyo", "2026-07-15T12:00:00Z", "21:00", "Japan Standard Time (UTC+9)"],
+    [
+      "Asia/Tokyo",
+      "2026-07-15T12:00:00Z",
+      "21:00",
+      "Japan Standard Time (UTC+9)",
+    ],
     // India: half-hour offset
-    ["Asia/Kolkata", "2026-07-15T12:00:00Z", "17:30", "India Standard Time (UTC+5:30)"],
+    [
+      "Asia/Kolkata",
+      "2026-07-15T12:00:00Z",
+      "17:30",
+      "India Standard Time (UTC+5:30)",
+    ],
   ])("%s at %s reads %s %s", (zone, iso, time, label) => {
     const reading = readClock(zone, new Date(iso));
     expect(reading.time).toBe(time);
@@ -167,10 +223,14 @@ describe("ageing of data kept on screen (D11)", () => {
   // observed 07:20, current_until 08:50, stale_until 10:20
   it("moves from current to stale to too old at the API's times", () => {
     // Inclusive like the backend: exactly at a boundary the earlier state holds.
-    expect(viewAt(severe, new Date("2026-10-30T08:50:00.000Z"))).toBe("current");
+    expect(viewAt(severe, new Date("2026-10-30T08:50:00.000Z"))).toBe(
+      "current",
+    );
     expect(viewAt(severe, new Date("2026-10-30T08:50:00.001Z"))).toBe("stale");
     expect(viewAt(severe, new Date("2026-10-30T10:20:00.000Z"))).toBe("stale");
-    expect(viewAt(severe, new Date("2026-10-30T10:20:00.001Z"))).toBe("too-old");
+    expect(viewAt(severe, new Date("2026-10-30T10:20:00.001Z"))).toBe(
+      "too-old",
+    );
   });
 
   it("keeps the API's own stale and unavailable states", () => {
@@ -178,29 +238,54 @@ describe("ageing of data kept on screen (D11)", () => {
     expect(viewAt(stale, new Date("2026-10-30T07:55:00Z"))).toBe("stale");
     expect(viewAt(stale, new Date("2026-10-30T08:50:00.001Z"))).toBe("too-old");
     const now = new Date("2026-10-30T07:55:00Z");
-    expect(viewAt(fixture("conditions-rjbb-no-report").body as ConditionsResponse, now)).toBe("no-report");
-    expect(viewAt(fixture("conditions-aai-no-station").body as ConditionsResponse, now)).toBe("no-station");
-    expect(viewAt(fixture("conditions-egll-too-old").body as ConditionsResponse, now)).toBe("too-old");
+    expect(
+      viewAt(
+        fixture("conditions-rjbb-no-report").body as ConditionsResponse,
+        now,
+      ),
+    ).toBe("no-report");
+    expect(
+      viewAt(
+        fixture("conditions-aai-no-station").body as ConditionsResponse,
+        now,
+      ),
+    ).toBe("no-station");
+    expect(
+      viewAt(
+        fixture("conditions-egll-too-old").body as ConditionsResponse,
+        now,
+      ),
+    ).toBe("too-old");
   });
 
   it("withdraws the score once stale, and only then", () => {
     expect(conditionsFor(severe, "current")).toBe(severe.conditions);
     const stale = conditionsFor(severe, "stale");
-    expect(stale).toMatchObject({ score: null, level: "unknown", explanation: STALE_EXPLANATION });
+    expect(stale).toMatchObject({
+      score: null,
+      level: "unknown",
+      explanation: STALE_EXPLANATION,
+    });
     expect(stale.factors).toEqual(severe.conditions.factors);
-    const unknown = fixture("conditions-egll-unknown").body as ConditionsResponse;
+    const unknown = fixture("conditions-egll-unknown")
+      .body as ConditionsResponse;
     expect(conditionsFor(unknown, "stale")).toBe(unknown.conditions);
   });
 });
 
 describe("recently viewed (browser only)", () => {
-  const heathrow = { code: "EGLL", iata: "LHR", name: "London Heathrow Airport" };
+  const heathrow = {
+    code: "EGLL",
+    iata: "LHR",
+    name: "London Heathrow Airport",
+  };
   it("remembers, de-duplicates, orders newest first and caps the list", () => {
     rememberAirport(heathrow);
     rememberAirport({ code: "KJFK", iata: "JFK", name: "JFK" });
     rememberAirport(heathrow);
     expect(loadRecent().map((a) => a.code)).toEqual(["EGLL", "KJFK"]);
-    for (let i = 0; i < 10; i++) rememberAirport({ code: `T${i}00`, iata: null, name: `Test ${i}` });
+    for (let i = 0; i < 10; i++)
+      rememberAirport({ code: `T${i}00`, iata: null, name: `Test ${i}` });
     expect(loadRecent()).toHaveLength(MAX_RECENT);
   });
 
@@ -213,9 +298,15 @@ describe("recently viewed (browser only)", () => {
   it("ignores corrupt or foreign data", () => {
     window.localStorage.setItem("clearflight.recentAirports", "{not json");
     expect(loadRecent()).toEqual([]);
-    window.localStorage.setItem("clearflight.recentAirports", JSON.stringify([{ code: 1 }, heathrow, "x"]));
+    window.localStorage.setItem(
+      "clearflight.recentAirports",
+      JSON.stringify([{ code: 1 }, heathrow, "x"]),
+    );
     expect(loadRecent()).toEqual([heathrow]);
-    window.localStorage.setItem("clearflight.recentAirports", JSON.stringify({ a: 1 }));
+    window.localStorage.setItem(
+      "clearflight.recentAirports",
+      JSON.stringify({ a: 1 }),
+    );
     expect(loadRecent()).toEqual([]);
   });
 
@@ -245,26 +336,40 @@ describe("forecast ageing (CF-008 §5)", () => {
     const view = forecastViewAt(egll, at("2026-10-30T07:55:00Z"));
     expect(view.kind === "hours" && view.hours.length).toBe(12);
     const later = forecastViewAt(egll, at("2026-10-30T10:00:00Z"));
-    expect(later.kind === "hours" && later.hours[0]!.start).toBe("2026-10-30T10:00:00Z");
+    expect(later.kind === "hours" && later.hours[0]!.start).toBe(
+      "2026-10-30T10:00:00Z",
+    );
     expect(later.kind === "hours" && later.hours.length).toBe(9);
   });
 
   it("drops an hour exactly when it ends", () => {
     const view = forecastViewAt(egll, at("2026-10-30T08:00:00Z"));
-    expect(view.kind === "hours" && view.hours[0]!.start).toBe("2026-10-30T08:00:00Z");
+    expect(view.kind === "hours" && view.hours[0]!.start).toBe(
+      "2026-10-30T08:00:00Z",
+    );
   });
 
   it("says outdated, not expired, when the shown hours pass before valid_to", () => {
-    expect(forecastViewAt(egll, at("2026-10-30T19:00:00Z")).kind).toBe("outdated");
-    expect(forecastViewAt(egll, at("2026-10-31T05:59:59Z")).kind).toBe("outdated");
+    expect(forecastViewAt(egll, at("2026-10-30T19:00:00Z")).kind).toBe(
+      "outdated",
+    );
+    expect(forecastViewAt(egll, at("2026-10-31T05:59:59Z")).kind).toBe(
+      "outdated",
+    );
   });
 
   it("withdraws the forecast at valid_to", () => {
-    expect(forecastViewAt(egll, at("2026-10-31T06:00:00Z")).kind).toBe("expired");
+    expect(forecastViewAt(egll, at("2026-10-31T06:00:00Z")).kind).toBe(
+      "expired",
+    );
   });
 
   it("maps unavailable reasons", () => {
-    const of = (name: string) => forecastViewAt(fixture(name).body as ForecastResponse, at("2026-10-30T07:55:00Z")).kind;
+    const of = (name: string) =>
+      forecastViewAt(
+        fixture(name).body as ForecastResponse,
+        at("2026-10-30T07:55:00Z"),
+      ).kind;
     expect(of("forecast-rjbb-no-forecast")).toBe("no-forecast");
     expect(of("forecast-egll-expired")).toBe("expired");
     expect(of("forecast-aai-no-station")).toBe("no-station");

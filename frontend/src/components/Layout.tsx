@@ -27,24 +27,54 @@ function Wordmark() {
 }
 
 /** A plain GET form to the home page's search (header, error and not-found pages). */
-export function SearchForm({ id, visibleLabel = false }: { id: string; visibleLabel?: boolean }) {
+export function SearchForm({
+  id,
+  visibleLabel = false,
+}: {
+  id: string;
+  visibleLabel?: boolean;
+}) {
   return (
-    <form className={visibleLabel ? "inline-search" : "header-search"} role="search" action="/" method="get">
-      <label htmlFor={id} className={visibleLabel ? "field-label" : "visually-hidden"}>
+    <form
+      className={visibleLabel ? "inline-search" : "header-search"}
+      role="search"
+      action="/"
+      method="get"
+    >
+      <label
+        htmlFor={id}
+        className={visibleLabel ? "field-label" : "visually-hidden"}
+      >
         {visibleLabel ? "Airport name, city or code" : "Search airports"}
       </label>
-      <input id={id} name="q" type="search" placeholder="Search airports" autoComplete="off" />
+      <input
+        id={id}
+        name="q"
+        type="search"
+        placeholder="Search airports"
+        autoComplete="off"
+      />
     </form>
   );
 }
 
-export function Layout({ children, headerSearch = false }: { children: ReactNode; headerSearch?: boolean }) {
+export function Layout({
+  children,
+  headerSearch = false,
+}: {
+  children: ReactNode;
+  headerSearch?: boolean;
+}) {
   return (
     <div className="page">
       <header className="site-header">
         <div className="container header-row">
           <Wordmark />
-          {headerSearch ? <SearchForm id="header-search" /> : <span className="strapline">Airport weather, explained</span>}
+          {headerSearch ? (
+            <SearchForm id="header-search" />
+          ) : (
+            <span className="strapline">Airport weather, explained</span>
+          )}
         </div>
       </header>
       <main className="site-main" id="main">
@@ -53,8 +83,13 @@ export function Layout({ children, headerSearch = false }: { children: ReactNode
       <footer className="site-footer">
         <div className="container footer-text">
           <p>
-            Weather: <a href="https://aviationweather.gov/">NOAA Aviation Weather Center</a>. Airport data:{" "}
-            <a href="https://ourairports.com/data/">OurAirports</a>. Timezones: IANA tz database.
+            Weather:{" "}
+            <a href="https://aviationweather.gov/">
+              NOAA Aviation Weather Center
+            </a>
+            . Airport data:{" "}
+            <a href="https://ourairports.com/data/">OurAirports</a>. Timezones:
+            IANA tz database.
           </p>
           <p>{FOOTER_DISCLAIMER}</p>
         </div>

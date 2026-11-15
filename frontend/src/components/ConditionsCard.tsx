@@ -27,14 +27,23 @@ export function levelOf(score: number | null): Level {
   return "severe";
 }
 
-export function FactorRow({ factor, scored }: { factor: Factor; scored: boolean }) {
+export function FactorRow({
+  factor,
+  scored,
+}: {
+  factor: Factor;
+  scored: boolean;
+}) {
   const unknown = factor.score === null;
   const level = levelOf(factor.score);
   return (
     <li className="factor">
       <span className="factor-name">{FACTOR_NAMES[factor.name]}</span>
       <span className="factor-body">
-        <span className={`factor-track${unknown ? " factor-track-unknown" : ""}`} aria-hidden="true">
+        <span
+          className={`factor-track${unknown ? " factor-track-unknown" : ""}`}
+          aria-hidden="true"
+        >
           {!unknown && (
             <span
               className={`factor-fill ${scored ? `level-fill-${level}` : "level-fill-unscored"}`}
@@ -44,14 +53,22 @@ export function FactorRow({ factor, scored }: { factor: Factor; scored: boolean 
         </span>
         <span className="factor-detail">{factor.detail}</span>
       </span>
-      <span className={`factor-score${scored && !unknown ? ` level-text-${level}` : ""}`}>
+      <span
+        className={`factor-score${scored && !unknown ? ` level-text-${level}` : ""}`}
+      >
         {unknown ? "Unknown" : `${factor.score} / 10`}
       </span>
     </li>
   );
 }
 
-export function ConditionsCard({ conditions, stale }: { conditions: Conditions; stale: boolean }) {
+export function ConditionsCard({
+  conditions,
+  stale,
+}: {
+  conditions: Conditions;
+  stale: boolean;
+}) {
   const scored = conditions.score !== null;
   const chipLevel: Level = stale ? "unknown" : conditions.level;
   return (
@@ -60,7 +77,9 @@ export function ConditionsCard({ conditions, stale }: { conditions: Conditions; 
         <h2 id="index-heading" className="card-title">
           Experimental conditions index
         </h2>
-        <span className="muted small">v{conditions.version} · observed weather only</span>
+        <span className="muted small">
+          v{conditions.version} · observed weather only
+        </span>
       </div>
       <div className="score-row">
         {scored ? (
@@ -71,9 +90,15 @@ export function ConditionsCard({ conditions, stale }: { conditions: Conditions; 
         ) : (
           <span className="score-word">{stale ? "Not scored" : "Unknown"}</span>
         )}
-        <span className={`level-chip level-chip-${chipLevel}`}>{stale ? "Stale" : LEVEL_WORDS[conditions.level]}</span>
+        <span className={`level-chip level-chip-${chipLevel}`}>
+          {stale ? "Stale" : LEVEL_WORDS[conditions.level]}
+        </span>
       </div>
-      {stale && <p className="score-note">Not scored: this report is too old to score.</p>}
+      {stale && (
+        <p className="score-note">
+          Not scored: this report is too old to score.
+        </p>
+      )}
       <p className="explanation">{conditions.explanation}</p>
       {conditions.factors.length > 0 && (
         <ul className="factors" aria-label="Factors">
