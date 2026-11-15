@@ -6,7 +6,7 @@ from datetime import datetime
 import redis
 
 from app.core.config import settings
-from app.services import cache
+from app.services import cache, movements
 from app.services.credit_budget import Lock
 from app.services.metar import MetarRateLimited, MetarTimeout, MetarUpstreamError
 from app.services.positions import Area, FeedResult
@@ -99,14 +99,19 @@ def get_positions(code: str, area: Area) -> tuple[FeedResult, bool, object]:
         if cached is not None:
             return cached, has_evidence(client, coverage_key), provider
         result = provider.fetch(area, deadline())
+        # Movement detection runs once per fresh answer, before the cache is
+        # published (CF-011 §5); it never raises.
+        movements.observe(client, provider.name, code, result)
         store(client, cache_key, coverage_key, result)  # before releasing the lock
     except redis.RedisError as e:
         # Redis failed mid-fetch (reserving credits): fail closed (spec §5).
         failure = QuotaExhausted("budget_unavailable", None)
         publish_failure(client, cache_key, failure, lock.token)
+        movements.record_failed_poll(client, provider.name, code, "store_error")
         raise failure from e
     except FAILURES as e:
         publish_failure(client, cache_key, e, lock.token)
+        movements.record_failed_poll(client, provider.name, code, failed_poll_reason(e))
         raise
     finally:
         try:
@@ -117,6 +122,17 @@ def get_positions(code: str, area: Area) -> tuple[FeedResult, bool, object]:
 
 
 FAILURES = (QuotaExhausted, MetarTimeout, MetarUpstreamError, MetarRateLimited)
+
+
+def failed_poll_reason(error: Exception) -> str:
+    """How a failed fetch ends a watched window (CF-011 §4)."""
+    if isinstance(error, QuotaExhausted):
+        return "quota_exhausted"
+    if getattr(error, "reason", "") == "requests_busy":
+        return "busy"
+    return "provider_error"
+
+
 FAILURE_TTL_MS = 5000
 
 
