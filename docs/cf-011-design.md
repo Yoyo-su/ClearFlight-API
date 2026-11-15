@@ -176,6 +176,18 @@ Every key has a TTL: movements, windows and polls 6 h, refreshed on write; aircr
 - **Boards without actual times (owner decision P5-b):**
   - The comparison uses **scheduled times**, with wider tolerances: a departure matches −15 to +75 min after its scheduled departure, an arrival −60 to +30 min around its scheduled arrival.
   - It's labelled **"scheduled-time comparison (weaker evidence)"** in the validation document and the result.
+- **Identity by route (owner decision, 2026-11-15, after the first EGLL run failed on identity; applies to every later recording):** many airlines fly ATC callsigns (`BAW35LF`, `SHT6Q`) that aren't flight numbers.
+  - A callsign of the form ICAO prefix + flight number that matches a board flight's ICAO identifier is matched as above.
+  - Otherwise its route is looked up once in adsbdb (`api.adsbdb.com/v0/callsign/<callsign>`, free, crowd-sourced). The detection matches a board flight of the same airline (callsign prefix, through a fixed alias table kept in the validation script, e.g. `SHT`→`BAW` for BA Shuttle) and movement type whose other airport (destination for a departure, origin for an arrival) equals the route's other end, within the same time tolerances, one-to-one, closest first.
+  - A detection whose callsign has neither form of identity (no callsign, or unknown to adsbdb) is **unidentified**: listed separately with its count, left out of the false-rate denominator, and never counted as found.
+  - Lookups are recorded in the validation document, so the result can be reproduced.
+- **Identity by airline and aircraft type (owner decision, 2026-11-15, replaces the adsbdb route rule above, which a dry run showed unreliable: crowd-sourced routes are stale for reused ATC callsigns, and BA Shuttle callsigns are unknown). Fixed before the fresh EGLL, KJFK and RJBB recordings; every airport is judged only on a fresh hour recorded after this rule:**
+  1. **Flight number:** a callsign of the form ICAO prefix + flight number that equals the board flight's ICAO identifier (or its IATA code through the fixed mapping table in the validation script).
+  2. **Otherwise airline + aircraft type + movement:** the same airline (callsign prefix through the alias table, e.g. `SHT`→`BAW`) and the same ICAO aircraft type (from the raw recording's `t` field, read offline only and never stored by the app), within the time tolerance. Used only where the board publishes the aircraft type.
+  - Matching is one-to-one: flight-number pairs first, then the closest time.
+  - A detection with neither identity (no callsign, or no aircraft type where rule 2 is needed) is **unidentified**: counted and listed, left out of the false-rate denominator, never found.
+  - **Board time types:** Heathrow's "Departed" is the airborne time and "Landed" the landing time. On the 2026-11-15 07:00 hour, flights matched by flight number alone were detected within −0.1 to +0.7 min of "Departed" (14) and +0.1 to +1.5 min of "Landed" (26), so the runway tolerance (±5 min) applies to both. A board whose time type is unknown uses the wider gate tolerances.
+  - **Scheduled-only flights** on a board that publishes actual times stay out of the denominator, as above.
   - Identity matching is still required.
 - **Too few identifiers:** if fewer than 80% of a board's flights can be matched by identifier, the comparison isn't run and the owner is told.
 
