@@ -33,7 +33,18 @@ def replay(code: str, files: list[Path]) -> dict:
         raise SystemExit(f"unknown airport {code}")
     area = Area(ctx.latitude, ctx.longitude, 25.0)
     state = movements.empty_state()
-    for path in sorted(files, key=fetched_at):
+    # Failed fetches logged by the recorder ("<stamp> fetch-failed") are failed
+    # polls at their time, as in the app: they end the watched window.
+    events = [(fetched_at(p), p) for p in files if p.suffix == ".json"]
+    for log in {p.parent / "failures.log" for p in files}:
+        if log.exists():
+            for line in log.read_text().split("\n"):
+                if line.strip():
+                    events.append((fetched_at(Path(line.split()[0])), None))
+    for _, path in sorted(events, key=lambda e: (e[0], e[1] is not None)):
+        if path is None:
+            state = movements.record_failure(state, "provider_error")
+            continue
         try:
             body = json.loads(path.read_text())
             result = AdsbLol.parse(body, area, fetched_at(path))
