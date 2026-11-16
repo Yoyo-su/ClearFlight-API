@@ -140,6 +140,10 @@ IATA_TO_ICAO = {
     "OM": "MGL",
     "NX": "AMU",
     "KA": "HDA",
+    "NU": "JTA",
+    "IJ": "SJO",
+    "RF": "EOK",
+    "OD": "MXD",
 }
 
 
@@ -267,7 +271,56 @@ def jfk(board_dir: str, iata: str) -> list[dict]:
     return out
 
 
-BOARDS = {"heathrow": heathrow, "jfk": jfk}
+def kansai(board_dir: str, iata: str) -> list[dict]:
+    """Kansai boards pasted by the owner (V5) into RJBB-board*.txt as pipe rows:
+    flights (operating first, then codeshares) | other city | scheduled | revised | status.
+    Local JST; "DEPARTED"/"ARRIVED" times don't state their type (wider tolerances)."""
+    from zoneinfo import ZoneInfo
+
+    tz = ZoneInfo("Asia/Tokyo")
+    date = os.environ.get("BOARD_DATE", "2026-11-16")
+
+    def local(hhmm: str) -> datetime:
+        return (
+            datetime.strptime(f"{date} {hhmm}", "%Y-%m-%d %H:%M")
+            .replace(tzinfo=tz)
+            .astimezone(timezone.utc)
+        )
+
+    out = []
+    for path in sorted(glob.glob(os.path.join(board_dir, "RJBB-board*.txt"))):
+        kind = None
+        for line in open(path, encoding="utf-8"):
+            line = line.strip()
+            if line.startswith("## "):
+                kind = "departure" if "DEPARTURES" in line else "arrival"
+                continue
+            if not line or line.startswith("#"):
+                continue
+            flights, _, sched, revised, status = (line.split("|") + [""] * 5)[:5]
+            done = status == ("DEPARTED" if kind == "departure" else "ARRIVED")
+            if done and revised:
+                when, ttype = local(revised), (
+                    "dep_unknown" if kind == "departure" else "arr_unknown"
+                )
+            else:
+                when, ttype = local(sched), (
+                    "dep_scheduled" if kind == "departure" else "arr_scheduled"
+                )
+            ids = set()
+            for code in flights.split():
+                m = re.fullmatch(r"([A-Z0-9]{2})(\d{1,4})", code)
+                if m and m.group(1) in IATA_TO_ICAO:
+                    ids.add(f"{IATA_TO_ICAO[m.group(1)]}{int(m.group(2))}")
+            out.append(
+                {"flight": flights, "id": None, "ids": ids, "airline": None, "type": None, "kind": kind,
+                 "time": when, "time_type": ttype, "status": status,
+                 "unmapped": sorted({c[:2] for c in flights.split() if c[:2] not in IATA_TO_ICAO})}
+            )  # fmt: skip
+    return out
+
+
+BOARDS = {"heathrow": heathrow, "jfk": jfk, "kansai": kansai}
 
 # -- Matching
 
