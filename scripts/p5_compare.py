@@ -298,6 +298,8 @@ def kansai(board_dir: str, iata: str) -> list[dict]:
             if not line or line.startswith("#"):
                 continue
             flights, _, sched, revised, status = (line.split("|") + [""] * 5)[:5]
+            if "CANCEL" in status.upper():
+                continue  # never operated: not a board movement
             done = status == ("DEPARTED" if kind == "departure" else "ARRIVED")
             if done and revised:
                 when, ttype = local(revised), (
@@ -432,8 +434,23 @@ def main() -> int:
             "unidentified": len(unid),
         }  # fmt: skip
 
+    # §9 (P5-b): a board where under 80% of the hour's movements carry a usable
+    # identity (a flight number we can map, or an aircraft type for rule 2) isn't compared.
+    hour_board = [b for b in board if counted(b)]
+    with_identity = [
+        b
+        for b in hour_board
+        if b.get("id") or b.get("ids") or (b.get("type") and b.get("airline"))
+    ]
+    share = len(with_identity) / len(hour_board) if hour_board else 0.0
+    if share < 0.8:
+        print(json.dumps({"result": "not assessed", "reason": f"board identity coverage {share:.0%} < 80% (§9)",
+                          "board": len(hour_board), "with_identity": len(with_identity)}, indent=1))  # fmt: skip
+        return 2
+
     result = {
         "rule": "§9 2026-11-15: flight number, then airline + aircraft type + movement",
+        "board_identity_coverage": round(share, 3),
         "hour": [start.isoformat(), end.isoformat()],
         "evidence": "actual times" if has_actual else "scheduled-time comparison (weaker evidence)",
         "board_types_available": board_has_types,
