@@ -1,6 +1,6 @@
-# ClearFlight — Development Plan v1.1
+# ClearFlight — Development Plan v1.2
 
-**Status:** **Approved by the owner 2026-11-09** (r3 with decisions P1–P6, §11; revised after the Codex design critique of r2, §13)
+**Status:** **v1.2 approved by the owner 2026-11-16** (movement validation by coverage class, §0a, P5′). v1.1 was approved 2026-11-09 (r3 with decisions P1–P6, §11; revised after the Codex design critique of r2, §13).
 **Date:** 8 November 2026 (v1.0: 18 October 2026, in git history up to `d379dd6`)
 **Repository:** https://github.com/Yoyo-su/ClearFlight-API
 **Product name:** ClearFlight ("Airport weather, explained")
@@ -20,6 +20,15 @@
 | Roadmap | CF-001–CF-007 | CF-001–CF-005 done; cleanup done (PRs #20–#22); **Phase 2: CF-008–CF-013** (forecast first); then CF-006, CF-007 only after all of Phase 2 (§5) |
 
 Phase 1 (CF-001 to CF-005) is complete and merged. Its scope, contract and decisions stay as recorded in D-001 to D-009 and `docs/API.md`.
+
+## 0a. Changes in v1.2 (2026-11-16)
+| Area | v1.1 | v1.2 |
+|---|---|---|
+| Movement validation | P5 per pilot airport, against that airport's board | **P5′ per coverage class**: the method is validated at sample airports chosen by objective criteria; every airport, pilots included, inherits its class's figures only while its own measured coverage fits ([proposal r4](movement-confidence-proposal.md), D-014) |
+| Identity in validation | flight-number mapping table | no curated data: plain flight number with any prefix, else a unique aircraft-type match, else unidentified |
+| CF-012 eligibility | airport passed P5 | class S or D applies, **plus** the unchanged current-window completeness and baseline gates (§3) |
+
+Why: CF-011's P5 runs (2026-11-15/16) showed per-airport board checks can't scale (11,318 airports; Kansai blocks automated access) and that free identity data can't tie ATC callsigns to flights.
 
 ## 1. Product and positioning
 
@@ -178,7 +187,7 @@ Each milestone follows the Phase 1 workflow: its own design or plan; a CORMORANT
 
 ## 7. Acceptance gates (additions to v1.0 §7)
 - **Map:** aircraft near each pilot airport render on desktop and mobile; source, age and attribution are visible; no requests from background tabs.
-- **Movements:** detection is validated against a documented manual sample at each pilot airport, for at least one busy hour each, against the airport's published board. Proposed thresholds **(owner decision P5, 2026-11-09)**: at least 90% of movements detected and at most 5% false movements. An airport that misses them shows movements as "experimental" and has no traffic-rate signal.
+- **Movements (v1.2, P5′):** detection is validated **per coverage class** at 4 sample airports per class (2 calibration, 2 held out), at least 3 busy hours each, against each sample's published board captured automatically. Pass: at least 90% found, at most 5% false on identified detections, and at most 10% worst-case false (unidentified counted as false); a coincidental-match rate of at most 1%. An airport shows its class's figures only while its own measured coverage (including callsign mix and conversion measures) fits the class and is current; otherwise its movements are "experimental" with no traffic-rate signal. Details: [proposal r4](movement-confidence-proposal.md).
 - **Forecasts:** forecast periods are labelled as forecast; the observed and forecast indices are visually distinct.
 - **Disruption signals:** they never use "delay prediction" or safety wording; they show their basis; an unknown baseline gives "unknown".
 - **Flight lookup:** quota exhaustion degrades to a clear state; delays are labelled partial.
@@ -231,7 +240,8 @@ Revisit after Phase 2 and, ideally, traveller feedback:
 - **P4:** OpenSky is for development/educational use only; a licence or source decision is mandatory before CF-006 (§8).
 - **Free data only** for Phase 2; complete per-flight delays are not possible on free data, so they're best-effort and labelled partial.
 
-- **P5 (2026-11-09):** movement detection must find at least 90% of movements with at most 5% false at a busy hour per pilot airport; otherwise "experimental" and no traffic-rate signal (§7).
+- **P5 (2026-11-09):** movement detection must find at least 90% of movements with at most 5% false at a busy hour per pilot airport; otherwise "experimental" and no traffic-rate signal (§7). **Superseded by P5′ (2026-11-16).**
+- **P5′ (2026-11-16):** P5's thresholds apply per coverage class, not per pilot airport (§0a, §7). No airport has special status; ATC-callsign-dominated airports stay unknown until a test shows callsign format doesn't change accuracy; the worst-case false cap is 10%.
 - **P6 (2026-11-09):** no background collection; positions are polled only while viewed, so traffic-rate signals are often `unknown` (§3).
 - Still to decide later: map tiles (RQ-003, in CF-010) and an adsb.lol key (before CF-006).
 

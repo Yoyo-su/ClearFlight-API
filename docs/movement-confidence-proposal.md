@@ -1,4 +1,4 @@
-# Proposal: movement confidence by coverage class (draft r4, for owner decision)
+# Proposal: movement confidence by coverage class (r4, approved 2026-11-16)
 
 **Status:** draft r4, 2026-11-16 (r4: a scoped critique of r3, 3 High + 1 Medium, all confirmed; §12). r2 was revised after a CORMORANT critique of r1 (Codex: 3 High, 2 Medium, all confirmed). r3 applies the owner's answers: principle adopted; no airport gets special status; 4 sample airports per class; identity rules with no curated data (§12). If approved, this amends D-014 and plan v1.1 §7 / §11 P5 (a plan v1.2 increment), and sets CF-012's eligibility rule.
 **Context:** CF-011 shipped with every airport labelled `experimental`, because P5 is defined per pilot airport against that airport's own board ([validation](validation/)). That can't scale to the 11,318 catalogue airports, and most of them publish no usable board.
@@ -138,14 +138,10 @@ A traffic-rate signal needs **all** of these:
 4. **No curated data:** identity by plain flight number with any prefix, else a unique aircraft-type match, else unidentified (§5). This replaces the IATA→ICAO table and the JFK alias proposal.
 
 **Still open:**
-5. **ATC-callsign airports (critique finding 2).** Choose one:
-   - **(a) U until tested (recommended):** callsign mix is a class bound, so such airports are U, including EGLL.
-   - **(b) Test the assumption:** add a test that detection accuracy doesn't depend on callsign format. Within sample airports, compare rule-2-matched (ATC-callsign) flights with numbered ones over all 12 hours per class. Lift the bound only if they agree within 5 points. Start with (a).
-   - **(c) Accept the assumption untested,** and say so in the class text.
-   
-   The 80% bar for choosing sample airports stays either way: below it, identity can't be measured reliably.
+5. ~~ATC-callsign airports~~ **decided:** option (a), U until tested, with the (b) test to lift it (owner, 2026-11-16).
+   **Also decided:** worst-case false cap **10%** (owner, 2026-11-16).
 6. **Wording** of the user-facing class text (§7).
-7. **Approval of r3 as a whole,** then the plan v1.2 text and the D-014 amendment.
+7. ~~Approval~~ **r4 approved by the owner 2026-11-16**; plan v1.2 and the D-014 amendment written.
 
 ## 11. Risks
 - **The class assumption may not hold.** Accuracy may depend on more than measured coverage (runway layout, traffic mix). §5's agreement test detects this, and a failing class stays U.
