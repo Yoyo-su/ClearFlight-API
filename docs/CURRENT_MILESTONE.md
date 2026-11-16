@@ -9,7 +9,9 @@ Recent departures and arrivals on the airport map, detected from live positions 
 
 ## Next task
 - **Done:** field elevation in the catalogue; detector, store and positions hook (recorded-track fixtures, 10-mutant sweep); `GET /v1/airports/{code}/movements`; the "Recent movements" list in the map section (unit, contract, e2e with axe).
-- **Remaining:** P5 validation (Heathrow recording 2026-11-15 06:55–08:10 UTC with the board; JFK and KIX busy hours), recorded in `docs/validation/`; reviews (quality-reviewer, Codex); PR.
+- **P5 (open exit criterion; every airport `experimental`):** fresh hours under the adopted identity rule (design §9). EGLL 2026-11-15 16:00 UTC: found 88.0%, false 1.5%, not validated (7 of 9 misses at provider timeouts). KJFK: not assessed (no arrivals board for the hour, recording too short for gate times, regional-operator callsigns). RJBB 2026-11-16 09:00 JST: found 77.4%, false 24.2%, not validated (take-off dropouts, timeouts, cargo not on the board). Details in `docs/validation/`.
+- **After P5 (owner, 2026-11-16):** inferred movements across up to 120 s of missed polls (design §3). Fresh P5 hours under the current rules are a follow-up, with JFK's three fixes and Kansai's board pasted by the owner.
+- **Remaining:** Codex review of the gap rule; PR with every airport experimental.
 
 ## Previous: CF-010 Airport map (merged, PR #26)
 - **Reviews:**

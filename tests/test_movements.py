@@ -127,13 +127,14 @@ class TestRecorded:
         "RKSI: mixed, one movement per aircraft; no transition across a missed poll"
     )
     def test_rksi(self):
-        # Five aircraft vanish for exactly one poll between their air and
-        # ground fixes: not consecutive polls (spec §3), so not observed.
+        # Six aircraft vanish for a poll or more between their ground and air
+        # fixes: not consecutive (not observed), but inferred across the gap
+        # (spec §3, 2026-11-16).
         state, counts = self.replay("rksi", "RKSI")
         assert counts == {
-            ("departure", "inferred"): 1,
+            ("departure", "inferred"): 3,
             ("arrival", "observed"): 1,
-            ("arrival", "inferred"): 5,
+            ("arrival", "inferred"): 9,
         }
         ids = [m["id"] for m in state["movements"]]
         assert len(ids) == len(set(ids))
@@ -212,10 +213,81 @@ class TestObserved:
         assert kinds(state) == [("departure", "observed")]
 
     @pytest.mark.it(
-        "an aircraft absent from the poll between its fixes makes no observed transition"
+        "an aircraft absent between its fixes is inferred, never observed (§3 gap rule)"
     )
     def test_absent_between(self):
         state = run(poll(0, target()), poll(0.5), poll(1, target(state="air", alt=300)))
+        assert kinds(state) == [("departure", "inferred")]
+        m = state["movements"][0]
+        assert (m["time_from"], m["time_to"], m["distance_nm"]) == (
+            at(0).isoformat(),
+            at(1).isoformat(),
+            0.5,
+        )
+
+    @pytest.mark.it("infers an arrival across a gap, attributed at the ground fix")
+    def test_gap_arrival(self):
+        state = run(
+            poll(0, target(state="air", alt=300, lon_nm=2)),
+            poll(0.5),
+            poll(1, target(lon_nm=0.4)),
+        )
+        assert kinds(state) == [("arrival", "inferred")]
+        assert state["movements"][0]["distance_nm"] == 0.4
+
+    @pytest.mark.it("allows up to 120 s across the gap, not more")
+    def test_gap_limit(self):
+        assert (
+            kinds(
+                run(
+                    poll(0, target()),
+                    poll(0.5),
+                    poll(1),
+                    poll(1.5),
+                    poll(2),
+                    poll(2.5, target(state="air", alt=300)),  # 150 s
+                )
+            )
+            == []
+        )
+        exactly = run(
+            poll(0, target()),
+            poll(0.5),
+            poll(1),
+            poll(1.5),
+            poll(2, target(state="air", alt=300)),
+        )
+        assert kinds(exactly) == [("departure", "inferred")]  # 120 s is allowed
+        state = run(
+            poll(0, target()),
+            poll(0.5),
+            poll(1),
+            poll(1.5, target(state="air", alt=300)),
+        )
+        assert kinds(state) == [("departure", "inferred")]
+
+    @pytest.mark.it("infers nothing across a failed poll (the window ended)")
+    def test_gap_failed_poll(self):
+        assert (
+            kinds(
+                run(
+                    poll(0, target()),
+                    "provider_error",
+                    poll(0.5, target(state="air", alt=300)),
+                )
+            )
+            == []
+        )
+
+    @pytest.mark.it(
+        "drops a gap movement whose ground fix isn't attributed to the airport"
+    )
+    def test_gap_attribution(self):
+        state = run(
+            poll(0, target(lon_nm=4.6)),
+            poll(0.5),
+            poll(1, target(state="air", alt=300, lon_nm=0.5)),
+        )
         assert kinds(state) == []
 
     @pytest.mark.it("an answer with only dropped rows is unusable")

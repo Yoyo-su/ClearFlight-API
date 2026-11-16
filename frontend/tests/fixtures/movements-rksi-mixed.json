@@ -23,6 +23,24 @@
       {
         "kind": "arrival",
         "method": "inferred",
+        "id": "71c016",
+        "callsign": "JNA480",
+        "time_from": "2026-10-30T07:53:02.502000Z",
+        "time_to": "2026-10-30T07:54:03.003000Z",
+        "distance_nm": 1.4
+      },
+      {
+        "kind": "departure",
+        "method": "inferred",
+        "id": "71c050",
+        "callsign": "JJA1393",
+        "time_from": "2026-10-30T07:50:59.004000Z",
+        "time_to": "2026-10-30T07:52:00.501000Z",
+        "distance_nm": 1.0
+      },
+      {
+        "kind": "arrival",
+        "method": "inferred",
         "id": "71c259",
         "callsign": "AAR712",
         "time_from": "2026-10-30T07:50:59.004000Z",
@@ -32,11 +50,38 @@
       {
         "kind": "arrival",
         "method": "inferred",
+        "id": "71c513",
+        "callsign": "TWB614",
+        "time_from": "2026-10-30T07:50:28.500000Z",
+        "time_to": "2026-10-30T07:51:29.501000Z",
+        "distance_nm": 1.4
+      },
+      {
+        "kind": "arrival",
+        "method": "inferred",
         "id": "71c073",
         "callsign": "ASV248",
         "time_from": "2026-10-30T07:49:27Z",
         "time_to": "2026-10-30T07:50:28.500000Z",
         "distance_nm": 1.3
+      },
+      {
+        "kind": "departure",
+        "method": "inferred",
+        "id": "781328",
+        "callsign": null,
+        "time_from": "2026-10-30T07:48:25.500000Z",
+        "time_to": "2026-10-30T07:49:57.500000Z",
+        "distance_nm": 1.5
+      },
+      {
+        "kind": "arrival",
+        "method": "inferred",
+        "id": "78063b",
+        "callsign": "CDG4613",
+        "time_from": "2026-10-30T07:47:55.001000Z",
+        "time_to": "2026-10-30T07:48:56.501000Z",
+        "distance_nm": 1.5
       },
       {
         "kind": "arrival",
@@ -54,6 +99,15 @@
         "callsign": "FDX5132",
         "time_from": "2026-10-30T07:44:51.501000Z",
         "time_to": "2026-10-30T07:45:52.501000Z",
+        "distance_nm": 1.4
+      },
+      {
+        "kind": "arrival",
+        "method": "inferred",
+        "id": "782333",
+        "callsign": "CES2073",
+        "time_from": "2026-10-30T07:44:20.501000Z",
+        "time_to": "2026-10-30T07:45:22.006000Z",
         "distance_nm": 1.4
       },
       {

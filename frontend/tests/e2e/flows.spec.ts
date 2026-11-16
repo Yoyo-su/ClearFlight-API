@@ -320,9 +320,9 @@ test("the live map loads on scroll, lists the same data and is accessible (CF-01
   await expect(map.getByText(/Map tiles from OpenFreeMap/)).toBeVisible();
   // CF-011: the movements list shares the map's on-screen gate.
   const movements = page.getByRole("table", { name: /Recent movements/ });
-  await expect(movements.getByRole("row")).toHaveCount(8);
+  await expect(movements.getByRole("row")).toHaveCount(14);
   await expect(movements).toContainText(
-    "Inferred (seen only low near the runway)",
+    "Inferred (the moment itself wasn't seen)",
   );
   await expectAccessible(page);
   await expectNoHorizontalScroll(page);

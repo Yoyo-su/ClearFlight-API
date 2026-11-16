@@ -31,6 +31,9 @@ INFER_NM = 2.0  # inferred: within this of the attributed airport (V3)
 INFER_AGL_FT = 1500  # inferred: below this above field elevation (V3)
 INFER_RATE_FPM = 200  # inferred: climbing/descending faster than this (V3)
 ABSENT_POLLS = 2  # inferred arrival: absent from this many usable polls (V3)
+GAP_INFER = timedelta(
+    seconds=120
+)  # ground/air fixes across missed polls: inferred (§3, 2026-11-16)
 HELICOPTER = "A7"  # excluded (V6)
 
 
@@ -277,6 +280,29 @@ def detect(state: dict, result: FeedResult, ctx: AirportContext) -> dict:
                     t,
                 ):
                     cov["observed"] += 1
+        elif (
+            prev is not None
+            and not consecutive
+            and {prev["state"], status} == {"ground", "airborne"}
+            and t - parse(prev["t"]) <= GAP_INFER
+        ):
+            # Lost for a poll or more low over the runway (common at weak-
+            # coverage airports), then seen on the other side of the change
+            # in the same window: inferred, attributed at the ground fix.
+            kind = "departure" if status == "airborne" else "arrival"
+            ground = prev if kind == "departure" else fix
+            if attribute(ground["lat"], ground["lon"], ctx, ATTRIBUTION_NM) == ctx.code:
+                add_movement(
+                    state,
+                    ctx,
+                    kind,
+                    "inferred",
+                    target.id,
+                    target.callsign,
+                    ground,
+                    parse(prev["t"]),
+                    t,
+                )
         elif (
             prev is None
             and not first_of_window

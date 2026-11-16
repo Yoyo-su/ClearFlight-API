@@ -482,16 +482,16 @@ describe("live map: recent movements (CF-011)", () => {
     await setOnScreen(true);
     await settle();
     const rows = within(movementsTable()).getAllByRole("row").slice(1);
-    expect(rows).toHaveLength(7);
+    expect(rows).toHaveLength(13);
     expect(rows[0]).toHaveTextContent("Arrival");
-    expect(rows[0]).toHaveTextContent("AAR712");
+    expect(rows[0]).toHaveTextContent("JNA480");
     // Local airport time and UTC, both labelled (spec §1).
-    expect(rows[0]).toHaveTextContent("07:52 local (07:52 UTC)");
+    expect(rows[0]).toHaveTextContent("07:54 local (07:54 UTC)");
     expect(
       within(movementsTable()).getAllByText(
-        /Inferred \(seen only low near the runway\) · experimental/,
+        /Inferred \(the moment itself wasn.t seen\) · experimental/,
       ).length,
-    ).toBe(6);
+    ).toBe(12);
     expect(
       within(movementsTable()).getAllByText(
         /Observed \(on the ground and in the air\) · experimental/,
@@ -534,7 +534,7 @@ describe("live map: recent movements (CF-011)", () => {
     await renderMap();
     await setOnScreen(true);
     await settle();
-    expect(within(movementsTable()).getAllByRole("row")).toHaveLength(8);
+    expect(within(movementsTable()).getAllByRole("row")).toHaveLength(14);
     await settle(6 * 60 * 60_000 + 60_000);
     expect(
       within(movementsTable()).queryByText("JJA8906"),
@@ -587,7 +587,7 @@ describe("live map: movements states and labels (CF-011)", () => {
     ).toBeInTheDocument();
     expect(
       within(movementsTable()).getAllByText(/Inferred .* · experimental/),
-    ).toHaveLength(6);
+    ).toHaveLength(12);
   });
 
   it("says why each watched window ended", async () => {

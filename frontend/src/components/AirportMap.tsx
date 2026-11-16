@@ -551,7 +551,7 @@ function MovementsList({
                 <td>
                   {m.method === "observed"
                     ? "Observed (on the ground and in the air)"
-                    : "Inferred (seen only low near the runway)"}
+                    : "Inferred (the moment itself wasn't seen)"}
                   {data && data.validation[m.method] === "validated"
                     ? " · validated"
                     : " · experimental"}

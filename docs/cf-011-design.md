@@ -59,6 +59,7 @@ On the airport page, below the live map, a **"Recent movements"** list:
 **Observed movements** (both sides seen):
 - **Departure:** the same aircraft has a **ground** fix at usable poll N and an **airborne** fix at usable poll N+1. **Arrival:** the reverse.
 - Polls N and N+1 must be **consecutive usable polls in one watched window**, at most 90 s apart.
+- **Across a short gap (owner decision, 2026-11-16, from P5 at RJBB):** receivers often lose an aircraft for 1–3 polls low over the runway. If an aircraft's last fix is **ground** and it is next seen **airborne** (or the reverse), with the polls between all usable, in the same watched window (no failed poll), and at most **120 s** between the two fixes, it is recorded as an **inferred** departure (or arrival). It is attributed at the ground fix as above, with `time_from`/`time_to` spanning the gap. "Observed" stays reserved for consecutive polls.
 - **Attributed fix:** the **ground fix** (the last ground fix for a departure, the first for an arrival).
 
 **Inferred movements** (fallback when there's no ground fix; **[V1]**, **[V3]**):
