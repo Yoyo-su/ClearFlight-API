@@ -212,6 +212,32 @@ def radar_index(minutes_old: int = 5, **changes):
     return index
 
 
+def movements_cases():
+    """CF-011: the RKSI probe (observed and inferred) re-dated to end at NOW."""
+    from app.services import movements as mv
+    from app.services.positions import Area
+    from app.services.positions_providers import AdsbLol
+
+    data = json.loads((POSITIONS / "movements" / "rksi_15min.json").read_text())
+    stamps = [
+        datetime.strptime(p["fetched_at"], "%Y%m%dT%H%M%S").replace(tzinfo=timezone.utc)
+        for p in data["polls"]
+    ]
+    shift = NOW - timedelta(minutes=1) - stamps[-1]
+    ctx = mv.context_for("RKSI")
+    area = Area(ctx.latitude, ctx.longitude, 25.0)
+    state = mv.empty_state()
+    for poll, stamp in zip(data["polls"], stamps):
+        body = dict(
+            poll["body"], now=poll["body"]["now"] + int(shift.total_seconds() * 1000)
+        )
+        state = mv.detect(state, AdsbLol.parse(body, area, stamp + shift), ctx)
+    return {
+        "movements-rksi-mixed": ("RKSI", state),
+        "movements-egll-not-watched": ("EGLL", None),
+    }
+
+
 SEARCHES = {
     "search-lon": "lon",
     "search-osaka": "osaka",
@@ -317,6 +343,22 @@ def main(out: Path = OUT) -> int:
             radar, "cached_index", return_value=index
         ):
             save(name, client.get("/v1/map/radar"))
+    for name, (code, state) in movements_cases().items():
+        import fakeredis
+
+        store = fakeredis.FakeStrictRedis(decode_responses=True)
+        if state is not None:
+            from app.services import movements as mv
+
+            store.set(f"movements:v1:adsblol:{code}", json.dumps(state))
+            store.set(f"movements:v1:adsblol:{code}:last", state["last_poll"])
+            assert mv  # the detector built the state (movements_cases)
+        from app.services import cache
+
+        with mock.patch.object(cache, "redis_client", store), mock.patch(
+            "app.api.movements.utc_now", return_value=NOW
+        ):
+            save(name, client.get(f"/v1/airports/{code}/movements"))
     for name, query in SEARCHES.items():
         save(name, client.get("/v1/airports/search", params={"q": query}))
 

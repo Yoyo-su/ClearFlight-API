@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import Literal
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict, Field
 
 from app.services.metar import CloudLayer
 
@@ -241,6 +241,58 @@ class RadarResponse(BaseModel):
     frame: RadarFrame | None
     attribution: str
     attribution_url: str
+
+
+class Movement(BaseModel):
+    kind: Literal["departure", "arrival"]
+    method: Literal["observed", "inferred"]
+    id: str
+    callsign: str | None
+    time_from: datetime
+    time_to: datetime  # the movement happened between the two polls
+    distance_nm: float
+
+
+class WatchedWindow(BaseModel):
+    # "from" is a Python keyword, so the fields use aliases; FastAPI
+    # serialises responses by alias, so the API keeps "from" and "to".
+    model_config = ConfigDict(populate_by_name=True)
+    start: datetime = Field(alias="from")
+    end: datetime = Field(alias="to")
+    ended_by: (
+        Literal[
+            "gap",
+            "provider_error",
+            "quota_exhausted",
+            "busy",
+            "unusable",
+            "store_error",
+            "detector_error",
+            "state_lost",
+        ]
+        | None
+    )
+
+
+class MovementValidation(BaseModel):
+    observed: Literal["validated", "experimental"]
+    inferred: Literal["validated", "experimental"]
+    airport: Literal["validated", "experimental"]  # the P5 gate (combined, P5-a)
+
+
+class MovementsResponse(BaseModel):
+    airport: ConditionsAirport
+    source: AircraftSource | None
+    movements: list[Movement]  # newest first, at most 100, none older than 6 h
+    watched: list[WatchedWindow]  # ended_by is null for the open window
+    coverage_mode: Literal["surface", "airborne_only", "unknown"]
+    coverage_reason: (
+        Literal["not_enough_watching", "no_low_traffic_seen", "no_recent_data"] | None
+    )
+    validation: MovementValidation
+    data_status: Literal["available", "unavailable"]
+    unavailable_reason: Literal["not_watched", "store_unavailable"] | None
+    disclaimer: str
 
 
 class ErrorResponse(BaseModel):

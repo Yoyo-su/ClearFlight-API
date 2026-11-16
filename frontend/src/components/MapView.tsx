@@ -20,7 +20,8 @@ import { LEVEL_WORDS } from "./ConditionsCard";
 maplibregl.setWorkerUrl(workerUrl);
 
 export const MAP_STYLE_URL: string =
-  import.meta.env.VITE_MAP_STYLE_URL ?? "https://tiles.openfreemap.org/styles/positron";
+  import.meta.env.VITE_MAP_STYLE_URL ??
+  "https://tiles.openfreemap.org/styles/positron";
 
 /** The selection key for the airport's own weather marker. */
 export const AIRPORT_MARKER = "__airport__";
@@ -40,14 +41,25 @@ export interface MapViewProps {
 const NM_PER_DEGREE = 60;
 const OWN_SOURCES = new Set(["area", "aircraft", "radar"]); // not the basemap
 
-function circle(lat: number, lon: number, radiusNm: number, steps = 64): Feature {
+function circle(
+  lat: number,
+  lon: number,
+  radiusNm: number,
+  steps = 64,
+): Feature {
   const coordinates = Array.from({ length: steps + 1 }, (_, i) => {
     const angle = (i / steps) * 2 * Math.PI;
     const dLat = (radiusNm / NM_PER_DEGREE) * Math.cos(angle);
-    const dLon = ((radiusNm / NM_PER_DEGREE) * Math.sin(angle)) / Math.max(Math.cos((lat * Math.PI) / 180), 0.01);
+    const dLon =
+      ((radiusNm / NM_PER_DEGREE) * Math.sin(angle)) /
+      Math.max(Math.cos((lat * Math.PI) / 180), 0.01);
     return [lon + dLon, lat + dLat];
   });
-  return { type: "Feature", properties: {}, geometry: { type: "Polygon", coordinates: [coordinates] } };
+  return {
+    type: "Feature",
+    properties: {},
+    geometry: { type: "Polygon", coordinates: [coordinates] },
+  };
 }
 
 function aircraftCollection(aircraft: AircraftPosition[]): FeatureCollection {
@@ -58,7 +70,12 @@ function aircraftCollection(aircraft: AircraftPosition[]): FeatureCollection {
       properties: {
         id: a.id,
         track: a.track_deg ?? 0,
-        state: a.kind === "unclassified" ? "unclassified" : a.on_ground ? "ground" : "air",
+        state:
+          a.kind === "unclassified"
+            ? "unclassified"
+            : a.on_ground
+              ? "ground"
+              : "air",
       },
       geometry: { type: "Point", coordinates: [a.longitude, a.latitude] },
     })),
@@ -70,7 +87,10 @@ function aircraftCollection(aircraft: AircraftPosition[]): FeatureCollection {
  * airborne, outlined on the ground, dashed outline when unclassified (the
  * target may not be an aircraft) — shape, not only colour, tells them apart.
  */
-function planeIcon(style: "filled" | "outline" | "dashed", size = 64): ImageData | null {
+function planeIcon(
+  style: "filled" | "outline" | "dashed",
+  size = 64,
+): ImageData | null {
   const canvas = document.createElement("canvas");
   canvas.width = canvas.height = size;
   const ctx = canvas.getContext("2d");
@@ -122,8 +142,24 @@ export default function MapView({
   const readyRef = useRef(false);
   const markersRef = useRef<maplibregl.Marker[]>([]);
   const drawnRef = useRef("");
-  const latest = useRef({ aircraft, stations, airportLabel, radarTileUrl, onSelectAircraft, onSelectStation, onError });
-  latest.current = { aircraft, stations, airportLabel, radarTileUrl, onSelectAircraft, onSelectStation, onError };
+  const latest = useRef({
+    aircraft,
+    stations,
+    airportLabel,
+    radarTileUrl,
+    onSelectAircraft,
+    onSelectStation,
+    onError,
+  });
+  latest.current = {
+    aircraft,
+    stations,
+    airportLabel,
+    radarTileUrl,
+    onSelectAircraft,
+    onSelectStation,
+    onError,
+  };
 
   // Create the map once per airport.
   useEffect(() => {
@@ -143,7 +179,10 @@ export default function MapView({
       return;
     }
     mapRef.current = map;
-    map.addControl(new maplibregl.NavigationControl({ showCompass: false }), "top-right");
+    map.addControl(
+      new maplibregl.NavigationControl({ showCompass: false }),
+      "top-right",
+    );
     map.on("error", (event) => {
       // Only a failure not tied to a tile or source, before the first load
       // (the style, WebGL), is fatal. A failed tile, at any time (a blip, or
@@ -151,7 +190,8 @@ export default function MapView({
       const e = event as { sourceId?: string; tile?: unknown; error?: unknown };
       if (!readyRef.current && !e.sourceId && !e.tile) latest.current.onError();
       else {
-        if (e.tile && e.sourceId && !OWN_SOURCES.has(e.sourceId)) basemapErrors += 1;
+        if (e.tile && e.sourceId && !OWN_SOURCES.has(e.sourceId))
+          basemapErrors += 1;
         console.warn("Map tile error", e.error);
       }
     });
@@ -160,15 +200,26 @@ export default function MapView({
     let basemapErrors = 0;
     let basemapLoaded = 0;
     map.on("data", (event) => {
-      const e = event as { dataType?: string; sourceId?: string; tile?: unknown };
-      if (e.dataType === "source" && e.tile && e.sourceId && !OWN_SOURCES.has(e.sourceId)) basemapLoaded += 1;
+      const e = event as {
+        dataType?: string;
+        sourceId?: string;
+        tile?: unknown;
+      };
+      if (
+        e.dataType === "source" &&
+        e.tile &&
+        e.sourceId &&
+        !OWN_SOURCES.has(e.sourceId)
+      )
+        basemapLoaded += 1;
     });
     map.on("idle", () => {
       if (basemapErrors > 0 && basemapLoaded === 0) latest.current.onError();
     });
     map.on("load", () => {
       const dLat = radiusNm / NM_PER_DEGREE;
-      const dLon = dLat / Math.max(Math.cos((center.latitude * Math.PI) / 180), 0.01);
+      const dLon =
+        dLat / Math.max(Math.cos((center.latitude * Math.PI) / 180), 0.01);
       map.fitBounds(
         [
           [center.longitude - dLon, center.latitude - dLat],
@@ -176,8 +227,20 @@ export default function MapView({
         ],
         { padding: 16, animate: false },
       );
-      map.addSource("area", { type: "geojson", data: circle(center.latitude, center.longitude, radiusNm) });
-      map.addLayer({ id: "area", type: "line", source: "area", paint: { "line-color": "#1f5fbf", "line-opacity": 0.35, "line-width": 1.5 } });
+      map.addSource("area", {
+        type: "geojson",
+        data: circle(center.latitude, center.longitude, radiusNm),
+      });
+      map.addLayer({
+        id: "area",
+        type: "line",
+        source: "area",
+        paint: {
+          "line-color": "#1f5fbf",
+          "line-opacity": 0.35,
+          "line-width": 1.5,
+        },
+      });
       for (const [name, style] of [
         ["plane-air", "filled"],
         ["plane-ground", "outline"],
@@ -186,20 +249,39 @@ export default function MapView({
         const icon = planeIcon(style);
         if (icon) map.addImage(name, icon, { sdf: true, pixelRatio: 2 }); // drawn at 2x for crisp edges
       }
-      map.addSource("aircraft", { type: "geojson", data: aircraftCollection([]) });
+      map.addSource("aircraft", {
+        type: "geojson",
+        data: aircraftCollection([]),
+      });
       map.addLayer({
         id: "aircraft",
         type: "symbol",
         source: "aircraft",
         layout: {
-          "icon-image": ["match", ["get", "state"], "air", "plane-air", "ground", "plane-ground", "plane-unclassified"],
+          "icon-image": [
+            "match",
+            ["get", "state"],
+            "air",
+            "plane-air",
+            "ground",
+            "plane-ground",
+            "plane-unclassified",
+          ],
           "icon-size": ["match", ["get", "state"], "ground", 0.55, 0.75],
           "icon-rotate": ["get", "track"],
           "icon-rotation-alignment": "map",
           "icon-allow-overlap": true,
         },
         paint: {
-          "icon-color": ["match", ["get", "state"], "air", "#13213a", "ground", "#4a5872", "#8c99ad"],
+          "icon-color": [
+            "match",
+            ["get", "state"],
+            "air",
+            "#13213a",
+            "ground",
+            "#4a5872",
+            "#8c99ad",
+          ],
           "icon-halo-color": "#ffffff",
           "icon-halo-width": 1.5,
         },
@@ -208,8 +290,16 @@ export default function MapView({
         const id = event.features?.[0]?.properties?.id;
         if (typeof id === "string") latest.current.onSelectAircraft(id);
       });
-      map.on("mouseenter", "aircraft", () => (map.getCanvas().style.cursor = "pointer"));
-      map.on("mouseleave", "aircraft", () => (map.getCanvas().style.cursor = ""));
+      map.on(
+        "mouseenter",
+        "aircraft",
+        () => (map.getCanvas().style.cursor = "pointer"),
+      );
+      map.on(
+        "mouseleave",
+        "aircraft",
+        () => (map.getCanvas().style.cursor = ""),
+      );
       readyRef.current = true;
       drawnRef.current = "";
       draw();
@@ -232,45 +322,106 @@ export default function MapView({
     // Redraw only when something visible changed (the parent re-renders on
     // every clock tick).
     const key = JSON.stringify([
-      data.aircraft.map((a) => [a.id, a.latitude, a.longitude, a.track_deg, a.on_ground, a.kind]),
+      data.aircraft.map((a) => [
+        a.id,
+        a.latitude,
+        a.longitude,
+        a.track_deg,
+        a.on_ground,
+        a.kind,
+      ]),
       data.stations.map((st) => [st.station, st.view, st.conditions.score]),
       data.airportLabel,
       data.radarTileUrl,
     ]);
     if (key === drawnRef.current) return;
     drawnRef.current = key;
-    (map.getSource("aircraft") as GeoJSONSource | undefined)?.setData(aircraftCollection(data.aircraft));
+    (map.getSource("aircraft") as GeoJSONSource | undefined)?.setData(
+      aircraftCollection(data.aircraft),
+    );
 
     markersRef.current.forEach((m) => m.remove());
     markersRef.current = [];
-    const label = (text: string, className: string, lon: number, lat: number, station?: string, above = false) => {
+    const label = (
+      text: string,
+      className: string,
+      lon: number,
+      lat: number,
+      station?: string,
+      above = false,
+    ) => {
       const el = document.createElement("div");
       el.className = className;
       el.textContent = text;
       el.setAttribute("aria-hidden", "true"); // the list below carries the same data
       if (station) {
         el.style.cursor = "pointer";
-        el.addEventListener("click", () => latest.current.onSelectStation(station));
+        el.addEventListener("click", () =>
+          latest.current.onSelectStation(station),
+        );
       }
       // The airport label sits above its point, so it doesn't cover the field.
-      const options = above ? { element: el, anchor: "bottom" as const, offset: [0, -18] as [number, number] } : { element: el };
-      markersRef.current.push(new maplibregl.Marker(options).setLngLat([lon, lat]).addTo(map));
+      const options = above
+        ? {
+            element: el,
+            anchor: "bottom" as const,
+            offset: [0, -18] as [number, number],
+          }
+        : { element: el };
+      markersRef.current.push(
+        new maplibregl.Marker(options).setLngLat([lon, lat]).addTo(map),
+      );
     };
-    if (data.airportLabel) label(data.airportLabel, "map-label map-label-airport", center.longitude, center.latitude, AIRPORT_MARKER, true);
+    if (data.airportLabel)
+      label(
+        data.airportLabel,
+        "map-label map-label-airport",
+        center.longitude,
+        center.latitude,
+        AIRPORT_MARKER,
+        true,
+      );
     for (const s of data.stations) {
       const score =
-        s.view === "stale" ? "old report" : s.conditions.score === null ? "unknown" : `${s.conditions.score} ${LEVEL_WORDS[s.conditions.level]}`;
-      label(`${s.station} · ${score}`, `map-label map-label-${s.view === "stale" ? "stale" : s.conditions.level}`, s.longitude, s.latitude, s.station);
+        s.view === "stale"
+          ? "old report"
+          : s.conditions.score === null
+            ? "unknown"
+            : `${s.conditions.score} ${LEVEL_WORDS[s.conditions.level]}`;
+      label(
+        `${s.station} · ${score}`,
+        `map-label map-label-${s.view === "stale" ? "stale" : s.conditions.level}`,
+        s.longitude,
+        s.latitude,
+        s.station,
+      );
     }
 
     const radar = map.getSource("radar");
     if (data.radarTileUrl && !radar) {
-      map.addSource("radar", { type: "raster", tiles: [data.radarTileUrl], tileSize: 256, maxzoom: 7 });
-      map.addLayer({ id: "radar", type: "raster", source: "radar", paint: { "raster-opacity": 0.6 } }, "area");
+      map.addSource("radar", {
+        type: "raster",
+        tiles: [data.radarTileUrl],
+        tileSize: 256,
+        maxzoom: 7,
+      });
+      map.addLayer(
+        {
+          id: "radar",
+          type: "raster",
+          source: "radar",
+          paint: { "raster-opacity": 0.6 },
+        },
+        "area",
+      );
     } else if (!data.radarTileUrl && radar) {
       map.removeLayer("radar");
       map.removeSource("radar");
-    } else if (data.radarTileUrl && radar && (radar as maplibregl.RasterTileSource).tiles?.[0] !== data.radarTileUrl) {
+    } else if (
+      data.radarTileUrl &&
+      radar &&
+      (radar as maplibregl.RasterTileSource).tiles?.[0] !== data.radarTileUrl
+    ) {
       (radar as maplibregl.RasterTileSource).setTiles([data.radarTileUrl]);
     }
   }
@@ -278,5 +429,12 @@ export default function MapView({
   // Redraw whenever the data changes.
   useEffect(draw, [aircraft, stations, airportLabel, radarTileUrl]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  return <div ref={container} className="map-canvas" role="region" aria-label="Map of the area (the list below has the same information)" />;
+  return (
+    <div
+      ref={container}
+      className="map-canvas"
+      role="region"
+      aria-label="Map of the area (the list below has the same information)"
+    />
+  );
 }

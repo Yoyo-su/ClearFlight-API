@@ -4,7 +4,10 @@
 // a field's name, type, nullability or allowed values can't drift between
 // the backend models, the fixtures and the frontend (spec §10, D-008).
 
-export type Schema<T> = { check: (value: unknown, path: string) => string | null; _type?: T };
+export type Schema<T> = {
+  check: (value: unknown, path: string) => string | null;
+  _type?: T;
+};
 export type Infer<S> = S extends Schema<infer T> ? T : never;
 
 const fail = (path: string, expected: string, value: unknown) =>
@@ -15,7 +18,8 @@ export const str: Schema<string> = {
 };
 
 export const num: Schema<number> = {
-  check: (v, p) => (typeof v === "number" && Number.isFinite(v) ? null : fail(p, "number", v)),
+  check: (v, p) =>
+    typeof v === "number" && Number.isFinite(v) ? null : fail(p, "number", v),
 };
 
 export const bool: Schema<boolean> = {
@@ -25,13 +29,17 @@ export const bool: Schema<boolean> = {
 /** An ISO 8601 timestamp string. */
 export const datetime: Schema<string> = {
   check: (v, p) =>
-    typeof v === "string" && !Number.isNaN(Date.parse(v)) ? null : fail(p, "ISO timestamp", v),
+    typeof v === "string" && !Number.isNaN(Date.parse(v))
+      ? null
+      : fail(p, "ISO timestamp", v),
 };
 
 export function literal<const T extends string>(...values: T[]): Schema<T> {
   return {
     check: (v, p) =>
-      typeof v === "string" && (values as string[]).includes(v) ? null : fail(p, values.join(" | "), v),
+      typeof v === "string" && (values as string[]).includes(v)
+        ? null
+        : fail(p, values.join(" | "), v),
   };
 }
 
@@ -53,18 +61,24 @@ export function arr<T>(inner: Schema<T>): Schema<T[]> {
 }
 
 export function oneOf<A, B>(a: Schema<A>, b: Schema<B>): Schema<A | B> {
-  return { check: (v, p) => (a.check(v, p) === null || b.check(v, p) === null ? null : a.check(v, p)) };
+  return {
+    check: (v, p) =>
+      a.check(v, p) === null || b.check(v, p) === null ? null : a.check(v, p),
+  };
 }
 
 type Shape = Record<string, Schema<unknown>>;
 type FromShape<S extends Shape> = { [K in keyof S]: Infer<S[K]> };
 
 /** An object with exactly these fields (no extra, none missing). */
-export function obj<S extends Shape>(shape: S): Schema<FromShape<S>> & { shape: S } {
+export function obj<S extends Shape>(
+  shape: S,
+): Schema<FromShape<S>> & { shape: S } {
   return {
     shape,
     check: (v, p) => {
-      if (typeof v !== "object" || v === null || Array.isArray(v)) return fail(p, "object", v);
+      if (typeof v !== "object" || v === null || Array.isArray(v))
+        return fail(p, "object", v);
       const record = v as Record<string, unknown>;
       for (const key of Object.keys(record)) {
         if (!(key in shape)) return `${p}.${key}: unexpected field`;
@@ -80,7 +94,10 @@ export function obj<S extends Shape>(shape: S): Schema<FromShape<S>> & { shape: 
 }
 
 /** Adds a cross-field rule; `rule` returns an error message, or null when valid. */
-export function refine<T>(inner: Schema<T>, rule: (value: T) => string | null): Schema<T> {
+export function refine<T>(
+  inner: Schema<T>,
+  rule: (value: T) => string | null,
+): Schema<T> {
   return {
     check: (v, p) => {
       const error = inner.check(v, p);
@@ -92,7 +109,11 @@ export function refine<T>(inner: Schema<T>, rule: (value: T) => string | null): 
 }
 
 /** Throws a readable error when `value` doesn't match `schema`. */
-export function validate<T>(schema: Schema<T>, value: unknown, name = "response"): T {
+export function validate<T>(
+  schema: Schema<T>,
+  value: unknown,
+  name = "response",
+): T {
   const error = schema.check(value, name);
   if (error) throw new SchemaError(error);
   return value as T;

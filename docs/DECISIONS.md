@@ -17,6 +17,14 @@ Locked pilot decisions live in [development-plan.md §1](development-plan.md) an
 
 ## Entries
 
+### D-014: CF-011 observed movement rules (2026-11-15)
+- **Decision:** detect departures and arrivals only from positions already polled for a viewed map (no background polling), attribute them to the nearest catalogue airport within 4 nm (dropped when ambiguous within 1 nm), label each `observed` or `inferred`, show what was watched and why each window ended, keep 6 h, and mark every airport `experimental` until it passes the P5 comparison with its board (design §9: combined figures; scheduled-time comparison labelled weaker evidence where actual times aren't published). Store: one state key per airport with a compare-and-set on the last processed data time.
+- **Why:** free volunteer data can't give complete movements; honest windows and methods avoid implying a full board. Live probes (2026-11-15) showed ground transitions at KJFK/RJBB/YSSY, airborne-only coverage at WSSS and none at several Asian airports. Nearest-airport attribution is simpler than callsign matching and needs no schedule data.
+- **Alternatives considered:** a fixed 5 nm radius (double-counts neighbours such as Northolt); callsign/schedule matching (needs data we don't have free); background polling (cost, quota, and the plan's no-polling rule); multi-key Lua store (more failure modes than one key with compare-and-set).
+- **Amended 2026-11-16 (owner, after P5):** an aircraft seen on the ground and then in the air (or the reverse) with up to 120 s of missed polls between, in one watched window, is an **inferred** movement. At Kansai and Incheon, receivers lose aircraft low over the runway for 1–3 polls. P5 identity is by flight number, then airline + aircraft type (design §9). No pilot airport has passed P5 yet; all stay experimental.
+- **Source:** [cf-011-design.md](cf-011-design.md) r3 (approved 2026-11-15), plan v1.1 §5 CF-011
+- **Status:** accepted
+
 ### D-013: CF-010 airport map rules (2026-11-11)
 - **Decision:** The airport map follows [cf-010-design.md](cf-010-design.md) r3, with the owner's choices M1–M6:
   - M1: an OpenFreeMap basemap via MapLibre GL JS 6.16.0, lazy-loaded, with a configurable style URL;

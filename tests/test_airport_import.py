@@ -32,6 +32,7 @@ def source_row(**overrides):
         "icao_code": "EGLL",
         "iata_code": "LHR",
         "scheduled_service": "yes",
+        "elevation_ft": "83",
     }
     row.update(overrides)
     return row
@@ -49,6 +50,7 @@ def snapshot_row(**overrides):
         "scheduled": "yes",
         "latitude": "51.470748",
         "longitude": "-0.459909",
+        "elevation_ft": "83",
         "timezone": "Europe/London",
     }
     row.update(overrides)
@@ -280,3 +282,33 @@ class TestSnapshotFiles:
             SnapshotValidationError, match="unexpected snapshot columns"
         ):
             read_snapshot(path)
+
+
+@pytest.mark.describe("Field elevation (CF-011)")
+class TestElevation:
+    @pytest.mark.it("keeps whole feet, and leaves missing or out-of-range values empty")
+    @pytest.mark.parametrize(
+        "raw, kept",
+        [
+            ("83", "83"),
+            ("83.4", "83"),
+            ("-1500", "-1500"),
+            ("15000", "15000"),
+            ("", ""),
+            (None, ""),
+            ("abc", ""),
+            ("-1501", ""),
+            ("15001", ""),
+        ],
+    )
+    def test_parse(self, raw, kept):
+        from app.services.airport_import import parse_elevation
+
+        assert parse_elevation(raw) == kept
+
+    @pytest.mark.it("carries elevation into the snapshot rows")
+    def test_in_rows(self):
+        rows, _ = build_snapshot_rows(
+            [source_row()], {"GB": "United Kingdom"}, lambda lat, lon: "Europe/London"
+        )
+        assert rows[0]["elevation_ft"] == "83"

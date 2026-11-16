@@ -33,6 +33,7 @@ def airport(**fields):
         "scheduled": "no",
         "latitude": "51.0",
         "longitude": "0.0",
+        "elevation_ft": "",
         "timezone": "Europe/London",
     }
     row.update(fields)
@@ -320,3 +321,13 @@ class TestPilotDst:
         zone = get_catalogue().get(code).timezone
         assert offset_hours(zone, before) == offset_before
         assert offset_hours(zone, after) == offset_after
+
+
+@pytest.mark.describe("Field elevation (CF-011)")
+class TestCatalogueElevation:
+    @pytest.mark.it("reads elevation, and None when unknown; keeps it out of API dicts")
+    def test_elevation(self):
+        from app.services.airport_catalogue import get_catalogue
+
+        assert get_catalogue().get("EGLL").elevation_ft == 83
+        assert get_catalogue().get("EGLL").to_dict().get("elevation_ft") is None

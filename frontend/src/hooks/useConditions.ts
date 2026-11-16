@@ -1,6 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
-import { fetchConditions, fetchForecast, isAbort, type ApiResult } from "../api/client";
+import {
+  fetchConditions,
+  fetchForecast,
+  isAbort,
+  type ApiResult,
+} from "../api/client";
 import type { ConditionsResponse, ForecastResponse } from "../api/types";
 
 // Loads and refreshes one airport's data, its conditions or its forecast
@@ -72,7 +77,11 @@ export function useForecast(code: string) {
 }
 
 /** `fetcher` must be stable (a module-level function). */
-export function useAirportData<T>(code: string, fetcher: Fetcher<T>, options: PollOptions = {}) {
+export function useAirportData<T>(
+  code: string,
+  fetcher: Fetcher<T>,
+  options: PollOptions = {},
+) {
   const gated = options.active !== undefined;
   const refreshMs = options.refreshMs ?? AUTO_REFRESH_MS;
   const cooldownMs = options.cooldownMs ?? COOLDOWN_MS;
@@ -97,11 +106,13 @@ export function useAirportData<T>(code: string, fetcher: Fetcher<T>, options: Po
     let retryTimer: number | null = null;
     let pending: Mode | null = null; // work that fell due while inactive
     const timers = new Set<number>();
-    const canRun = () => !gated || (activeRef.current && document.visibilityState === "visible");
+    const canRun = () =>
+      !gated || (activeRef.current && document.visibilityState === "visible");
     /** The one gate every request goes through. */
     const request = (mode: Mode) => {
       if (!canRun()) {
-        if (pending === null || PRIORITY[mode] > PRIORITY[pending]) pending = mode;
+        if (pending === null || PRIORITY[mode] > PRIORITY[pending])
+          pending = mode;
         return;
       }
       pending = null;
@@ -131,7 +142,8 @@ export function useAirportData<T>(code: string, fetcher: Fetcher<T>, options: Po
         cooldownRef.current = 0;
         setState({ ...EMPTY, owner: code });
         later(() => {
-          if (!disposed && id === requestId) setState((s) => (s.loading ? { ...s, slow: true } : s));
+          if (!disposed && id === requestId)
+            setState((s) => (s.loading ? { ...s, slow: true } : s));
         }, SLOW_MS);
       }
       let result: ApiResult<T>;
@@ -145,12 +157,23 @@ export function useAirportData<T>(code: string, fetcher: Fetcher<T>, options: Po
       lastFetchRef.current = Date.now();
       if (result.kind === "ok") {
         const data = result.data;
-        setState((s) => ({ ...s, data, failure: null, loading: false, slow: false, refreshFailed: false, retryAt: null }));
+        setState((s) => ({
+          ...s,
+          data,
+          failure: null,
+          loading: false,
+          slow: false,
+          refreshFailed: false,
+          retryAt: null,
+        }));
         return;
       }
       const failure = result;
       const busy = failure.kind === "error" && failure.status === 503;
-      const retryAt = busy && !retried ? Date.now() + (failure.retryAfter ?? DEFAULT_RETRY_S) * 1000 : null;
+      const retryAt =
+        busy && !retried
+          ? Date.now() + (failure.retryAfter ?? DEFAULT_RETRY_S) * 1000
+          : null;
       setState((s) =>
         s.data
           ? { ...s, loading: false, slow: false, refreshFailed: true, retryAt }
@@ -168,19 +191,22 @@ export function useAirportData<T>(code: string, fetcher: Fetcher<T>, options: Po
     runRef.current = request;
     resumeRef.current = () => {
       if (pending !== null) request(pending);
-      else if (Date.now() - lastFetchRef.current >= refreshMs) request("refresh");
+      else if (Date.now() - lastFetchRef.current >= refreshMs)
+        request("refresh");
     };
     lastFetchRef.current = 0;
     request("initial");
 
     const interval = window.setInterval(() => {
       // Interval refreshes aren't deferred: resuming refreshes if data is old.
-      if (document.visibilityState === "visible" && canRun()) void run("refresh");
+      if (document.visibilityState === "visible" && canRun())
+        void run("refresh");
     }, refreshMs);
     const onVisible = () => {
       if (document.visibilityState !== "visible") return;
       if (pending !== null) request(pending);
-      else if (Date.now() - lastFetchRef.current >= refreshMs) request("refresh");
+      else if (Date.now() - lastFetchRef.current >= refreshMs)
+        request("refresh");
     };
     document.addEventListener("visibilitychange", onVisible);
 

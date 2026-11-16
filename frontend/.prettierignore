@@ -1,0 +1,3 @@
+# Recorded API answers: written by scripts/record_frontend_fixtures.py and
+# checked byte-for-byte by tests/test_frontend_fixtures.py.
+tests/fixtures/

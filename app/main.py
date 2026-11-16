@@ -7,6 +7,7 @@ from app.api.aircraft import aircraft_query
 from app.api.airport_search import search_query
 from app.api.conditions import ConditionsError, conditions_query
 from app.api.forecast import forecast_query
+from app.api.movements import movements_query
 from app.api.nearby import nearby_query
 from app.api.radar import radar_query
 from app.api.models import (
@@ -15,6 +16,7 @@ from app.api.models import (
     ConditionsResponse,
     ErrorResponse,
     ForecastResponse,
+    MovementsResponse,
     NearbyConditionsResponse,
     RadarResponse,
 )
@@ -101,6 +103,16 @@ def get_airport_aircraft(code: str):
 def get_nearby_conditions(code: str):
     """Observed conditions at reporting stations within 50 nm (CF-010)."""
     return nearby_query(code)
+
+
+@app.get(
+    "/v1/airports/{code}/movements",
+    response_model=MovementsResponse,
+    responses={status: {"model": ErrorResponse} for status in (400, 404)},
+)
+def get_airport_movements(code: str):
+    """Recent departures and arrivals detected while the airport was viewed (CF-011)."""
+    return movements_query(code)
 
 
 @app.get(

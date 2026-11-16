@@ -15,6 +15,7 @@ tests/testfiles/*
 !tests/testfiles/awc/
 !tests/testfiles/opensky/
 !tests/testfiles/adsblol/
+!tests/testfiles/movements/
 htmlcov
 
 # Local-only AI agent instructions

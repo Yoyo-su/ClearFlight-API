@@ -27,7 +27,13 @@ function statusText(state: SearchState): string {
   }
 }
 
-function Shortcuts({ recent, onClear }: { recent: RecentAirport[]; onClear: () => void }) {
+function Shortcuts({
+  recent,
+  onClear,
+}: {
+  recent: RecentAirport[];
+  onClear: () => void;
+}) {
   return (
     <div className="shortcuts">
       {recent.length > 0 && (
@@ -90,7 +96,8 @@ export function HomePage() {
       <div className="container hero">
         <h1 className="hero-title">Check the weather at an airport</h1>
         <p className="hero-lead">
-          The latest observed weather, how recent it is, and an experimental conditions index with its reasons.
+          The latest observed weather, how recent it is, and an experimental
+          conditions index with its reasons.
         </p>
         <form role="search" onSubmit={onSubmit}>
           <label htmlFor="airport-search" className="field-label">
@@ -122,14 +129,20 @@ export function HomePage() {
                 <Link to={`/airport/${airport.code}`} className="result">
                   <span className="result-text">
                     <span className="result-name">{airport.name}</span>
-                    <span className="result-place">{[airport.city, airport.country].filter(Boolean).join(", ")}</span>
+                    <span className="result-place">
+                      {[airport.city, airport.country]
+                        .filter(Boolean)
+                        .join(", ")}
+                    </span>
                   </span>
                   <span className="result-codes">
-                    {[airport.icao, airport.iata].filter(Boolean).map((code) => (
-                      <span key={code} className="code-chip">
-                        {code}
-                      </span>
-                    ))}
+                    {[airport.icao, airport.iata]
+                      .filter(Boolean)
+                      .map((code) => (
+                        <span key={code} className="code-chip">
+                          {code}
+                        </span>
+                      ))}
                   </span>
                 </Link>
               </li>

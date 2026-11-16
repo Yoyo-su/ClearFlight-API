@@ -8,10 +8,21 @@ import { ConditionsCard } from "../components/ConditionsCard";
 import { ForecastSection } from "../components/ForecastSection";
 import { Layout, SearchForm } from "../components/Layout";
 import { ObservationCard } from "../components/ObservationCard";
-import { useConditions, useForecast, type ConditionsState, type Failure, type ForecastState } from "../hooks/useConditions";
+import {
+  useConditions,
+  useForecast,
+  type ConditionsState,
+  type Failure,
+  type ForecastState,
+} from "../hooks/useConditions";
 import { useNow } from "../hooks/useNow";
 import { conditionsFor, viewAt } from "../lib/ageing";
-import { formatAgo, formatDuration, formatUtcTime, minutesSince } from "../lib/format";
+import {
+  formatAgo,
+  formatDuration,
+  formatUtcTime,
+  minutesSince,
+} from "../lib/format";
 import { rememberAirport } from "../lib/recent";
 
 interface PanelProps {
@@ -30,7 +41,12 @@ function Panel({ title, body, action, search }: PanelProps) {
       <p className="panel-body">{body}</p>
       {action && (
         <div>
-          <button type="button" className="button" onClick={action.onClick} disabled={action.disabled}>
+          <button
+            type="button"
+            className="button"
+            onClick={action.onClick}
+            disabled={action.disabled}
+          >
             {action.label}
           </button>
         </div>
@@ -61,7 +77,13 @@ function Loading({ code, slow }: { code: string; slow: boolean }) {
   );
 }
 
-function FailureView({ code, failure, state, retry, now }: {
+function FailureView({
+  code,
+  failure,
+  state,
+  retry,
+  now,
+}: {
   code: string;
   failure: Failure;
   state: ConditionsState;
@@ -85,7 +107,11 @@ function FailureView({ code, failure, state, retry, now }: {
     return (
       <>
         {heading}
-        <Panel title="Airport not found" body={`We couldn’t find an airport with the code ${code}.`} search />
+        <Panel
+          title="Airport not found"
+          body={`We couldn’t find an airport with the code ${code}.`}
+          search
+        />
       </>
     );
   }
@@ -93,18 +119,29 @@ function FailureView({ code, failure, state, retry, now }: {
     return (
       <>
         {heading}
-        <Panel title="Can’t reach ClearFlight" body="Check your connection, then try again." action={{ label: "Try again", onClick: retry }} />
+        <Panel
+          title="Can’t reach ClearFlight"
+          body="Check your connection, then try again."
+          action={{ label: "Try again", onClick: retry }}
+        />
       </>
     );
   }
   if (failure.status === 503) {
-    const seconds = state.retryAt === null ? 0 : Math.max(0, Math.ceil((state.retryAt - now.getTime()) / 1000));
+    const seconds =
+      state.retryAt === null
+        ? 0
+        : Math.max(0, Math.ceil((state.retryAt - now.getTime()) / 1000));
     return (
       <>
         {heading}
         <Panel
           title="Lots of people are checking the weather right now"
-          body={seconds > 0 ? `Trying again automatically in ${seconds} s…` : "Please try again."}
+          body={
+            seconds > 0
+              ? `Trying again automatically in ${seconds} s…`
+              : "Please try again."
+          }
           action={{ label: "Try again", onClick: retry, disabled: seconds > 0 }}
         />
       </>
@@ -122,7 +159,12 @@ function FailureView({ code, failure, state, retry, now }: {
   );
 }
 
-function SourceRow({ data, state, refresh, now }: {
+function SourceRow({
+  data,
+  state,
+  refresh,
+  now,
+}: {
   data: ConditionsResponse;
   state: ConditionsState;
   refresh: () => void;
@@ -136,12 +178,22 @@ function SourceRow({ data, state, refresh, now }: {
       <div className="source-text">
         <span>Source: NOAA Aviation Weather Center</span>
         <span>
-          Observed {formatUtcTime(observation.observed_at)} · Fetched {formatUtcTime(observation.fetched_at)}
+          Observed {formatUtcTime(observation.observed_at)} · Fetched{" "}
+          {formatUtcTime(observation.fetched_at)}
         </span>
       </div>
       <div className="source-actions">
-        <span aria-live="polite">{coolingDown ? "Checked just now" : "Updates every 5 minutes while open"}</span>
-        <button type="button" className="button button-ghost" onClick={refresh} disabled={coolingDown}>
+        <span aria-live="polite">
+          {coolingDown
+            ? "Checked just now"
+            : "Updates every 5 minutes while open"}
+        </span>
+        <button
+          type="button"
+          className="button button-ghost"
+          onClick={refresh}
+          disabled={coolingDown}
+        >
           Refresh
         </button>
       </div>
@@ -149,7 +201,14 @@ function SourceRow({ data, state, refresh, now }: {
   );
 }
 
-function DataView({ data, state, refresh, now, forecast, retryForecast }: {
+function DataView({
+  data,
+  state,
+  refresh,
+  now,
+  forecast,
+  retryForecast,
+}: {
   data: ConditionsResponse;
   state: ConditionsState;
   refresh: () => void;
@@ -159,10 +218,15 @@ function DataView({ data, state, refresh, now, forecast, retryForecast }: {
 }) {
   const view = viewAt(data, now);
   const coolingDown = now.getTime() < state.cooldownUntil;
-  const refreshAction = { label: "Refresh", onClick: refresh, disabled: coolingDown };
+  const refreshAction = {
+    label: "Refresh",
+    onClick: refresh,
+    disabled: coolingDown,
+  };
   const failedNote = state.refreshFailed && data.last_observed_at && (
     <p role="status" className="notice notice-neutral">
-      Couldn’t update just now — showing the report from {formatUtcTime(data.last_observed_at)}.
+      Couldn’t update just now — showing the report from{" "}
+      {formatUtcTime(data.last_observed_at)}.
     </p>
   );
 
@@ -202,17 +266,23 @@ function DataView({ data, state, refresh, now, forecast, retryForecast }: {
       <>
         {stale ? (
           <p role="status" className="notice notice-stale">
-            This report is {formatDuration(minutesSince(observation.observed_at, now))} old (
-            {formatUtcTime(observation.observed_at)}), so it isn’t scored. Showing it for reference.
+            This report is{" "}
+            {formatDuration(minutesSince(observation.observed_at, now))} old (
+            {formatUtcTime(observation.observed_at)}), so it isn’t scored.
+            Showing it for reference.
           </p>
         ) : (
           <p role="status" className="status-line">
             <span className="status-dot" aria-hidden="true" />
-            Observed {formatAgo(observation.observed_at, now)} · {formatUtcTime(observation.observed_at)}
+            Observed {formatAgo(observation.observed_at, now)} ·{" "}
+            {formatUtcTime(observation.observed_at)}
           </p>
         )}
         <div className="cards">
-          <ConditionsCard conditions={conditionsFor(data, view)} stale={stale} />
+          <ConditionsCard
+            conditions={conditionsFor(data, view)}
+            stale={stale}
+          />
           <ObservationCard observation={observation} />
         </div>
         <SourceRow data={data} state={state} refresh={refresh} now={now} />
@@ -224,7 +294,12 @@ function DataView({ data, state, refresh, now, forecast, retryForecast }: {
       <AirportHeading airport={data.airport} now={now} />
       {failedNote}
       {body}
-      <ForecastSection state={forecast} retry={retryForecast} now={now} timeZone={data.airport.timezone} />
+      <ForecastSection
+        state={forecast}
+        retry={retryForecast}
+        now={now}
+        timeZone={data.airport.timezone}
+      />
       <AirportMap code={data.airport.code} conditions={data} />
     </>
   );
@@ -236,9 +311,15 @@ export function AirportPage() {
   const navigate = useNavigate();
   // After the URL is rewritten to the canonical code (D8), keep using the code
   // that was requested, so the rewrite doesn't trigger a second fetch.
-  const requested = (location.state as { requested?: string } | null)?.requested ?? param.toUpperCase();
+  const requested =
+    (location.state as { requested?: string } | null)?.requested ??
+    param.toUpperCase();
   const { state, refresh: refreshConditions, retry } = useConditions(requested);
-  const { state: forecast, refresh: refreshForecast, retry: retryForecast } = useForecast(requested);
+  const {
+    state: forecast,
+    refresh: refreshForecast,
+    retry: retryForecast,
+  } = useForecast(requested);
   const refresh = () => {
     refreshConditions();
     refreshForecast();
@@ -253,7 +334,9 @@ export function AirportPage() {
       state.cooldownUntil || null,
       state.retryAt,
       // Forecast hours leave the screen as they end (CF-008 §5).
-      forecastData?.forecast ? Date.parse(forecastData.forecast.valid_to) : null,
+      forecastData?.forecast
+        ? Date.parse(forecastData.forecast.valid_to)
+        : null,
       ...(forecastData?.hours ?? []).map((hour) => Date.parse(hour.end)),
     ],
     data,
@@ -263,30 +346,53 @@ export function AirportPage() {
     if (!data) return;
     const airport = data.airport;
     document.title = `${airport.name} (${airport.code}) – ClearFlight`;
-    rememberAirport({ code: airport.code, iata: airport.iata, name: airport.name });
+    rememberAirport({
+      code: airport.code,
+      iata: airport.iata,
+      name: airport.name,
+    });
     if (param !== airport.code) {
-      navigate(`/airport/${airport.code}`, { replace: true, state: { requested } });
+      navigate(`/airport/${airport.code}`, {
+        replace: true,
+        state: { requested },
+      });
     }
   }, [data, param, requested, navigate]);
 
   let content;
   if (data) {
     content = (
-      <DataView data={data} state={state} refresh={refresh} now={now} forecast={forecast} retryForecast={retryForecast} />
+      <DataView
+        data={data}
+        state={state}
+        refresh={refresh}
+        now={now}
+        forecast={forecast}
+        retryForecast={retryForecast}
+      />
     );
-  }
-  else if (state.failure) {
+  } else if (state.failure) {
     // A forecast that loaded stays available when the observation fails.
     content = (
       <>
-        <FailureView code={param.toUpperCase()} failure={state.failure} state={state} retry={retry} now={now} />
+        <FailureView
+          code={param.toUpperCase()}
+          failure={state.failure}
+          state={state}
+          retry={retry}
+          now={now}
+        />
         {forecastData?.data_status === "available" && (
-          <ForecastSection state={forecast} retry={retryForecast} now={now} timeZone={forecastData.airport.timezone} />
+          <ForecastSection
+            state={forecast}
+            retry={retryForecast}
+            now={now}
+            timeZone={forecastData.airport.timezone}
+          />
         )}
       </>
     );
-  }
-  else content = <Loading code={param.toUpperCase()} slow={state.slow} />;
+  } else content = <Loading code={param.toUpperCase()} slow={state.slow} />;
 
   return (
     <Layout headerSearch>

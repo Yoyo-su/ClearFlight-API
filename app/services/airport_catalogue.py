@@ -36,6 +36,9 @@ class Airport:
     timezone: str | None
     search_name: str = field(repr=False, compare=False)
     search_city: str = field(repr=False, compare=False)
+    # Field elevation (CF-011, inferred movements); None when unknown. Not
+    # part of to_dict, so API responses are unchanged.
+    elevation_ft: int | None = None
 
     @property
     def code(self) -> str:
@@ -58,6 +61,7 @@ class Airport:
             timezone=row["timezone"] or None,
             search_name=normalise(row["name"]),
             search_city=normalise(row["city"]),
+            elevation_ft=int(row["elevation_ft"]) if row.get("elevation_ft") else None,
         )
 
     def to_dict(self) -> dict:

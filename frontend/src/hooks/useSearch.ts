@@ -26,7 +26,12 @@ export function useSearch(query: string) {
     const timer = window.setTimeout(async () => {
       try {
         const result = await searchAirports(term, controller.signal);
-        if (result.kind === "ok") setState({ status: "done", query: term, results: result.data.results });
+        if (result.kind === "ok")
+          setState({
+            status: "done",
+            query: term,
+            results: result.data.results,
+          });
         else setState({ status: "error", query: term });
       } catch (error) {
         if (!isAbort(error)) setState({ status: "error", query: term });
@@ -46,7 +51,12 @@ export function useSearch(query: string) {
   // shows as loading until this query's answer arrives.
   let shown: SearchState;
   if (term.length < MIN_QUERY) shown = { status: "idle" };
-  else if (state.status !== "idle" && state.status !== "loading" && state.query === term) shown = state;
+  else if (
+    state.status !== "idle" &&
+    state.status !== "loading" &&
+    state.query === term
+  )
+    shown = state;
   else shown = { status: "loading", query: term };
   return { state: shown, retry };
 }

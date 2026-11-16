@@ -32,8 +32,10 @@ SNAPSHOT_FIELDS = [
     "scheduled",
     "latitude",
     "longitude",
+    "elevation_ft",  # CF-011: field elevation for inferred movements; may be empty
     "timezone",
 ]
+ELEVATION_RANGE_FT = (-1500, 15000)
 PILOT_AIRPORTS = {
     "EGLL": "Europe/London",
     "RJBB": "Asia/Tokyo",
@@ -67,6 +69,16 @@ def parse_overrides(override_rows: Iterable[dict]) -> dict[str, str]:
         for row in override_rows
         if row.get("code", "").strip()
     }
+
+
+def parse_elevation(value) -> str:
+    """Whole feet as text, or "" when missing or out of range."""
+    try:
+        feet = round(float(str(value).strip()))
+    except (TypeError, ValueError):
+        return ""
+    low, high = ELEVATION_RANGE_FT
+    return str(feet) if low <= feet <= high else ""
 
 
 def build_snapshot_rows(
@@ -125,6 +137,7 @@ def build_snapshot_rows(
                 ),
                 "latitude": f"{latitude:.6f}",
                 "longitude": f"{longitude:.6f}",
+                "elevation_ft": parse_elevation(row.get("elevation_ft")),
                 "timezone": timezone,
             }
         )

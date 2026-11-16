@@ -118,7 +118,7 @@ Three routes, documented in full in [docs/API.md](docs/API.md):
 | [docs/CURRENT_MILESTONE.md](docs/CURRENT_MILESTONE.md) | What's in progress now |
 
 ## Roadmap
-- **Phase 2 ([plan v1.1](docs/development-plan.md), free data only):** a forecast outlook from official airport forecasts (CF-008), live aircraft positions (CF-009) on an airport map (CF-010), observed departures and arrivals (CF-011), heuristic disruption signals (CF-012), and a flight lookup with best-effort delays (CF-013). Complete per-flight delays and delay prediction aren't possible on free data and stay out of scope.
+- **Phase 2 ([plan v1.1](docs/development-plan.md), free data only):** a forecast outlook from official airport forecasts (CF-008), live aircraft positions (CF-009) on an airport map (CF-010), observed departures and arrivals while the map is open, labelled observed or inferred (CF-011, in progress), heuristic disruption signals (CF-012), and a flight lookup with best-effort delays (CF-013). Complete per-flight delays and delay prediction aren't possible on free data and stay out of scope.
 - **Deferred until then:**
   - CF-006 public deployment: hosting, HTTPS, CORS, request limits, monitoring; release `v0.1.0`; remove the deprecated legacy route;
   - CF-007 traveller validation: 10–20 testers, then a go / iterate / stop decision.

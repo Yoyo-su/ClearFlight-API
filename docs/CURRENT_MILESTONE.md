@@ -1,14 +1,19 @@
-# Current milestone: CF-010 Airport map
+# Current milestone: CF-011 Observed movements
 
-**Status:** Implemented and reviewed on `feat/cf-010-airport-map`; PR open for owner merge (design approved 2026-11-11, D-013)
-**Source of truth:** [docs/development-plan.md](development-plan.md) v1.1 (§5 CF-010, §7, §8); decisions D-010, D-012, D-013
-**Last updated:** 2026-11-12
+**Status:** Implementing on `feat/cf-011-observed-movements` (design r3 approved 2026-11-15, D-014); CF-010 merged (PR #26)
+**Source of truth:** [docs/development-plan.md](development-plan.md) v1.1 (§5 CF-011, §7, §8); decisions D-012, D-013, D-014
+**Last updated:** 2026-11-15
 
 ## Goal
-A live map on each airport page: aircraft positions and observed weather nearby, with honest states, polling only while visible, and clear attribution.
+Recent departures and arrivals on the airport map, detected from live positions while the page is open, labelled observed or inferred, honest about what was watched and validated against airport boards before being called validated.
 
 ## Next task
-Owner review and merge of the CF-010 PR; then CF-011 observed movements. Design: [cf-010-design.md](cf-010-design.md).
+- **Done:** field elevation in the catalogue; detector, store and positions hook (recorded-track fixtures, 10-mutant sweep); `GET /v1/airports/{code}/movements`; the "Recent movements" list in the map section (unit, contract, e2e with axe).
+- **P5 (open exit criterion; every airport `experimental`):** fresh hours under the adopted identity rule (design §9). EGLL 2026-11-15 16:00 UTC: found 88.0%, false 1.5%, not validated (7 of 9 misses at provider timeouts). KJFK: not assessed (no arrivals board for the hour, recording too short for gate times, regional-operator callsigns). RJBB 2026-11-16 09:00 JST: found 77.4%, false 24.2%, not validated (take-off dropouts, timeouts, cargo not on the board). Details in `docs/validation/`.
+- **After P5 (owner, 2026-11-16):** inferred movements across up to 120 s of missed polls (design §3). Fresh P5 hours under the current rules are a follow-up, with JFK's three fixes and Kansai's board pasted by the owner.
+- **Remaining:** Codex review of the gap rule; PR with every airport experimental.
+
+## Previous: CF-010 Airport map (merged, PR #26)
 - **Reviews:**
   - quality-reviewer: 3 Medium and 7 Low, fixed;
   - Codex: r1 1H/5M/2L, r2 0H/3M/4L, scoped r3 0H/1M/1L, all fixed with tests.

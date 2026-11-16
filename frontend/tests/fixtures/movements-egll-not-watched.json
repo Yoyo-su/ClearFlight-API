@@ -1,0 +1,35 @@
+{
+  "status": 200,
+  "headers": {},
+  "body": {
+    "airport": {
+      "code": "EGLL",
+      "icao": "EGLL",
+      "iata": "LHR",
+      "name": "London Heathrow Airport",
+      "city": "London",
+      "country": "United Kingdom",
+      "country_code": "GB",
+      "timezone": "Europe/London"
+    },
+    "source": {
+      "provider": "adsblol",
+      "name": "adsb.lol (ODbL 1.0)",
+      "attribution_url": "https://adsb.lol",
+      "access": "keyless",
+      "privacy_filter": "applied"
+    },
+    "movements": [],
+    "watched": [],
+    "coverage_mode": "unknown",
+    "coverage_reason": "not_enough_watching",
+    "validation": {
+      "observed": "experimental",
+      "inferred": "experimental",
+      "airport": "experimental"
+    },
+    "data_status": "unavailable",
+    "unavailable_reason": "not_watched",
+    "disclaimer": "Detected from volunteer receiver data while this page was open. May be incomplete; not an official departures board."
+  }
+}

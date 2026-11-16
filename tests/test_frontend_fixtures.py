@@ -10,6 +10,7 @@ from app.api.models import (
     ErrorResponse,
     ForecastResponse,
     AircraftResponse,
+    MovementsResponse,
     NearbyConditionsResponse,
     RadarResponse,
 )
@@ -38,6 +39,8 @@ def model_for(name: str, status: int):
         return AircraftResponse
     if name.startswith("nearby-") and status == 200:
         return NearbyConditionsResponse
+    if name.startswith("movements-") and status == 200:
+        return MovementsResponse
     if name.startswith("radar-") and status == 200:
         return RadarResponse
     if status == 200:
@@ -74,6 +77,7 @@ class TestFrontendFixtures:
             "provider_disabled",
             "no_stations",
             "invalid_index",
+            "not_watched",
         }
         assert errors == {
             "invalid_code",
@@ -95,7 +99,9 @@ class TestFrontendFixtures:
         parsed = model.model_validate(fixture["body"])
         # Extra fields are dropped and missing ones fail validation, so
         # equality means the field sets match exactly.
-        assert parsed.model_dump(mode="json") == fixture["body"]
+        assert (
+            parsed.model_dump(mode="json", by_alias=True) == fixture["body"]
+        )  # as the API serialises
 
     @pytest.mark.it("are what the API produces now (re-record if this fails)")
     def test_up_to_date(self, tmp_path):

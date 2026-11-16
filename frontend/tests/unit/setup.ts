@@ -14,7 +14,8 @@ class NeverIntersecting {
   }
 }
 if (typeof globalThis.IntersectionObserver === "undefined") {
-  globalThis.IntersectionObserver = NeverIntersecting as unknown as typeof IntersectionObserver;
+  globalThis.IntersectionObserver =
+    NeverIntersecting as unknown as typeof IntersectionObserver;
 }
 
 afterEach(() => {

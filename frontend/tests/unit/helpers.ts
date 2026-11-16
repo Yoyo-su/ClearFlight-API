@@ -12,7 +12,9 @@ const FIXTURES = join(__dirname, "..", "fixtures");
 
 /** A recorded API response from tests/fixtures (see scripts/record_frontend_fixtures.py). */
 export function fixture(name: string): Fixture {
-  return JSON.parse(readFileSync(join(FIXTURES, `${name}.json`), "utf8")) as Fixture;
+  return JSON.parse(
+    readFileSync(join(FIXTURES, `${name}.json`), "utf8"),
+  ) as Fixture;
 }
 
 export function response(f: Fixture): Response {
@@ -24,11 +26,23 @@ export function response(f: Fixture): Response {
 
 /** A fetch whose replies the test controls, one request at a time. */
 export function controlledFetch() {
-  const pending: { url: string; resolve: (r: Response) => void; reject: (e: unknown) => void; signal?: AbortSignal | null }[] = [];
+  const pending: {
+    url: string;
+    resolve: (r: Response) => void;
+    reject: (e: unknown) => void;
+    signal?: AbortSignal | null;
+  }[] = [];
   const fn = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
     return new Promise<Response>((resolve, reject) => {
-      const entry = { url: String(input), resolve, reject, signal: init?.signal };
-      init?.signal?.addEventListener("abort", () => reject(new DOMException("aborted", "AbortError")));
+      const entry = {
+        url: String(input),
+        resolve,
+        reject,
+        signal: init?.signal,
+      };
+      init?.signal?.addEventListener("abort", () =>
+        reject(new DOMException("aborted", "AbortError")),
+      );
       pending.push(entry);
     });
   });
