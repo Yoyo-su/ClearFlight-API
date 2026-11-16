@@ -1,6 +1,6 @@
-# Proposal: movement confidence by coverage class (draft r2, for owner decision)
+# Proposal: movement confidence by coverage class (draft r3, for owner decision)
 
-**Status:** draft r2, 2026-11-16, revised after a CORMORANT critique of r1 (Codex: 3 High, 2 Medium, all confirmed; §12). If approved, this amends D-014 and plan v1.1 §7 / §11 P5 (a plan v1.2 increment), and sets CF-012's eligibility rule.
+**Status:** draft r3, 2026-11-16. r2 was revised after a CORMORANT critique of r1 (Codex: 3 High, 2 Medium, all confirmed). r3 applies the owner's answers: principle adopted; no airport gets special status; 4 sample airports per class; identity rules with no curated data (§12). If approved, this amends D-014 and plan v1.1 §7 / §11 P5 (a plan v1.2 increment), and sets CF-012's eligibility rule.
 **Context:** CF-011 shipped with every airport labelled `experimental`, because P5 is defined per pilot airport against that airport's own board ([validation](validation/)). That can't scale to the 11,318 catalogue airports, and most of them publish no usable board.
 
 ## 1. Problem
@@ -12,10 +12,11 @@
 Movement detection accuracy depends mainly on **what the receivers see at that airport** (ground coverage, low-altitude dropouts, provider reliability, nearby airfields), not on the airport's name. So:
 1. **Validate the method once per coverage class**, at sample airports whose boards can be checked automatically.
 2. **Measure every airport's coverage continuously** from the detector's own data (no board needed) and place it in a class.
-3. **An airport inherits its class's validated accuracy** only while its own **current** measurements stay inside the class bounds and it has been watched enough (§5a). Otherwise it is `unknown`.
-4. **"Validated" stays reserved** for an airport whose own board check **passed** and hasn't expired (§7).
+3. **Every airport, pilots included, is rated the same way:** it inherits its class's validated accuracy only while its own **current** measurements stay inside the class bounds and it has been watched enough (§5a). Otherwise it is `unknown`.
+4. **No airport has special status.** Board checks exist only to validate classes, at sample airports chosen by objective criteria (§5). A sample airport's own result feeds its class; it doesn't give that airport a label of its own. The pilot airports (EGLL, KJFK, RJBB) are ordinary airports under this rule, and their 2026-11-15/16 results stay on record as evidence.
+5. **No curated data in validation.** Identity rules use only what the feed and the board publish, with no airline tables or aliases (§5).
 
-The assumption in point 1 is itself tested, **on airports not used to set the class** (§5): thresholds come from two sample airports, and a third, held-out airport classified only by its measures must also meet P5. If it doesn't, the class isn't used.
+The assumption in point 1 is itself tested, **on airports not used to set the class** (§5): thresholds come from two calibration airports, and two held-out airports, classified only by their measures, must also meet P5. If either misses, the class isn't used.
 
 **Blind spot, and how it's covered:** the receivers' own statistics can't show movements they never saw. An airport could lose a whole runway and still show a high observed share. §3 therefore adds **conversion measures** with an independent denominator: aircraft seen low on approach or climb-out near the airport, against the movements recorded for them.
 
@@ -54,9 +55,15 @@ The 15-minute RKSI and WSSS figures are short probes, indicative only.
 - **neighbour ambiguity** is shown when relevant ("movements near Northolt are left out").
 
 ## 5. Validation of a class
-- **Samples:** **3 airports per class**, each with an automatable ground-truth source that passed a dry run (identity, access, time type, coverage; SHRIKE S23). At least 3 busy hours per airport, on different days.
-- **Calibration and transfer test:** class bounds, including the conversion thresholds, are set from 2 calibration airports. The third airport is **held out**. It is classified by its measures alone, and it must meet P5 on its own hours. Only then is the class validated. If the held-out airport misses, the class isn't used (U), whatever the calibration airports scored.
-- **Protocol:** design §9 as amended (identity by flight number, then airline + aircraft type; per-source time-type tolerances). It is fixed per source before recording.
+- **Samples (owner, 2026-11-16):** **4 airports per class**, at least 3 busy hours each on different days. A sample airport must meet **objective criteria**, all checked automatically before it's chosen:
+  1. a board source that can be captured automatically and passed a dry run (identity, access, time type, coverage; SHRIKE S23);
+  2. **identity coverage:** at least 80% of its detected movements carry a plain flight-number callsign (3 letters + digits). Measured: KJFK 92%, RJBB 97%, EGLL 41% (BA and Shuttle fly ATC callsigns such as `BAW35LF`, `SHT6Q`), so EGLL can't be a sample;
+  3. its coverage measures (§3) place it in the class.
+- **Calibration and transfer test:** class bounds, including the conversion thresholds, are set from 2 calibration airports. The other 2 are **held out**. They're classified by their measures alone, and each must meet P5 on its own hours. Only then is the class validated. If a held-out airport misses, the class isn't used (U), whatever the calibration airports scored.
+- **Identity rules, with no curated data (owner, 2026-11-16).** These replace the IATA→ICAO table and the airline aliases:
+  1. **A plain flight-number callsign** (3 letters + digits) matches a board flight with **the same number**, the same movement type and a time within tolerance, **whatever the airline prefix**. Regional operators (`EDV5150` = DL5150), operating carriers (`LPE2691` = LA2691) and unlisted airlines (`ASL500` = JU500) need no table. Measured on the three recorded hours: 0 of 163 numbered detections had more than one candidate, and all 12 matches across different prefixes were the right flight.
+  2. **Any other callsign** (an ATC callsign, or none) matches only on the aircraft type (feed and board), movement and time, and only if **exactly one** board flight fits. Otherwise it's **unidentified**: listed, left out of the false rate, never found.
+- **Time tolerances:** per source by its time type (runway ±5 min; gate times wider; recording to the hour's end plus 45 min for gate-time boards), fixed per source before recording.
 - **Pass:** every sample airport meets P5 (≥90% found, ≤5% false) on its combined hours.
 - **Validity:** a class result carries the detector rule version and provider it was measured with. It expires after 12 months, or immediately on a new rule version or provider (§5a).
 
@@ -71,17 +78,22 @@ An airport's inherited class figures are shown only if **all** of these hold whe
 The rules apply at read time, so a stale class can't persist just because no new poll arrived. Each rule has a test.
 
 ## 6. Ground-truth sources: dry runs (2026-11-16)
-- **Heathrow (S):** automated. The board feed has runway times and aircraft types, and was used twice.
-- **JFK (S):** automated. The public flight tracker, driven by time window, returns complete departure and arrival lists (1,089 arrival rows for 12:00–18:00 on 2026-11-15). Its times are gate times, so recordings must run to the hour's end plus 45 min. A regional-operator alias rule is needed (EDV, RPA and others flying partner flight numbers). The earlier "no arrivals board" finding was my error: an unsorted list judged by its first and last rows. It is corrected in the [JFK validation note](validation/2026-11-15-kjfk-p5.md).
+- **Heathrow (S):** the board is automated (runway times, aircraft types), but identity coverage is 41%, so it **can't be a sample** under §5. It is rated by its class like any airport.
+- **JFK (S):** **sample candidate.** The public flight tracker, driven by time window, returns complete departure and arrival lists (1,089 arrival rows for 12:00–18:00 on 2026-11-15). Identity coverage is 92%. Its times are gate times, so recordings run to the hour's end plus 45 min. Regional operators are handled by identity rule 1, with no alias list. The earlier "no arrivals board" finding was my error: an unsorted list judged by its first and last rows. It is corrected in the [JFK validation note](validation/2026-11-15-kjfk-p5.md).
 - **Kansai (D):** **no automated source.** The airport site blocks automated access. ODPT's catalogue has no Kansai airport or operator dataset (searches for 関西, kansai and KIX return none; none of its 138 organisations is Kansai's). Its JAL and ANA airline feeds need registration and would cover only those airlines' flights, about 3–4 of the 31 board movements in the RJBB hour. So class D needs **other sample airports** with automatable boards.
-- **Still to find:** two class-D and two class-A sample airports with automatable sources. Method: measure coverage at candidate busy airports cheaply first (the adsb.lol probes used for CF-011), then dry-run their boards.
+- **Still to find:** 4 sample airports per class meeting §5's criteria. JFK is 1 for class S, and Kansai would qualify on identity but has no automated board. **Method, fully automatic:**
+  1. probe candidate busy airports with adsb.lol for coverage class and identity coverage (the same probes as CF-011);
+  2. dry-run their public boards;
+  3. keep those that pass.
+
+  If a class can't reach 4, it stays U.
 
 ## 7. What users see
-**Precedence**, first match wins:
-1. **This airport's board check passed** and is current (§5 validity): "Validated at this airport: found X%, false Y% (date)."
-2. **This airport's board check failed** and is current: "Checked at this airport: below our accuracy bar (found X%, false Y%, date)." No class figures are inherited: the airport's own evidence beats its class. This is Heathrow today.
-3. **A class applies** under §5a: the class text below.
-4. **Otherwise U.**
+The same rule for every airport, pilots included:
+1. **The airport's class applies** under §5a: the class text below.
+2. **Otherwise U.**
+
+Sample airports' own results feed their class and are published in `docs/validation/`. They don't change that airport's label. This also removes r2's "failed check" case: Heathrow's checks, made under the earlier curated identity rule, stay on record as evidence only.
 
 Per-method labels stay: an inferred row is always labelled inferred, and a method that failed its own figures is shown as experimental, as the design already requires.
 - **Class S, D or A with a validated class:** for example, "Receivers here see aircraft on the ground well. Checked at similar airports: about X% of movements found, Y% false." Inferred movements are still labelled per row.
@@ -90,7 +102,7 @@ Per-method labels stay: an inferred row is always labelled inferred, and a metho
 
 ## 8. CF-012 impact
 A traffic-rate signal needs **all** of these:
-1. **Movement accuracy:** the airport is validated (§7 rule 1), or its class applies (rule 3), with class S or D. Class A, U, and airports whose own check failed (rule 2) get `unknown`. This replaces "airport passed P5".
+1. **Movement accuracy:** the airport's class applies (§7), with class S or D. Class A and U airports get `unknown`. This replaces "airport passed P5".
 2. **Current-window completeness, unchanged** (plan §3): at least 90% of the current window watched, with no gap over 5 minutes. A class or a validation never substitutes for it.
 3. **Baseline comparability, unchanged** (plan §3): the baseline uses the same movement definition and source type, or a validated adjustment. Class validation says nothing about the baseline.
 
@@ -103,15 +115,20 @@ A traffic-rate signal needs **all** of these:
   - **Initialisation:** existing airports start empty (U) and fill by watching; there's no back-fill from the 6-hour state.
   - **Expiry:** a key TTL of 8 days.
 - **Conversion tracking:** the detector keeps a small per-aircraft "seen in the low gate" marker within the existing aircraft state (15-minute TTL), and counts the gate entries and the conversions into the hourly buckets.
-- **API:** `/movements` gains a `confidence` block (class, measures, class figures, basis); `validation` keeps per-airport board results.
+- **API:** `/movements` gains a `confidence` block (class, measures, class figures, basis); the per-airport `validation` field is retired (its board results move to the class records in `docs/validation/`).
 - **Docs:** D-014 amendment; plan v1.2 (P5 per class, with pilot airports where an automated source exists); design §9 per-source protocols.
 
-## 10. Owner decisions needed
-1. **Adopt the principle** (§2): class validation plus measured coverage, replacing per-airport P5 for the full app.
-2. **Pilot airports:** keep P5 per pilot airport where an automated source exists (EGLL, KJFK), and let Kansai inherit class D once validated elsewhere. Or drop per-airport P5 entirely.
-3. **Validation size:** 3 airports per class (2 calibration, 1 held out), 3 busy hours each (§5), or a different size.
-4. **Wording** of the user-facing class text (§7).
-5. **JFK regional operators:** adopt an alias rule (EDV, RPA, SKW, ENY, JIA, ASH, GJS, PDT flying partner flight numbers), fixed before any fresh JFK hour.
+## 10. Owner decisions
+**Decided 2026-11-16:**
+1. **Principle adopted:** class validation plus measured coverage replaces per-airport P5 (plan v1.2).
+2. **No special status for any airport:** pilots are rated by class, and board checks only feed classes (§2, §7).
+3. **Sample size:** 4 airports per class (2 calibration, 2 held out), 3 busy hours each.
+4. **No curated data:** identity by plain flight number with any prefix, else a unique aircraft-type match, else unidentified (§5). This replaces the IATA→ICAO table and the JFK alias proposal.
+
+**Still open:**
+5. **The 80% identity-coverage bar** for sample airports (§5).
+6. **Wording** of the user-facing class text (§7).
+7. **Approval of r3 as a whole,** then the plan v1.2 text and the D-014 amendment.
 
 ## 11. Risks
 - **The class assumption may not hold.** Accuracy may depend on more than measured coverage (runway layout, traffic mix). §5's agreement test detects this, and a failing class stays U.
@@ -128,3 +145,10 @@ A traffic-rate signal needs **all** of these:
   4. *Medium, the measure store couldn't be rebuilt from the retained state:* §9 specifies counts-only hourly buckets in the same atomic write, failed-poll counting, initialisation and an 8-day TTL.
   5. *Medium, "board-checked" would label a failed check as validated:* §7 adds a precedence (passed, failed, class, U); Heathrow's failed check is shown as such.
 - Still for the owner (§10), plus one raised by the critique: the regional-operator matching rule for JFK, fixed before any fresh JFK recording.
+- **r3:** owner answers 2026-11-16:
+  - **Principle adopted.**
+  - **No special status for pilot airports** ("Is it not inconsistent to retain the checks for the pilot airports while the rest go off classes?"): §2, §7 and §8 now use one rule for all airports.
+  - **4 airports per class.**
+  - **No curated data** ("we need a solution that will cover all airports without curating data"): §5's identity rules drop the IATA→ICAO table and the aliases. The plain-number rule was measured before adoption on the three recorded hours: 0 ambiguous of 163, and 12 of 12 cross-prefix matches correct.
+  - **Sample criteria added.** Identity coverage of at least 80% excludes EGLL (41%); KJFK (92%) qualifies.
+  - **Not yet critiqued:** r3 changes the r2 design materially (sample criteria, identity rules, label precedence), so it gets a scoped critique before approval.
