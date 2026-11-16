@@ -1,6 +1,6 @@
-# Proposal: movement confidence by coverage class (draft r3, for owner decision)
+# Proposal: movement confidence by coverage class (draft r4, for owner decision)
 
-**Status:** draft r3, 2026-11-16. r2 was revised after a CORMORANT critique of r1 (Codex: 3 High, 2 Medium, all confirmed). r3 applies the owner's answers: principle adopted; no airport gets special status; 4 sample airports per class; identity rules with no curated data (§12). If approved, this amends D-014 and plan v1.1 §7 / §11 P5 (a plan v1.2 increment), and sets CF-012's eligibility rule.
+**Status:** draft r4, 2026-11-16 (r4: a scoped critique of r3, 3 High + 1 Medium, all confirmed; §12). r2 was revised after a CORMORANT critique of r1 (Codex: 3 High, 2 Medium, all confirmed). r3 applies the owner's answers: principle adopted; no airport gets special status; 4 sample airports per class; identity rules with no curated data (§12). If approved, this amends D-014 and plan v1.1 §7 / §11 P5 (a plan v1.2 increment), and sets CF-012's eligibility rule.
 **Context:** CF-011 shipped with every airport labelled `experimental`, because P5 is defined per pilot airport against that airport's own board ([validation](validation/)). That can't scale to the 11,318 catalogue airports, and most of them publish no usable board.
 
 ## 1. Problem
@@ -39,6 +39,7 @@ The table below covers the existing measures.
 | **Failed-poll rate** | provider failures while watched | EGLL 4.7%, KJFK 7.6%, RJBB 0.9% |
 | **Neighbour ambiguity** | catalogue airfields within 5 nm | fixed per airport (EGLL: Northolt) |
 | **Watched minutes** | how much evidence there is | gate for any class |
+| **Plain flight-number callsign share** | the traffic mix the validation can speak for (r4) | EGLL 41%, KJFK 92%, RJBB 97% |
 
 The 15-minute RKSI and WSSS figures are short probes, indicative only.
 
@@ -62,9 +63,16 @@ The 15-minute RKSI and WSSS figures are short probes, indicative only.
 - **Calibration and transfer test:** class bounds, including the conversion thresholds, are set from 2 calibration airports. The other 2 are **held out**. They're classified by their measures alone, and each must meet P5 on its own hours. Only then is the class validated. If a held-out airport misses, the class isn't used (U), whatever the calibration airports scored.
 - **Identity rules, with no curated data (owner, 2026-11-16).** These replace the IATA→ICAO table and the airline aliases:
   1. **A plain flight-number callsign** (3 letters + digits) matches a board flight with **the same number**, the same movement type and a time within tolerance, **whatever the airline prefix**. Regional operators (`EDV5150` = DL5150), operating carriers (`LPE2691` = LA2691) and unlisted airlines (`ASL500` = JU500) need no table. Measured on the three recorded hours: 0 of 163 numbered detections had more than one candidate, and all 12 matches across different prefixes were the right flight.
-  2. **Any other callsign** (an ATC callsign, or none) matches only on the aircraft type (feed and board), movement and time, and only if **exactly one** board flight fits. Otherwise it's **unidentified**: listed, left out of the false rate, never found.
+  2. **Any other callsign** (an ATC callsign, or none) matches only on the aircraft type (feed and board), movement and time, and only if **exactly one** still-unmatched board flight fits:
+     - **no fitting board flight** means unmatched, so it **counts as false**;
+     - **several** fitting flights means **unidentified**;
+     - a detection with **no aircraft type** is unidentified.
+  - **Order:** rule 1 runs first over all detections, one-to-one, closest time first (several numbered candidates resolve to the closest). Rule 2 then runs on what remains, so its "exactly one" counts only board flights rule 1 left unmatched.
+  - **Unidentified detections are bounded, not hidden:** each sample reports **false** (unmatched ÷ identified) and **worst-case false** ((unmatched + unidentified) ÷ all detections). The sample passes only if worst-case false is at most 5%. The false figure can then never understate spurious detections in the complete list by more than the P5 margin.
+  - **Coincidence check, measured per sample:** both rules run again with the detections shifted by 3 hours, against the same board. Any match there is coincidental. The coincidental-match rate must be at most 1% of detections, or the sample fails. This measures unique-but-wrong matches, which uniqueness alone can't.
 - **Time tolerances:** per source by its time type (runway ±5 min; gate times wider; recording to the hour's end plus 45 min for gate-time boards), fixed per source before recording.
-- **Pass:** every sample airport meets P5 (≥90% found, ≤5% false) on its combined hours.
+- **Pass:** every sample airport meets P5 on its combined hours: ≥90% found, and **worst-case** false ≤5% (above). Each method (observed, inferred) is also assessed per class, so its own label can be inherited (§9).
+- **Callsign mix is a class bound (r4, critique finding 2).** The share of plain flight-number callsigns is one of the class measures (§3). An airport inherits only if its share is within the range its class's samples covered. Airports dominated by ATC callsigns (EGLL, 41%) are therefore **U**: the validation hasn't tested traffic like theirs. Whether to lift this, and how, is owner decision 5.
 - **Validity:** a class result carries the detector rule version and provider it was measured with. It expires after 12 months, or immediately on a new rule version or provider (§5a).
 
 ## 5a. Freshness and invalidation (read time)
@@ -115,7 +123,11 @@ A traffic-rate signal needs **all** of these:
   - **Initialisation:** existing airports start empty (U) and fill by watching; there's no back-fill from the 6-hour state.
   - **Expiry:** a key TTL of 8 days.
 - **Conversion tracking:** the detector keeps a small per-aircraft "seen in the low gate" marker within the existing aircraft state (15-minute TTL), and counts the gate entries and the conversions into the hourly buckets.
-- **API:** `/movements` gains a `confidence` block (class, measures, class figures, basis); the per-airport `validation` field is retired (its board results move to the class records in `docs/validation/`).
+- **API:** `/movements` gains a `confidence` block (class, measures, class figures, basis); `validation` is **kept**, with the same shape (`observed`, `inferred`, `airport`), now **derived from the class**:
+  - `observed` and `inferred` come from the class's per-method results;
+  - `airport` is `validated` when the class applies under §5a, otherwise `experimental`.
+  
+  No schema break, so existing clients and contract fixtures keep working. A method that failed, or couldn't be assessed in the class, stays `experimental`.
 - **Docs:** D-014 amendment; plan v1.2 (P5 per class, with pilot airports where an automated source exists); design §9 per-source protocols.
 
 ## 10. Owner decisions
@@ -126,7 +138,12 @@ A traffic-rate signal needs **all** of these:
 4. **No curated data:** identity by plain flight number with any prefix, else a unique aircraft-type match, else unidentified (§5). This replaces the IATA→ICAO table and the JFK alias proposal.
 
 **Still open:**
-5. **The 80% identity-coverage bar** for sample airports (§5).
+5. **ATC-callsign airports (critique finding 2).** Choose one:
+   - **(a) U until tested (recommended):** callsign mix is a class bound, so such airports are U, including EGLL.
+   - **(b) Test the assumption:** add a test that detection accuracy doesn't depend on callsign format. Within sample airports, compare rule-2-matched (ATC-callsign) flights with numbered ones over all 12 hours per class. Lift the bound only if they agree within 5 points. Start with (a).
+   - **(c) Accept the assumption untested,** and say so in the class text.
+   
+   The 80% bar for choosing sample airports stays either way: below it, identity can't be measured reliably.
 6. **Wording** of the user-facing class text (§7).
 7. **Approval of r3 as a whole,** then the plan v1.2 text and the D-014 amendment.
 
@@ -152,3 +169,9 @@ A traffic-rate signal needs **all** of these:
   - **No curated data** ("we need a solution that will cover all airports without curating data"): §5's identity rules drop the IATA→ICAO table and the aliases. The plain-number rule was measured before adoption on the three recorded hours: 0 ambiguous of 163, and 12 of 12 cross-prefix matches correct.
   - **Sample criteria added.** Identity coverage of at least 80% excludes EGLL (41%); KJFK (92%) qualifies.
   - **Not yet critiqued:** r3 changes the r2 design materially (sample criteria, identity rules, label precedence), so it gets a scoped critique before approval.
+- **r4:** scoped CORMORANT critique of r3 (`~/codex-reviews/ClearFlight-API-confidence-proposal-r3-critique-*.md`, Codex, read-only). 3 High + 1 Medium, **4 confirmed, 0 refuted**:
+  1. *High, "unidentified" could hide spurious detections:* zero candidates now counts as false; a sample passes only on **worst-case false** ≤5%.
+  2. *High, the 80% filter left transfer untested for ATC-callsign traffic:* the callsign mix becomes a class bound (such airports are U), with owner decision 5 on lifting it.
+  3. *High, unique-but-wrong matches unmeasured, and the rule order unspecified:* a 3-hour-shift coincidence check (≤1%), and an explicit order (numbered first, closest time; type-unique on the remainder).
+  4. *Medium, retiring `validation` broke the labels and the contract:* the field is kept, same shape, derived from the class, so no schema break.
+- **Critique budget:** two rounds (r1 full, r3 scoped), both well within CORMORANT's caps. No further critique before approval; the implementation gets its normal code reviews.
